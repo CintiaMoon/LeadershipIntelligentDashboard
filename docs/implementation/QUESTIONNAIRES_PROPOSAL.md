@@ -1,0 +1,106 @@
+# Proposal D47 to D51: questionnaires, the builder, assessment runs and the respondent flow
+
+Status: **APPROVED.** The wording of section 4 was applied to `specv3.md` as sections 4.2.1, 4.14 and an addition to 23.3. The product name shown in the interface is **"Leadership Intelligent Dashboard"** (the images say "Helm"; the name is one constant). The open points of section 6 are accepted and recorded as limitations at release. `specv3.md` defines questions, normalization and configuration layers, but not a builder, runs, a roster or a respondent flow, and it has no multi-select question type. Under the precedence rule (specv3 > architect.md > frontend-spec.md > CLAUDE.md) that is new business behavior and needs approval first.
+
+## 1. Problem
+
+Questions are fixed in the platform configuration JSON and answers arrive only through `POST /calculate`. Administrators cannot author a questionnaire, and team members cannot complete one. The screens in `specs/screens/` (a questionnaire library and a builder) are the baseline.
+
+## 2. Decisions already taken by the user
+
+| # | Decision |
+|---|---|
+| 1 | Build the **full builder**, plus assessment runs and the respondent flow. |
+| 2 | **Anonymity:** a draft is linked to a member only until submit; on submit the answers are stored with the team only, and a separate completion record says who finished. "Anonymous responses" is always on. |
+| 3 | Respondents sign in through the identity provider with a new **`RESPONDENT`** role. Team membership comes from a **roster of people**. |
+| 4 | The **administrator closes** a run, which scores it once. |
+| 5 | **Multiple choice is scored** (mean of the selected options' values). **Free text is collected, not scored.** |
+| 6 | **Restyle the whole application** like the images (dark, left sidebar, "Helm"). |
+| 7 | Administrators **author patterns and penalties** in the builder. |
+
+## 3. Decisions D47 to D51 (the design that follows from them)
+
+### D47. A questionnaire is a template layer of the configuration
+A published questionnaire is an ACTIVE `TEMPLATE` configuration layer of the tenant (`ConfigurationScope.TEMPLATE`, which the engine already merges between the platform default and the organization). A generator turns the builder document into a complete layer: `questions`, `signals`, `dimensions.mappings`, `patterns`, `penalties`, `imbalances`, `overall`, `responses`, `recommendations`, `presentation`. It is validated by the same parser and lifecycle as any configuration (draft, validate, activate with an approval record); there is no second validator. A published version is immutable; republishing creates a new version and archives the previous one. Template ids of questionnaires are generated (the `assessment_template.id` namespace is global across tenants).
+
+Mapping from the builder's question types:
+
+| Builder type | Engine | Notes |
+|---|---|---|
+| Single choice | `MULTIPLE_CHOICE` | every option has a 0 to 100 score, default evenly spaced in the order shown |
+| Rating (1 to 5) | `SCALE` 1 to 5 | switch "higher is better / worse" |
+| Likert scale | `SCALE` with 5 or 7 points and labels | same switch |
+| NPS | `SCALE` 0 to 10 | |
+| Numeric | `NUMBER` min, max, direction | out-of-range answers are clamped and recorded |
+| Yes / No | `BOOLEAN` | which answer is the desirable one is a switch |
+| Multiple choice | **new `MULTI_SELECT`** | D49 |
+| Free text | `TEXT` | collected, not mapped to a dimension, never scored |
+
+A scored question has one of the four dimensions and a weight (default 1). Each scored question automatically gets a signal named after it, so patterns refer to questions. "Required" is enforced by the respondent flow, not by the engine: the engine's missing-data policy stays `IGNORE`, because `REQUIRED` would fail a whole run for one blank answer. **Publish is refused** unless every dimension has at least one scored question, every option has a score, option scores are within 0 to 100, and the generated layer passes the parser.
+
+**Layer replacement.** `ConfigurationMerger` replaces arrays wholesale but merges objects key by key. A questionnaire replaces the platform's questions, so stale platform ids in object sections such as `presentation` would fail validation, and a later platform change could silently break a published questionnaire. D47 adds one explicit marker, `{"$replace": X}`: the value replaces whatever lower layers had for that key (the explicit semantics specv3 23.3 asks for, next to the existing `{"$remove": true}`).
+
+### D48. Runs, roster, respondents and anonymity
+- A **team** belongs to an organization (id, name). Answers still carry only the team id (D45).
+- A **person** is a roster entry: name, email, one team, active or not. The roster is for OWNER and ADMIN only.
+- An **assessment run** pins a questionnaire version and its configuration version, an organization, the chosen teams and an optional due date. Starting it snapshots one **participant** per active person of those teams with a status (`NOT_STARTED`, `IN_PROGRESS`, `SUBMITTED`). This completion record never holds answers.
+- A respondent is matched to the roster by the **`email` claim** of the verified token (and `tenant_id`); the role is `RESPONDENT`.
+- **Drafts** (answers so far) are linked to the participant so they can resume, in the same session or later. They are deleted on submit and on close.
+- **Submit** is one transaction: the answers are written as `run_response` rows with a random id, the team and the question, and **no participant reference and no timestamp**; the drafts are deleted; the participant becomes `SUBMITTED`. No order is stored, so submission order cannot re-identify anyone.
+- **Close** (administrator only) scores the run once: the responses become `MEMBER` answers per team and go through the existing scoring, using the pinned configuration version, so republishing a questionnaire cannot change an open run. One organization result and one result per team with enough answers are produced; teams under the minimum get no score.
+- `RESPONDENT` is **not** a value of the tenant `Role` enum, for the reason D46 gives for `PLATFORM_ADMIN`: the rules that let "every role" read tenant data are built from that enum. `/api/v1/respond/**` has its own rule, and a respondent reaches nothing else.
+
+What the design does and does not protect: scores of a small team are not produced (minimum responses), member answers are never listed one by one, and the answers are not linked to a person after submit. It cannot hide **who has not finished** from an administrator (that is the point of the completion record), so in a very small team the administrator can guess who is missing. The interface says so.
+
+### D49. Multiple choice is scored: `MULTI_SELECT`
+New question type and normalization strategy (specv3 4.2 allows additional types through extensible strategies). Each option has a 0 to 100 value; the normalized value is the **mean of the values of the selected options**; no selection is missing data (never zero). The answer is a **list of option keys**, so the engine and its edges accept list-valued answers: input hash (order-independent), stored answers, the request body, the answers endpoint and the frontend types. A member-level list is normalized per member and then combined by the existing aggregation, like every other type. Results for one answer per question are unchanged.
+
+### D50. Authored patterns and penalties
+The builder stores conditions over question signals (AND, OR, NOT and the existing operators), a severity, evidence minimums, and penalties (fixed or severity-based amount, target, category, stacking policy, cap), with names, explanations and recommendation text. Validation is the existing condition validator and snapshot build. Authored ids are generated per questionnaire (`X-1`, `X-2`...), and the catalog identifiers of the specification (`TH-*`, `DS-*`...) are **not** reused for authored rules (stable-ID rule). The builder says that authored thresholds and deductions are unvalidated. "Start from the initial questionnaire" copies the platform default into a builder draft.
+
+### D51. Restyle
+New design tokens (dark by default, light kept behind a toggle so contrast can be checked in both), a left sidebar (Dashboard, Questionnaires, Assessment runs, People, and Tenants for the platform administrator; no links to features that do not exist), the brand "Helm, Leadership Intelligence" from the images as one constant that is easy to change, and a chart palette that works on dark. Every existing screen, unit test, browser test and accessibility check is re-verified. This changes the look of the whole product and nothing about what it computes.
+
+## 4. Proposed `specv3.md` wording (not applied)
+
+> **4.2 (addition) Multi-select.** `MULTI_SELECT` is a question type. Its answer is a set of option identifiers. Each option has a normalized value in [0, 100]. The normalized value of an answer is the arithmetic mean of the values of the selected options. An empty selection is missing data. Unknown options are handled by the question's unknown-option policy.
+>
+> **23.3 (addition) Replacement.** An object `{"$replace": X}` in a layer replaces the value of that key in every lower layer with `X`, instead of merging. It is the counterpart of the deletion tombstone and is the only way a layer replaces an object section.
+>
+> **New section: Questionnaires, runs and respondents.**
+> A *questionnaire* is a versioned set of questions with their scoring configuration, published as a template layer of one tenant; a published version is immutable. An *assessment run* pins one published version for one organization and a set of teams and is *open* or *closed*. A *participant* is a person of the roster who is expected to answer; the participant record states whether the person has finished and never contains answers. A respondent's unfinished answers (a *draft*) may be linked to the participant until submit. On submit the answers are stored with the team only: they carry no reference to the participant, no timestamp and no order, and the draft is deleted. Closing a run scores the stored answers once as member answers (4.10 to 4.13). Answers are never returned one by one or linked to a person. Free-text answers are collected and never scored.
+
+## 5. Interfaces (sketch, to be fixed in phase 2 and 3)
+
+| Area | Endpoints | Who |
+|---|---|---|
+| Questionnaires | `GET/POST /api/v1/questionnaires`, `GET/PUT /{id}` (draft), `POST /{id}/publish`, `/archive`, `/duplicate`, `POST /from-initial` | OWNER, ADMIN |
+| Roster | `GET/POST /api/v1/teams`, `GET/POST/PUT /api/v1/people` | OWNER, ADMIN |
+| Runs | `GET/POST /api/v1/runs`, `GET /{id}` (completion per team, who is missing), `POST /{id}/close` | OWNER, ADMIN |
+| Respondent | `GET /api/v1/respond/runs`, `GET /respond/runs/{id}` (questions and my draft), `PUT /respond/runs/{id}/draft`, `POST /respond/runs/{id}/submit` | RESPONDENT only |
+
+Migrations: V8 (questionnaire library), V9 (teams, people, runs, participants, drafts, responses). The token contract gains the `RESPONDENT` role and requires the `email` claim for respondents.
+
+## 6. Open points to confirm later (not blocking phase 0)
+
+- **Retention of roster data** (names, emails) and what happens when a person leaves; recorded as a limitation.
+- **The brand name.** Decided: "Leadership Intelligent Dashboard", one constant to change later.
+- **Reminders.** There is no e-mail; the administrator sees who has not finished.
+- **Calibration.** Everything authored in the builder is unvalidated by construction.
+
+## 7. Phases
+
+0 decisions and wording (this document), 1 engine (list-valued answers, `MULTI_SELECT`, `$replace`), 2 questionnaire backend, 3 roster, runs and respondent backend, 4 restyle, 5 new screens, 6 end-to-end, release documents. Each ends with a report and waits for your go-ahead.
+
+## 8. Status
+
+| Phase | State |
+|---|---|
+| 0 decisions and wording | **done**, approved |
+| 1 engine | **done**: `MULTI_SELECT` (config, strategy, parser), list-valued answers end to end (input hash, stored form, request limits, answers view, frontend display), empty selection is missing data, `{"$replace": X}` in the configuration merger. 49 new tests; backend 585 tests, frontend 252. Answers with one value per question score exactly as before. |
+| 2 questionnaire backend | not started |
+| 3 roster, runs and respondent backend | not started |
+| 4 restyle | not started |
+| 5 new screens | not started |
+| 6 end to end and release | not started |
+

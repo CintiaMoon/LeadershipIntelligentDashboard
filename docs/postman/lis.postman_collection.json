@@ -1,0 +1,1839 @@
+{
+  "info": {
+    "name": "Leadership Intelligence Scoring Engine",
+    "description": "Every endpoint of the API. Start the stack with `docker compose up -d --build`, then run folder 1 top to bottom. Tokens come from the local mock identity provider (client_id = persona: owner, admin, leader, analyst, viewer, org1-viewer, other-admin). Change the collection variable \"persona\" to act as another role.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Fetches (and caches) a token from the local mock identity provider for the persona in use.",
+          "// Persona: header X-Persona on the request (removed before sending), else the collection variable \"persona\".",
+          "let persona = pm.request.headers.get('X-Persona') || pm.collectionVariables.get('persona') || 'admin';",
+          "pm.request.headers.remove('X-Persona');",
+          "if (pm.request.auth && pm.request.auth.type === 'noauth') { return; }",
+          "const key = 'token_' + persona;",
+          "const cached = pm.collectionVariables.get(key);",
+          "const exp = Number(pm.collectionVariables.get(key + '_exp') || 0);",
+          "if (cached && Date.now() < exp) { pm.variables.set('accessToken', cached); return; }",
+          "pm.sendRequest({",
+          "  url: pm.collectionVariables.get('authUrl') + '/default/token',",
+          "  method: 'POST',",
+          "  header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+          "  body: { mode: 'urlencoded', urlencoded: [",
+          "    { key: 'grant_type', value: 'client_credentials' },",
+          "    { key: 'client_id', value: persona },",
+          "    { key: 'client_secret', value: 'secret' } ] }",
+          "}, (err, res) => {",
+          "  if (err || res.code !== 200) { throw new Error('token request failed for persona ' + persona + ': ' + (err || res.text())); }",
+          "  const body = res.json();",
+          "  pm.collectionVariables.set(key, body.access_token);",
+          "  pm.collectionVariables.set(key + '_exp', String(Date.now() + (body.expires_in - 60) * 1000));",
+          "  pm.variables.set('accessToken', body.access_token);",
+          "});",
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "authUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "persona",
+      "value": "admin"
+    },
+    {
+      "key": "organizationId",
+      "value": "org-1"
+    },
+    {
+      "key": "assessmentId",
+      "value": ""
+    },
+    {
+      "key": "scoringRunId",
+      "value": ""
+    },
+    {
+      "key": "baseRunId",
+      "value": ""
+    },
+    {
+      "key": "configurationVersionId",
+      "value": ""
+    },
+    {
+      "key": "scopedRunId",
+      "value": ""
+    },
+    {
+      "key": "teamRunId",
+      "value": ""
+    },
+    {
+      "key": "newTenantId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Scoring",
+      "item": [
+        {
+          "name": "Calculate (submit assessment + answers and score)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "calculate"
+              ]
+            },
+            "description": "Server generates the assessmentId and stores an immutable snapshot. Optional header Idempotency-Key. Roles: OWNER, ADMIN, ENGINEERING_LEADER. Saves assessmentId and scoringRunId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessment\": {\n    \"organizationId\": \"{{organizationId}}\",\n    \"templateId\": \"tpl-1\",\n    \"templateVersion\": \"1\",\n    \"status\": \"COMPLETED\",\n    \"completedAt\": \"2026-11-01T09:00:00Z\"\n  },\n  \"inputs\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 2\n    },\n    {\n      \"questionId\": \"Q02\",\n      \"answer\": \"OFTEN\"\n    },\n    {\n      \"questionId\": \"Q03\",\n      \"answer\": true\n    },\n    {\n      \"questionId\": \"Q04\",\n      \"answer\": \"only one key person\"\n    },\n    {\n      \"questionId\": \"Q05\",\n      \"answer\": 80\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('assessmentId', b.assessmentId);",
+                  "pm.collectionVariables.set('scoringRunId', b.scoringRunId);",
+                  "pm.test('has a score or INSUFFICIENT_DATA', () => pm.expect(['VALID','INSUFFICIENT_DATA']).to.include(b.scoreStatus));",
+                  "pm.test('carries the diagnostic notice', () => pm.expect(b.notice).to.include('not an individual performance rating'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Calculate - INSUFFICIENT_DATA (too few answers)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "calculate"
+              ]
+            },
+            "description": "Coverage below the configured requirement gives scoreStatus INSUFFICIENT_DATA, never an invented score.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessment\": {\n    \"organizationId\": \"{{organizationId}}\",\n    \"templateId\": \"tpl-1\",\n    \"templateVersion\": \"1\",\n    \"status\": \"COMPLETED\",\n    \"completedAt\": \"2026-11-01T09:00:00Z\"\n  },\n  \"inputs\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('insufficient', () => pm.expect(pm.response.json().scoreStatus).to.eql('INSUFFICIENT_DATA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Calculate with member answers (organization and team results)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "calculate"
+              ]
+            },
+            "description": "Answers carry a scope (D45): MEMBER (one respondent, no identity), TEAM or ORGANIZATION. The response is the organization run (all answers pooled) with teamRuns; a team with fewer answers than the configured minimum (default 5) has no score. Send inputs or responses, never both. Saves scopedRunId and teamRunId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n \"assessment\": {\n  \"organizationId\": \"{{organizationId}}\",\n  \"templateId\": \"tpl-1\",\n  \"templateVersion\": \"1\",\n  \"status\": \"COMPLETED\",\n  \"completedAt\": \"2026-11-01T09:00:00Z\"\n },\n \"responses\": [\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 1,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": true,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 40,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 2,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": false,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 50,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 3,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": true,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 60,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 4,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": false,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 70,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 5,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": true,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 80,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"alpha\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 1,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": true,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 40,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 2,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": false,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 50,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 3,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": true,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 60,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 4,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": false,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 70,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q01\",\n   \"answer\": 5,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q02\",\n   \"answer\": \"OFTEN\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q03\",\n   \"answer\": true,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q04\",\n   \"answer\": \"fine team\",\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  },\n  {\n   \"questionId\": \"Q05\",\n   \"answer\": 80,\n   \"scope\": \"MEMBER\",\n   \"teamId\": \"beta\"\n  }\n ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('scopedRunId', b.scoringRunId);",
+                  "pm.test('organization result with two team results', () => { pm.expect(b.scope).to.eql('ORGANIZATION'); pm.expect(b.teamRuns.length).to.eql(2); });",
+                  "pm.collectionVariables.set('teamRunId', b.teamRuns.find(t => t.teamId === 'alpha').scoringRunId);",
+                  "pm.test('answers were combined, not listed', () => pm.expect(b.responses.questions[0].participation).to.eql('OBSERVED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get a team run",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{teamRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{teamRunId}}"
+              ]
+            },
+            "description": "A team run reads like any run, with scope TEAM, its teamId and organizationScoringRunId. It is never part of history, trends, the dashboard or comparison."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('team scope', () => { const b = pm.response.json(); pm.expect(b.scope).to.eql('TEAM'); pm.expect(b.teamId).to.eql('alpha'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Source answers of a team run (evidence roles only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "analyst"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{teamRunId}}/answers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{teamRunId}}",
+                "answers"
+              ]
+            },
+            "description": "Member answers are never listed one by one: one group per question with a count and sorted values; groups below the minimum are suppressed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('member groups', () => pm.response.json().answers.filter(a => a.scope === 'MEMBER').forEach(a => pm.expect(a.count).to.be.a('number')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score a stored assessment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assessments/{{assessmentId}}/score",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "assessments",
+                "{{assessmentId}}",
+                "score"
+              ]
+            },
+            "description": "Re-scores a persisted assessment (no body). Reuses an identical earlier run (V3 27.4). Optional Idempotency-Key."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Latest result of an assessment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assessments/{{assessmentId}}/score",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "assessments",
+                "{{assessmentId}}",
+                "score"
+              ]
+            },
+            "description": "Latest completed run."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recalculate (effective configuration)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assessments/{{assessmentId}}/score/recalculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "assessments",
+                "{{assessmentId}}",
+                "score",
+                "recalculate"
+              ]
+            },
+            "description": "Always creates a new run. No body = the currently effective configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recalculate with an explicit configuration version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assessments/{{assessmentId}}/score/recalculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "assessments",
+                "{{assessmentId}}",
+                "score",
+                "recalculate"
+              ]
+            },
+            "description": "OWNER/ADMIN only. Set the collection variable configurationVersionId to a scoring_configuration_version id (select id from scoring_configuration_version).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"configurationVersion\": \"{{configurationVersionId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 404 if the id is not set', () => pm.expect([200, 404, 400]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get a scoring run",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}"
+              ]
+            },
+            "description": "Stored result, same shape as /calculate."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Explanation (calculation trace)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/explanation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "explanation"
+              ]
+            },
+            "description": "Versioned 8-stage trace. VIEWER receives a redacted copy; the read is audited."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dimensions and contributions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/dimensions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "dimensions"
+              ]
+            },
+            "description": "Raw and adjusted dimensions."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patterns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/patterns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "patterns"
+              ]
+            },
+            "description": "Pattern evaluations with evidence and confidence."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Penalties",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/penalties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "penalties"
+              ]
+            },
+            "description": "APPLIED / SUPPRESSED / INELIGIBLE / NOT_TRIGGERED."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Imbalances",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/imbalances",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "imbalances"
+              ]
+            },
+            "description": "Imbalance findings."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/recommendations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "recommendations"
+              ]
+            },
+            "description": "Text from the configuration catalog the run was scored with; unmapped action keys are listed, never invented."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Source answers (evidence roles only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "analyst"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/answers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "answers"
+              ]
+            },
+            "description": "OWNER, ADMIN and ANALYST only; the read is audited (count only). D42."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalog (names, descriptions, score bands)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/catalog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "catalog"
+              ]
+            },
+            "description": "Display text and LIS/dimension score bands from the configuration the run was scored with (D39)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. History, comparison, dashboard",
+      "item": [
+        {
+          "name": "List assessments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assessments?organizationId={{organizationId}}&status=COMPLETED&limit=20&cursor=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "assessments"
+              ],
+              "query": [
+                {
+                  "key": "organizationId",
+                  "value": "{{organizationId}}",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "COMPLETED",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Cursor paging; latestRun per item."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get an assessment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assessments/{{assessmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "assessments",
+                "{{assessmentId}}"
+              ]
+            },
+            "description": "Assessment with its latest run."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Score history (run summaries)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs?organizationId={{organizationId}}&assessmentId=&from=2026-01-01T00:00:00Z&to=2999-01-01T00:00:00Z&limit=20&cursor=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs"
+              ],
+              "query": [
+                {
+                  "key": "organizationId",
+                  "value": "{{organizationId}}",
+                  "disabled": false
+                },
+                {
+                  "key": "assessmentId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2026-01-01T00:00:00Z",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2999-01-01T00:00:00Z",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Newest first; previousScore, change (only when comparable), comparable, notComparableReasons."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().items;",
+                  "if (items.length > 1) { pm.collectionVariables.set('scoringRunId', items[0].scoringRunId); pm.collectionVariables.set('baseRunId', items[1].scoringRunId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Compare two runs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/compare?baseRunId={{baseRunId}}&runId={{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "compare"
+              ],
+              "query": [
+                {
+                  "key": "baseRunId",
+                  "value": "{{baseRunId}}",
+                  "disabled": false
+                },
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "baseRunId and runId; run /calculate twice first. A change is reported only for comparable runs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Organization trends",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/trends?templateId=&from=2026-01-01T00:00:00Z&to=2999-01-01T00:00:00Z&limit=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "{{organizationId}}",
+                "trends"
+              ],
+              "query": [
+                {
+                  "key": "templateId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2026-01-01T00:00:00Z",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2999-01-01T00:00:00Z",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Oldest first: per valid run the summary, dimensions, matched patterns, severity counts and penalty totals (D40)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Organization dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "{{organizationId}}",
+                "dashboard"
+              ]
+            },
+            "description": "Latest valid run per template, recent runs, assessment counts, notice."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Operations",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Open.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/info",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "info"
+              ]
+            },
+            "description": "Open.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Metrics list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics"
+              ]
+            },
+            "description": "OWNER/ADMIN only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Metric detail (scoring.duration)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/scoring.duration",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "scoring.duration"
+              ]
+            },
+            "description": "OWNER/ADMIN only. Run /calculate first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prometheus scrape",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "prometheus"
+              ]
+            },
+            "description": "OWNER/ADMIN only. scoring_requests_total, scoring_duration_seconds, ..."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OpenAPI document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v3/api-docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            },
+            "description": "Contract of the API (any authenticated role)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Security and error cases",
+      "item": [
+        {
+          "name": "No token -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs"
+              ]
+            },
+            "description": "Standard error body with correlationId.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "VIEWER cannot write -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "viewer"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "calculate"
+              ]
+            },
+            "description": "Writes need OWNER, ADMIN or ENGINEERING_LEADER.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessment\": {\n    \"organizationId\": \"{{organizationId}}\",\n    \"templateId\": \"tpl-1\",\n    \"templateVersion\": \"1\",\n    \"status\": \"COMPLETED\",\n    \"completedAt\": \"2026-11-01T09:00:00Z\"\n  },\n  \"inputs\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 2\n    },\n    {\n      \"questionId\": \"Q02\",\n      \"answer\": \"OFTEN\"\n    },\n    {\n      \"questionId\": \"Q03\",\n      \"answer\": true\n    },\n    {\n      \"questionId\": \"Q04\",\n      \"answer\": \"only one key person\"\n    },\n    {\n      \"questionId\": \"Q05\",\n      \"answer\": 80\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Organization outside the token -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "org1-viewer"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs?organizationId=org-2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs"
+              ],
+              "query": [
+                {
+                  "key": "organizationId",
+                  "value": "org-2",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "org1-viewer may only reach org-1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other tenant cannot see a run -> 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "other-admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}"
+              ]
+            },
+            "description": "Tenant isolation."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown question -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "calculate"
+              ]
+            },
+            "description": "Business error with the question named; nothing is stored.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessment\": {\n    \"organizationId\": \"{{organizationId}}\",\n    \"templateId\": \"tpl-1\",\n    \"templateVersion\": \"1\",\n    \"status\": \"COMPLETED\",\n    \"completedAt\": \"2026-11-01T09:00:00Z\"\n  },\n  \"inputs\": [\n    {\n      \"questionId\": \"NOPE\",\n      \"answer\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Malformed request -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "calculate"
+              ]
+            },
+            "description": "Unknown field rejected; no internals leaked.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"assessment\":{},\"inputs\":[],\"weights\":{\"TEAM_HEALTH\":1}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Explanation as VIEWER (redacted)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "viewer"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{scoringRunId}}/explanation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{scoringRunId}}",
+                "explanation"
+              ]
+            },
+            "description": "Per-question evidence is removed for VIEWER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Platform administration",
+      "item": [
+        {
+          "name": "List tenants (platform administrator)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "tenants"
+              ]
+            },
+            "description": "Only the PLATFORM_ADMIN role. The administrator belongs to no tenant (its token has no tenant_id) and the read is audited."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('items', () => pm.expect(pm.response.json().items).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "tenants"
+              ]
+            },
+            "description": "A permanent id (2 to 63 lowercase letters, digits or hyphens) and a name. 201 with the tenant; audited. Saves newTenantId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{newTenantId}}\",\n  \"name\": \"Postman tenant\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('newTenantId', 'postman-' + Date.now().toString(36));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', () => pm.response.to.have.status(201));",
+                  "pm.test('the tenant', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('newTenantId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create the same tenant again -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "tenants"
+              ]
+            },
+            "description": "An id is unique and permanent.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{newTenantId}}\",\n  \"name\": \"Again\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code', () => pm.expect(pm.response.json().code).to.eql('TENANT_ALREADY_EXISTS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An id that is not allowed -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "tenants"
+              ]
+            },
+            "description": "Uppercase letters, spaces and symbols are refused.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"Not Allowed\",\n  \"name\": \"Bad id\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A tenant ADMIN cannot list tenants -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "tenants"
+              ]
+            },
+            "description": "The tenant roles cannot reach platform administration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A tenant OWNER cannot create a tenant -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "owner"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "tenants"
+              ]
+            },
+            "description": "Not even a tenant owner.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"sneaky\",\n  \"name\": \"Sneaky\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The platform administrator cannot read tenant data -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs"
+              ]
+            },
+            "description": "The platform role reaches nothing that belongs to a tenant."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

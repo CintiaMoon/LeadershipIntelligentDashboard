@@ -1,0 +1,1801 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Leadership Intelligence Scoring Engine",
+    "description": "Deterministic, explainable organizational scoring. The score is an organizational diagnostic signal, not an individual performance rating and not a basis for employment decisions.",
+    "version": "3.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "paths": {
+    "/api/v1/platform/tenants": {
+      "get": {
+        "tags": [
+          "Platform"
+        ],
+        "summary": "Every tenant (platform administrators only; the read is audited)",
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Platform"
+        ],
+        "summary": "Create a tenant (platform administrators only; audited)",
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calculate": {
+      "post": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "Submit an assessment and its answers, score it and store the run",
+        "operationId": "calculate",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalculateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResultResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessmentId}/score": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "The latest completed result of an assessment",
+        "operationId": "latest",
+        "parameters": [
+          {
+            "name": "assessmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResultResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "Score a stored assessment (reuses an identical earlier run)",
+        "operationId": "score",
+        "parameters": [
+          {
+            "name": "assessmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResultResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessmentId}/score/recalculate": {
+      "post": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "Create a new run for an assessment, optionally with a chosen configuration version",
+        "operationId": "recalculate",
+        "parameters": [
+          {
+            "name": "assessmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecalculateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResultResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Score history with the previous score and whether the change is comparable",
+        "operationId": "runs",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assessmentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseRunSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "A stored scoring run",
+        "operationId": "run",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResultResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/recommendations": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Recommendations for a run, from the catalog of the configuration it was scored with",
+        "operationId": "recommendations",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/penalties": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "Penalty candidates, applied and suppressed deductions of a run",
+        "operationId": "penalties",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPenaltiesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/patterns": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "Pattern evaluations of a run",
+        "operationId": "patterns",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPatternsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/imbalances": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "Imbalance findings of a run",
+        "operationId": "imbalances",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunImbalancesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/explanation": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "The stored explanation trace of a run (never recalculated)",
+        "operationId": "explanation",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplanationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/dimensions": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "Raw and adjusted dimension scores, coverage and contributions of a run",
+        "operationId": "dimensions",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDimensionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/catalog": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Display names, descriptions and score bands of the configuration a run was scored with",
+        "operationId": "catalog",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCatalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{scoringRunId}/answers": {
+      "get": {
+        "tags": [
+          "Scoring"
+        ],
+        "summary": "The answers a run was scored with (owners, admins and analysts only; the read is audited)",
+        "operationId": "answers",
+        "parameters": [
+          {
+            "name": "scoringRunId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunAnswersResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/compare": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Compare two runs; a change is reported only when they are comparable",
+        "operationId": "compare",
+        "parameters": [
+          {
+            "name": "baseRunId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/trends": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Run series of an organization with dimensions, patterns and penalty totals per run, oldest first",
+        "operationId": "trends",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrendsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/dashboard": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Organization dashboard: latest result per template, recent runs and assessment counts",
+        "operationId": "dashboard",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Assessments of the caller's organizations with their latest result",
+        "operationId": "assessments",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseAssessmentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessmentId}": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "One assessment with its latest result",
+        "operationId": "assessment",
+        "parameters": [
+          {
+            "name": "assessmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateTenantRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 0
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "TenantResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AssessmentPart": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "templateId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "templateVersion": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 0
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 0
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "organizationId",
+          "status",
+          "templateId",
+          "templateVersion"
+        ]
+      },
+      "CalculateRequest": {
+        "type": "object",
+        "properties": {
+          "assessment": {
+            "$ref": "#/components/schemas/AssessmentPart"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InputPart"
+            },
+            "maxItems": 1000,
+            "minItems": 0
+          },
+          "responses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsePart"
+            },
+            "maxItems": 20000,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "assessment"
+        ]
+      },
+      "InputPart": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "answer": {},
+          "questionType": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "questionId"
+        ]
+      },
+      "ResponsePart": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "answer": {},
+          "questionType": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 0
+          },
+          "scope": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 0
+          },
+          "teamId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "respondents": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "questionId",
+          "scope"
+        ]
+      },
+      "CountsResponse": {
+        "type": "object",
+        "properties": {
+          "matchedPatterns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "appliedPenalties": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "suppressedPenalties": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DimensionResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "rawScore": {
+            "type": "number"
+          },
+          "effectivePenalty": {
+            "type": "number"
+          },
+          "adjustedScore": {
+            "type": "number"
+          },
+          "coverage": {
+            "type": "number"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "weightedContribution": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "JsonNode": {},
+      "OverallResponse": {
+        "type": "object",
+        "properties": {
+          "weightedAdjustedScore": {
+            "type": "number"
+          },
+          "effectiveOverallPenalty": {
+            "type": "number"
+          },
+          "finalScore": {
+            "type": "number"
+          }
+        }
+      },
+      "ScoringResultResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assessmentId": {
+            "type": "string"
+          },
+          "assessmentSnapshotId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "configurationSelection": {
+            "type": "string"
+          },
+          "engineVersion": {
+            "type": "string"
+          },
+          "algorithmVersion": {
+            "type": "string"
+          },
+          "configurationVersion": {
+            "type": "string"
+          },
+          "configurationHash": {
+            "type": "string"
+          },
+          "inputHash": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "scoreStatus": {
+            "type": "string"
+          },
+          "leadershipIntelligenceScore": {
+            "type": "number"
+          },
+          "interpretation": {
+            "type": "string"
+          },
+          "dimensions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DimensionResponse"
+            }
+          },
+          "overall": {
+            "$ref": "#/components/schemas/OverallResponse"
+          },
+          "imbalances": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "patterns": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "penalties": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CountsResponse"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "calculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "explanationReference": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "notice": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "organizationScoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responses": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "teamRuns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamRunResponse"
+            }
+          }
+        }
+      },
+      "TeamRunResponse": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string"
+          },
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scoreStatus": {
+            "type": "string"
+          },
+          "leadershipIntelligenceScore": {
+            "type": "number"
+          },
+          "interpretation": {
+            "type": "string"
+          }
+        }
+      },
+      "RecalculateRequest": {
+        "type": "object",
+        "properties": {
+          "configurationVersion": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          }
+        }
+      },
+      "PageResponseRunSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSummaryResponse"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "RunSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assessmentId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "templateId": {
+            "type": "string"
+          },
+          "templateVersion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "source": {
+            "type": "string"
+          },
+          "leadershipIntelligenceScore": {
+            "type": "number"
+          },
+          "interpretation": {
+            "type": "string"
+          },
+          "configurationVersion": {
+            "type": "string"
+          },
+          "configurationHash": {
+            "type": "string"
+          },
+          "algorithmVersion": {
+            "type": "string"
+          },
+          "engineVersion": {
+            "type": "string"
+          },
+          "calculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "previousScoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previousScore": {
+            "type": "number"
+          },
+          "change": {
+            "type": "number"
+          },
+          "comparable": {
+            "type": "boolean"
+          },
+          "notComparableReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Recommendation": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            }
+          }
+        }
+      },
+      "RecommendationsResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            }
+          },
+          "unmappedActionKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notice": {
+            "type": "string"
+          }
+        }
+      },
+      "Source": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        }
+      },
+      "RunPenaltiesResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "penalties": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "effectiveByTarget": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "tieBreakVersion": {
+            "type": "string"
+          },
+          "redacted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RunPatternsResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patterns": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "redacted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RunImbalancesResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "imbalances": {
+            "$ref": "#/components/schemas/JsonNode"
+          }
+        }
+      },
+      "ExplanationResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "redacted": {
+            "type": "boolean"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/JsonNode"
+          }
+        }
+      },
+      "RunDimensionsResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dimensions": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "adjusted": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "redacted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Band": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          }
+        }
+      },
+      "Entry": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          }
+        }
+      },
+      "RunCatalog": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patterns": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          },
+          "penalties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          },
+          "dimensions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          },
+          "signals": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          },
+          "questions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          },
+          "lisBands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Band"
+            }
+          },
+          "dimensionBands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Band"
+            }
+          }
+        }
+      },
+      "AnswerView": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string"
+          },
+          "answer": {},
+          "scope": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "declaredRespondents": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "values": {
+            "type": "array",
+            "items": {}
+          },
+          "suppressed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RunAnswersResponse": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnswerView"
+            }
+          }
+        }
+      },
+      "ComparisonResponse": {
+        "type": "object",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/RunSummaryResponse"
+          },
+          "run": {
+            "$ref": "#/components/schemas/RunSummaryResponse"
+          },
+          "comparable": {
+            "type": "boolean"
+          },
+          "notComparableReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scoreChange": {
+            "type": "number"
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DimensionChangeResponse"
+            }
+          },
+          "patterns": {
+            "$ref": "#/components/schemas/PatternChanges"
+          },
+          "notice": {
+            "type": "string"
+          }
+        }
+      },
+      "DimensionChangeResponse": {
+        "type": "object",
+        "properties": {
+          "dimension": {
+            "type": "string"
+          },
+          "baseScore": {
+            "type": "number"
+          },
+          "score": {
+            "type": "number"
+          },
+          "change": {
+            "type": "number"
+          }
+        }
+      },
+      "PatternChanges": {
+        "type": "object",
+        "properties": {
+          "appeared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resolved": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "persistent": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TenantListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TenantResponse"
+            }
+          }
+        }
+      },
+      "DimensionPoint": {
+        "type": "object",
+        "properties": {
+          "dimension": {
+            "type": "string"
+          },
+          "rawScore": {
+            "type": "number"
+          },
+          "adjustedScore": {
+            "type": "number"
+          }
+        }
+      },
+      "PatternHit": {
+        "type": "object",
+        "properties": {
+          "patternId": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        }
+      },
+      "PenaltyTotals": {
+        "type": "object",
+        "properties": {
+          "applied": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "suppressed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ineligible": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notTriggered": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "effectiveDeduction": {
+            "type": "number"
+          },
+          "suppressedAmount": {
+            "type": "number"
+          }
+        }
+      },
+      "TrendPointResponse": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunSummaryResponse"
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DimensionPoint"
+            }
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PatternHit"
+            }
+          },
+          "patternsBySeverity": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "penalties": {
+            "$ref": "#/components/schemas/PenaltyTotals"
+          }
+        }
+      },
+      "TrendsResponse": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string"
+          },
+          "templateId": {
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrendPointResponse"
+            }
+          },
+          "notice": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardResponse": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string"
+          },
+          "latestPerTemplate": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSummaryResponse"
+            }
+          },
+          "recentRuns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSummaryResponse"
+            }
+          },
+          "assessmentsByStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "notice": {
+            "type": "string"
+          }
+        }
+      },
+      "AssessmentResponse": {
+        "type": "object",
+        "properties": {
+          "assessmentId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "templateId": {
+            "type": "string"
+          },
+          "templateVersion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "latestRun": {
+            "$ref": "#/components/schemas/LatestRun"
+          }
+        }
+      },
+      "LatestRun": {
+        "type": "object",
+        "properties": {
+          "scoringRunId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scoreStatus": {
+            "type": "string"
+          },
+          "leadershipIntelligenceScore": {
+            "type": "number"
+          },
+          "interpretation": {
+            "type": "string"
+          },
+          "calculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PageResponseAssessmentResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentResponse"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
