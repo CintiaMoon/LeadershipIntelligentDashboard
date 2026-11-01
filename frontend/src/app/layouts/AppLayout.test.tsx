@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { brand } from '@/brand';
@@ -71,6 +71,33 @@ describe('AppLayout appearance', () => {
     expect(document.documentElement).toHaveAttribute('data-theme', 'light');
     await userEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
     expect(document.documentElement).not.toHaveAttribute('data-theme');
+  });
+});
+
+describe('AppLayout navigation by role', () => {
+  const nav = () => screen.getByRole('navigation', { name: 'Main' });
+  const asTenant = (role: 'OWNER' | 'ADMIN' | 'VIEWER') => ({ subject: 'u', tenantId: 't', organizations: ['org-1'], roles: [role] });
+
+  it('lets an administrator reach the questionnaires, the runs and the people', () => {
+    renderRoutes(routes, { route: '/dashboard', auth: { principal: asTenant('ADMIN') } });
+    for (const label of ['Dashboard', 'Compare', 'Questionnaires', 'Assessment runs', 'People']) {
+      expect(within(nav()).getByRole('link', { name: label })).toBeInTheDocument();
+    }
+    expect(within(nav()).getByRole('link', { name: 'Questionnaires' })).toHaveAttribute('href', '/questionnaires');
+    expect(within(nav()).getByRole('link', { name: 'Assessment runs' })).toHaveAttribute('href', '/assessment-runs');
+  });
+
+  it('shows a viewer only what a viewer can use', () => {
+    renderRoutes(routes, { route: '/dashboard', auth: { principal: asTenant('VIEWER') } });
+    expect(within(nav()).getAllByRole('link').map((l) => l.textContent)).toEqual(['Dashboard', 'Compare']);
+  });
+
+  it('shows a respondent their assessments, with no organization to choose and no dashboard', () => {
+    const respondent = { subject: 'r', tenantId: 't', organizations: [], roles: [], respondent: true };
+    renderRoutes([{ path: '/', element: <AppLayout />, children: [{ path: 'respond', element: <p>my list</p> }] }], { route: '/respond', auth: { principal: respondent } });
+    expect(within(nav()).getAllByRole('link').map((l) => l.textContent)).toEqual(['My assessments']);
+    expect(screen.queryByLabelText('Organization')).not.toBeInTheDocument();
+    expect(screen.getByText('Respondent')).toBeInTheDocument();
   });
 });
 

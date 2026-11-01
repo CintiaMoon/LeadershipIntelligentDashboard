@@ -145,6 +145,92 @@
               "PLATFORM_ADMIN"
             ]
           }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "respondent-1",
+          "claims": {
+            "sub": "respondent-1-user",
+            "tenant_id": "demo-tenant",
+            "roles": [
+              "RESPONDENT"
+            ],
+            "email": "respondent1@demo.test"
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "respondent-2",
+          "claims": {
+            "sub": "respondent-2-user",
+            "tenant_id": "demo-tenant",
+            "roles": [
+              "RESPONDENT"
+            ],
+            "email": "respondent2@demo.test"
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "respondent-3",
+          "claims": {
+            "sub": "respondent-3-user",
+            "tenant_id": "demo-tenant",
+            "roles": [
+              "RESPONDENT"
+            ],
+            "email": "respondent3@demo.test"
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "respondent-4",
+          "claims": {
+            "sub": "respondent-4-user",
+            "tenant_id": "demo-tenant",
+            "roles": [
+              "RESPONDENT"
+            ],
+            "email": "respondent4@demo.test"
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "respondent-5",
+          "claims": {
+            "sub": "respondent-5-user",
+            "tenant_id": "demo-tenant",
+            "roles": [
+              "RESPONDENT"
+            ],
+            "email": "respondent5@demo.test"
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "respondent-6",
+          "claims": {
+            "sub": "respondent-6-user",
+            "tenant_id": "demo-tenant",
+            "roles": [
+              "RESPONDENT"
+            ],
+            "email": "respondent6@demo.test"
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "assess-admin",
+          "claims": {
+            "sub": "assess-admin-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-assess"
+            ],
+            "roles": [
+              "ADMIN"
+            ]
+          }
         }
       ]
     }

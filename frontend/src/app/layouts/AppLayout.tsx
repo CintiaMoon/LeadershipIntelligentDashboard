@@ -5,7 +5,7 @@ import { brand } from '@/brand';
 import { Badge } from '@/components/ui/Badge';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { Button } from '@/components/ui/Button';
-import { isPlatformAdmin } from '@/services/auth/principal';
+import { isPlatformAdmin, isRespondent } from '@/services/auth/principal';
 import { useSession } from '@/stores/session';
 import { useTheme } from '@/stores/theme';
 import { humanizeCode } from '@/utils/presentation';
@@ -20,6 +20,10 @@ const iconPaths: Record<NavIcon, string> = {
   dashboard: 'M4 4h6v7H4V4Zm10 0h6v4h-6V4ZM4 15h6v5H4v-5Zm10-3h6v8h-6v-8Z',
   compare: 'M7 4v16M17 4v16M3 8l4-4 4 4M13 16l4 4 4-4',
   tenants: 'M4 21V6l8-3 8 3v15M9 21v-5h6v5M8 9h2m4 0h2M8 12.5h2m4 0h2',
+  questionnaires: 'M7 3h8l4 4v14H7V3Zm7 0v5h5M10 12h6M10 16h6',
+  runs: 'M8 5v14l11-7L8 5Z',
+  people: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 4.5a3 3 0 0 1 0 6m2.5 9.5v-1a4.5 4.5 0 0 0-3-4.2',
+  answer: 'M5 4h14v16H5V4Zm3 5h8M8 13h8M8 17h5',
 };
 
 function NavGlyph({ icon }: { icon: NavIcon }) {
@@ -59,6 +63,7 @@ export function AppLayout() {
   const setOrganization = useSession((s) => s.setOrganization);
   const organizations = principal?.organizations ?? [];
   const platform = isPlatformAdmin(principal);
+  const respondent = isRespondent(principal);
 
   // Keep the selection valid for this user: default to the first organization, drop one the token does not list.
   useEffect(() => {
@@ -83,7 +88,7 @@ export function AppLayout() {
             </div>
           </div>
           <nav aria-label="Main" className="flex w-full min-w-0 items-center gap-1 overflow-x-auto lg:flex-col lg:items-stretch lg:overflow-visible">
-            {navItems(platform).map((item) => (
+            {navItems(principal).map((item) => (
               <NavLink key={item.to} to={item.to} className={navClass}>
                 <NavGlyph icon={item.icon} />
                 {item.label}
@@ -95,7 +100,7 @@ export function AppLayout() {
       <div className="min-w-0 flex-1">
         <header className="border-b border-line bg-sidebar">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
-            {!platform && (
+            {!platform && !respondent && (
               <label className="flex items-center gap-2 text-sm text-ink-soft">
                 <span>Organization</span>
                 <select
@@ -116,6 +121,7 @@ export function AppLayout() {
             <div className="ml-auto flex flex-wrap items-center gap-3">
               <div className="flex flex-wrap items-center gap-1.5" aria-label="Your roles">
                 {platform && <Badge tone="accent">Platform administrator</Badge>}
+                {respondent && <Badge tone="accent">Respondent</Badge>}
                 {principal?.roles.map((role) => (
                   <Badge key={role} tone="accent">
                     {humanizeCode(role)}

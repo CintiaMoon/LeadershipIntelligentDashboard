@@ -19,6 +19,8 @@ export const PERSONAS: Persona[] = [
   { id: 'viewer', label: 'Viewer', description: 'Reads results; evidence is redacted' },
   { id: 'org1-viewer', label: 'Viewer, one organization', description: 'Sees org-1 only' },
   { id: 'other-admin', label: 'Administrator of another tenant', description: 'Sees none of the demo data' },
+  { id: 'assess-admin', label: 'Assessments administrator', description: 'Administrator of a scratch organization for trying out questionnaires, people and runs' },
+  { id: 'respondent-1', label: 'Respondent', description: 'Answers the questionnaires assigned to them and sees nothing else' },
   { id: 'platform-admin', label: 'Platform administrator', description: 'Creates and lists tenants; sees no tenant data' },
   { id: 'sandbox-admin', label: 'Sandbox administrator', description: 'Sees the scratch organization used for trying out answers from teams' },
 ];

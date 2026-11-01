@@ -18,7 +18,7 @@ public final class RunViews {
     public record PersonView(UUID id, String teamId, String organizationId, String name, String email, boolean active) {
     }
 
-    public record RunSummary(UUID id, String name, String organizationId, String questionnaireId, String questionnaireName,
+    public record AssessmentRunSummary(UUID id, String name, String organizationId, String questionnaireId, String questionnaireName,
                              int questionnaireVersion, String status, LocalDate dueDate, Instant createdAt, Instant closedAt,
                              int participants, int submitted, String assessmentId, UUID scoringRunId) {
     }
@@ -33,7 +33,7 @@ public final class RunViews {
     /**
      * @param notice what the completion list can reveal in a small team (specv3.md Section 4.14); the interface shows it next to the list
      */
-    public record RunDetail(RunSummary run, List<TeamProgress> teams, List<ParticipantView> participants, String notice) {
+    public record AssessmentRunDetail(AssessmentRunSummary run, List<TeamProgress> teams, List<ParticipantView> participants, String notice) {
     }
 
     // ---------------- respondent ----------------

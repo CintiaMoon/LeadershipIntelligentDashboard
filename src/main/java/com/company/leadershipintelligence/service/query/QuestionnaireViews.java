@@ -15,11 +15,11 @@ public final class QuestionnaireViews {
     /**
      * @param state ARCHIVED, DRAFT (never published), PUBLISHED, or PUBLISHED_WITH_DRAFT (a newer draft is open)
      */
-    public record Summary(String id, String name, String state, boolean archived, Integer draftVersion, Integer publishedVersion,
+    public record QuestionnaireSummary(String id, String name, String state, boolean archived, Integer draftVersion, Integer publishedVersion,
                           Instant createdAt, Instant updatedAt, Instant publishedAt) {
     }
 
-    public record VersionInfo(int version, String status, Instant createdAt, Instant publishedAt, String publishedBy,
+    public record QuestionnaireVersionInfo(int version, String status, Instant createdAt, Instant publishedAt, String publishedBy,
                               UUID configurationVersionId) {
     }
 
@@ -28,20 +28,20 @@ public final class QuestionnaireViews {
      * show it while editing (empty for a published version). {@code notes} is set only when a questionnaire was just copied from the
      * platform default, and lists what the builder could not carry over.
      */
-    public record Detail(String id, String name, String state, boolean archived, int version, String versionStatus,
-                         QuestionnaireDocument document, List<String> problems, List<VersionInfo> versions, List<String> notes) {
+    public record QuestionnaireDetail(String id, String name, String state, boolean archived, int version, String versionStatus,
+                         QuestionnaireDocument document, List<String> problems, List<QuestionnaireVersionInfo> versions, List<String> notes) {
 
-        public Detail {
+        public QuestionnaireDetail {
             notes = notes == null ? List.of() : List.copyOf(notes);
         }
 
-        public Detail(String id, String name, String state, boolean archived, int version, String versionStatus,
-                      QuestionnaireDocument document, List<String> problems, List<VersionInfo> versions) {
+        public QuestionnaireDetail(String id, String name, String state, boolean archived, int version, String versionStatus,
+                      QuestionnaireDocument document, List<String> problems, List<QuestionnaireVersionInfo> versions) {
             this(id, name, state, archived, version, versionStatus, document, problems, versions, List.of());
         }
 
-        public Detail withNotes(List<String> notes) {
-            return new Detail(id, name, state, archived, version, versionStatus, document, problems, versions, notes);
+        public QuestionnaireDetail withNotes(List<String> notes) {
+            return new QuestionnaireDetail(id, name, state, archived, version, versionStatus, document, problems, versions, notes);
         }
     }
 }

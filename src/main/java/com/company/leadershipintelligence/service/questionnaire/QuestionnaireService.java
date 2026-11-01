@@ -12,9 +12,9 @@ import com.company.leadershipintelligence.service.command.Approval;
 import com.company.leadershipintelligence.service.command.Caller;
 import com.company.leadershipintelligence.service.command.ConfigurationTarget;
 import com.company.leadershipintelligence.service.query.ConfigurationVersionView;
-import com.company.leadershipintelligence.service.query.QuestionnaireViews.Detail;
-import com.company.leadershipintelligence.service.query.QuestionnaireViews.Summary;
-import com.company.leadershipintelligence.service.query.QuestionnaireViews.VersionInfo;
+import com.company.leadershipintelligence.service.query.QuestionnaireViews.QuestionnaireDetail;
+import com.company.leadershipintelligence.service.query.QuestionnaireViews.QuestionnaireSummary;
+import com.company.leadershipintelligence.service.query.QuestionnaireViews.QuestionnaireVersionInfo;
 import com.company.leadershipintelligence.service.query.ValidationResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,13 +57,13 @@ public class QuestionnaireService {
     }
 
     @Transactional(readOnly = true)
-    public List<Summary> list(Caller caller) {
+    public List<QuestionnaireSummary> list(Caller caller) {
         return store.list(tenant(caller)).stream().map(QuestionnaireService::summary).toList();
     }
 
     /** The open draft if there is one, else the latest published version; or exactly {@code version} when given. */
     @Transactional(readOnly = true)
-    public Detail get(Caller caller, String id, Integer version) {
+    public QuestionnaireDetail get(Caller caller, String id, Integer version) {
         String tenant = tenant(caller);
         QuestionnaireRow questionnaire = require(store.find(tenant, id), id);
         VersionRow shown = version != null
@@ -73,7 +73,7 @@ public class QuestionnaireService {
     }
 
     @Transactional
-    public Detail create(Caller caller, String name) {
+    public QuestionnaireDetail create(Caller caller, String name) {
         String tenant = tenant(caller);
         String cleanName = name == null || name.isBlank() ? null : name.trim();
         if (cleanName == null || cleanName.length() > 200) {
@@ -87,7 +87,7 @@ public class QuestionnaireService {
      * tenant's own override), as far as the builder can express it. What was left out is listed in {@code notes}. Nothing is published.
      */
     @Transactional
-    public Detail fromInitial(Caller caller, String name) {
+    public QuestionnaireDetail fromInitial(Caller caller, String name) {
         String tenant = tenant(caller);
         String cleanName = name == null || name.isBlank() ? null : name.trim();
         if (cleanName == null || cleanName.length() > 200) {
@@ -97,7 +97,7 @@ public class QuestionnaireService {
         return createFrom(caller, tenant, imported.document()).withNotes(imported.notes());
     }
 
-    private Detail createFrom(Caller caller, String tenant, QuestionnaireDocument document) {
+    private QuestionnaireDetail createFrom(Caller caller, String tenant, QuestionnaireDocument document) {
         QuestionnaireDocument tidy = QuestionnaireNormalizer.tidy(document);
         requireShape(tidy);
         if (tidy.name() == null) {
@@ -115,7 +115,7 @@ public class QuestionnaireService {
      * incomplete; only its shape is checked here and the publish checks are reported in {@code problems}.
      */
     @Transactional
-    public Detail saveDraft(Caller caller, String id, QuestionnaireDocument document) {
+    public QuestionnaireDetail saveDraft(Caller caller, String id, QuestionnaireDocument document) {
         String tenant = tenant(caller);
         QuestionnaireRow questionnaire = require(store.lock(tenant, id), id);
         requireOpen(questionnaire);
@@ -139,7 +139,7 @@ public class QuestionnaireService {
      * configuration lifecycle, all in one transaction. Any failure leaves nothing behind.
      */
     @Transactional
-    public Detail publish(Caller caller, String id) {
+    public QuestionnaireDetail publish(Caller caller, String id) {
         String tenant = tenant(caller);
         QuestionnaireRow questionnaire = require(store.lock(tenant, id), id);
         requireOpen(questionnaire);
@@ -167,7 +167,7 @@ public class QuestionnaireService {
 
     /** Hides the questionnaire from new use. Published layers stay active so past assessments can be explained and recalculated. */
     @Transactional
-    public Detail archive(Caller caller, String id) {
+    public QuestionnaireDetail archive(Caller caller, String id) {
         String tenant = tenant(caller);
         QuestionnaireRow questionnaire = require(store.lock(tenant, id), id);
         if (questionnaire.archivedAt() == null) {
@@ -178,7 +178,7 @@ public class QuestionnaireService {
 
     /** A new questionnaire with a copy of the current draft, or of the latest published version, as its first draft. */
     @Transactional
-    public Detail duplicate(Caller caller, String id) {
+    public QuestionnaireDetail duplicate(Caller caller, String id) {
         String tenant = tenant(caller);
         require(store.find(tenant, id), id);
         VersionRow source = store.draft(tenant, id).or(() -> store.latestPublished(tenant, id)).orElseThrow(() -> notFound(id));
@@ -227,20 +227,20 @@ public class QuestionnaireService {
         return new ScoringException(ScoringErrorCode.QUESTIONNAIRE_INVALID, message, details);
     }
 
-    private Detail detail(QuestionnaireRow questionnaire, VersionRow shown, List<VersionRow> versions) {
+    private QuestionnaireDetail detail(QuestionnaireRow questionnaire, VersionRow shown, List<VersionRow> versions) {
         QuestionnaireDocument document = read(shown.definition());
         boolean draft = "DRAFT".equals(shown.status());
         List<String> problems = draft ? QuestionnaireValidator.publishable(QuestionnaireNormalizer.tidy(document)) : List.of();
         Integer draftVersion = versions.stream().filter(v -> "DRAFT".equals(v.status())).map(VersionRow::version).findFirst().orElse(null);
         Integer publishedVersion = versions.stream().filter(v -> "PUBLISHED".equals(v.status())).map(VersionRow::version).findFirst().orElse(null);
-        return new Detail(questionnaire.id(), questionnaire.name(), state(questionnaire.archivedAt() != null, draftVersion, publishedVersion),
+        return new QuestionnaireDetail(questionnaire.id(), questionnaire.name(), state(questionnaire.archivedAt() != null, draftVersion, publishedVersion),
                 questionnaire.archivedAt() != null, shown.version(), shown.status(), document, problems,
-                versions.stream().map(v -> new VersionInfo(v.version(), v.status(), v.createdAt(), v.publishedAt(), v.publishedBy(),
+                versions.stream().map(v -> new QuestionnaireVersionInfo(v.version(), v.status(), v.createdAt(), v.publishedAt(), v.publishedBy(),
                         v.configurationVersionId())).toList());
     }
 
-    private static Summary summary(QuestionnaireListRow row) {
-        return new Summary(row.id(), row.name(), state(row.archivedAt() != null, row.draftVersion(), row.publishedVersion()),
+    private static QuestionnaireSummary summary(QuestionnaireListRow row) {
+        return new QuestionnaireSummary(row.id(), row.name(), state(row.archivedAt() != null, row.draftVersion(), row.publishedVersion()),
                 row.archivedAt() != null, row.draftVersion(), row.publishedVersion(), row.createdAt(), row.updatedAt(), row.publishedAt());
     }
 

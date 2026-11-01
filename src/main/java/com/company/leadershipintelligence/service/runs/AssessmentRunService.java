@@ -23,8 +23,8 @@ import com.company.leadershipintelligence.service.command.CalculateCommand;
 import com.company.leadershipintelligence.service.command.OrganizationScope;
 import com.company.leadershipintelligence.service.query.LayerRef;
 import com.company.leadershipintelligence.service.query.RunViews.ParticipantView;
-import com.company.leadershipintelligence.service.query.RunViews.RunDetail;
-import com.company.leadershipintelligence.service.query.RunViews.RunSummary;
+import com.company.leadershipintelligence.service.query.RunViews.AssessmentRunDetail;
+import com.company.leadershipintelligence.service.query.RunViews.AssessmentRunSummary;
 import com.company.leadershipintelligence.service.query.RunViews.TeamProgress;
 import com.company.leadershipintelligence.service.query.ScoringRunView;
 import com.company.leadershipintelligence.service.questionnaire.QuestionnaireDocument;
@@ -83,7 +83,7 @@ public class AssessmentRunService {
     }
 
     @Transactional(readOnly = true)
-    public List<RunSummary> list(TenantId tenant, OrganizationScope scope, String organizationId, String status) {
+    public List<AssessmentRunSummary> list(TenantId tenant, OrganizationScope scope, String organizationId, String status) {
         if (organizationId != null) {
             scope.require(organizationId);
         }
@@ -96,14 +96,14 @@ public class AssessmentRunService {
     }
 
     @Transactional
-    public RunDetail get(TenantId tenant, OrganizationScope scope, String actor, UUID id) {
+    public AssessmentRunDetail get(TenantId tenant, OrganizationScope scope, String actor, UUID id) {
         RunRow run = require(runs.run(tenant.value(), id), scope);
         audit.record(tenant.value(), actor, "RUN_PARTICIPANTS_READ", null, "{\"assessmentRunId\":\"" + id + "\"}", clock.instant());
         return detail(tenant, run);
     }
 
     @Transactional
-    public RunDetail start(TenantId tenant, OrganizationScope scope, String actor, String name, String organizationId, String questionnaireId,
+    public AssessmentRunDetail start(TenantId tenant, OrganizationScope scope, String actor, String name, String organizationId, String questionnaireId,
                            List<String> teamIds, LocalDate dueDate) {
         scope.require(organizationId);
         String cleanName = name == null ? "" : name.trim();
@@ -152,7 +152,7 @@ public class AssessmentRunService {
      * selected explicitly. A failure rolls everything back and leaves the run open.
      */
     @Transactional
-    public RunDetail close(TenantId tenant, OrganizationScope scope, String actor, UUID id) {
+    public AssessmentRunDetail close(TenantId tenant, OrganizationScope scope, String actor, UUID id) {
         RunRow run = require(runs.lockRun(tenant.value(), id), scope);
         if (!"OPEN".equals(run.status())) {
             throw new ScoringException(ScoringErrorCode.RUN_STATE, "the run is already closed", Map.of());
@@ -190,9 +190,9 @@ public class AssessmentRunService {
         return true;
     }
 
-    private RunDetail detail(TenantId tenant, RunRow run) {
+    private AssessmentRunDetail detail(TenantId tenant, RunRow run) {
         Map<String, String> names = new HashMap<>();
-        RunSummary summary = summary(tenant, run, names);
+        AssessmentRunSummary summary = summary(tenant, run, names);
         Map<String, Map<String, Integer>> counts = runs.counts(tenant.value(), run.id());
         List<TeamProgress> teams = new ArrayList<>();
         for (String teamId : runs.teamIdsOf(run.id())) {
@@ -205,10 +205,10 @@ public class AssessmentRunService {
         }
         List<ParticipantView> participants = runs.participants(tenant.value(), run.id()).stream()
                 .map((ParticipantRow p) -> new ParticipantView(p.teamId(), p.personName(), p.email(), p.status())).toList();
-        return new RunDetail(summary, teams, participants, COMPLETION_NOTICE);
+        return new AssessmentRunDetail(summary, teams, participants, COMPLETION_NOTICE);
     }
 
-    private RunSummary summary(TenantId tenant, RunRow run, Map<String, String> names) {
+    private AssessmentRunSummary summary(TenantId tenant, RunRow run, Map<String, String> names) {
         String name = names.computeIfAbsent(run.questionnaireId(),
                 q -> questionnaires.find(tenant.value(), q).map(QuestionnaireRow::name).orElse(q));
         int total = 0;
@@ -221,7 +221,7 @@ public class AssessmentRunService {
                 }
             }
         }
-        return new RunSummary(run.id(), run.name(), run.organizationId(), run.questionnaireId(), name, run.questionnaireVersion(), run.status(),
+        return new AssessmentRunSummary(run.id(), run.name(), run.organizationId(), run.questionnaireId(), name, run.questionnaireVersion(), run.status(),
                 run.dueDate(), run.createdAt(), run.closedAt(), total, submitted, run.assessmentId(), run.scoringRunId());
     }
 

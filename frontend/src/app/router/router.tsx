@@ -1,9 +1,14 @@
+import type { ComponentType } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { CallbackPage } from '@/features/auth/CallbackPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { NotFoundPage } from '@/features/errors/NotFoundPage';
-import { HomeRedirect, RequireAuth, RequirePlatformAdmin } from './guards';
+import { HomeRedirect, RequireAuth, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
+
+/** Wraps a page so that only owners and administrators see it; the backend refuses everyone else as well. */
+const manager = (Page: ComponentType) => function ManagerPage() { return (<RequireManager><Page /></RequireManager>); };
+const respondent = (Page: ComponentType) => function RespondentPage() { return (<RequireRespondent><Page /></RequireRespondent>); };
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -38,6 +43,17 @@ export const routes: RouteObject[] = [
           return { Component: () => (<RequirePlatformAdmin><CreateTenantPage /></RequirePlatformAdmin>) };
         },
       },
+      // questionnaires, the roster and assessment runs: owners and administrators (decisions D47, D48, D50)
+      { path: 'questionnaires', lazy: async () => ({ Component: manager((await import('@/features/questionnaires/QuestionnaireListPage')).QuestionnaireListPage) }) },
+      { path: 'questionnaires/new', lazy: async () => ({ Component: manager((await import('@/features/questionnaires/NewQuestionnairePage')).NewQuestionnairePage) }) },
+      { path: 'questionnaires/:questionnaireId', lazy: async () => ({ Component: manager((await import('@/features/questionnaires/BuilderPage')).BuilderPage) }) },
+      { path: 'people', lazy: async () => ({ Component: manager((await import('@/features/roster/PeoplePage')).PeoplePage) }) },
+      { path: 'assessment-runs', lazy: async () => ({ Component: manager((await import('@/features/runs/RunListPage')).RunListPage) }) },
+      { path: 'assessment-runs/new', lazy: async () => ({ Component: manager((await import('@/features/runs/StartRunPage')).StartRunPage) }) },
+      { path: 'assessment-runs/:runId', lazy: async () => ({ Component: manager((await import('@/features/runs/RunDetailPage')).RunDetailPage) }) },
+      // the respondent flow
+      { path: 'respond', lazy: async () => ({ Component: respondent((await import('@/features/respond/MyRunsPage')).MyRunsPage) }) },
+      { path: 'respond/:runId', lazy: async () => ({ Component: respondent((await import('@/features/respond/RespondPage')).RespondPage) }) },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
