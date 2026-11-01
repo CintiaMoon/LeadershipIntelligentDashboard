@@ -13,10 +13,14 @@ export interface Principal {
   roles: Role[];
   /** The platform administrator creates and lists tenants and sees no tenant data. */
   platformAdmin?: boolean;
+  /** A respondent answers the questionnaires assigned to them and reaches nothing else (decision D48). */
+  respondent?: boolean;
 }
 
 /** The role claim that marks the platform administrator. It is not one of the tenant roles. */
 export const PLATFORM_ADMIN = 'PLATFORM_ADMIN';
+/** The role claim of a person who answers questionnaires. It is not one of the tenant roles. */
+export const RESPONDENT = 'RESPONDENT';
 
 function base64UrlDecode(part: string): string {
   const padded = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=');
@@ -37,7 +41,8 @@ export function decodePrincipal(accessToken: string | null | undefined): Princip
     const roles = Array.isArray(payload['roles'])
       ? payload['roles'].filter((r): r is Role => typeof r === 'string' && (ROLES as readonly string[]).includes(r))
       : [];
-    return { subject: typeof payload['sub'] === 'string' ? payload['sub'] : '', tenantId, organizations: orgs, roles, platformAdmin };
+    const respondent = Array.isArray(payload['roles']) && payload['roles'].includes(RESPONDENT);
+    return { subject: typeof payload['sub'] === 'string' ? payload['sub'] : '', tenantId, organizations: orgs, roles, platformAdmin, respondent };
   } catch {
     return null;
   }
@@ -57,3 +62,7 @@ export const canSeeEvidence = (p: Principal | null) => hasAny(p, ['OWNER', 'ADMI
 export const isOperator = (p: Principal | null) => hasAny(p, ['OWNER', 'ADMIN']);
 /** Creating and listing tenants. The backend decides; this only shapes the navigation. */
 export const isPlatformAdmin = (p: Principal | null) => p?.platformAdmin === true;
+/** Questionnaires, the roster and assessment runs (decisions D47, D48). The backend decides; this only shapes the navigation. */
+export const canManageAssessments = (p: Principal | null) => hasAny(p, ['OWNER', 'ADMIN']);
+/** Answering questionnaires. */
+export const isRespondent = (p: Principal | null) => p?.respondent === true;

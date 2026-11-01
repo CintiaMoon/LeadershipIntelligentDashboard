@@ -1,6 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type AssessmentListParams, type RunListParams, type TrendParams } from '@/services/api/endpoints';
-import type { CalculateRequest, CreateTenantRequest, RecalculateRequest } from '@/types/api';
+import type {
+  CalculateRequest,
+  CreatePersonRequest,
+  CreateTenantRequest,
+  CreateTeamRequest,
+  QuestionnaireDocument,
+  RecalculateRequest,
+  SaveDraftRequest,
+  StartRunRequest,
+  UpdatePersonRequest,
+} from '@/types/api';
 import { queryKeys } from './keys';
 
 // A stored run never changes (history is immutable), so run-scoped reads are cached for a long time.
@@ -78,4 +88,98 @@ export function useCreateTenant() {
 export function useRecalculate() {
   const invalidate = useInvalidateOnRun();
   return useMutation({ mutationFn: (v: { assessmentId: string; request?: RecalculateRequest }) => api.recalculate(v.assessmentId, v.request), onSuccess: invalidate });
+}
+
+// ---------------- questionnaire library and builder (decisions D47, D50) ----------------
+
+export const useQuestionnaires = () => useQuery({ queryKey: queryKeys.questionnaires, queryFn: ({ signal }) => api.questionnaires(signal) });
+
+export const useQuestionnaire = (id: string | undefined, version?: number) =>
+  useQuery({ queryKey: queryKeys.questionnaire(id ?? '', version), queryFn: ({ signal }) => api.questionnaire(id as string, version, signal), enabled: !!id });
+
+/** Any change to a questionnaire changes the library list and that questionnaire. */
+function useQuestionnaireMutation<V, R extends { id?: string }>(fn: (v: V) => Promise<R>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (detail) => {
+      // the response is the questionnaire as it is now, so the page shows it without another round trip
+      if (detail.id) client.setQueryData(queryKeys.questionnaire(detail.id), detail);
+      return Promise.all([client.invalidateQueries({ queryKey: ['lis', 'questionnaires'] }), client.invalidateQueries({ queryKey: ['lis', 'questionnaire'] })]);
+    },
+  });
+}
+
+export const useCreateQuestionnaire = () => useQuestionnaireMutation((v: { name: string; fromInitial: boolean }) => (v.fromInitial ? api.questionnaireFromInitial(v.name) : api.createQuestionnaire(v.name)));
+export const useSaveQuestionnaire = () => useQuestionnaireMutation((v: { id: string; document: QuestionnaireDocument }) => api.saveQuestionnaire(v.id, v.document));
+export const usePublishQuestionnaire = () => useQuestionnaireMutation((id: string) => api.publishQuestionnaire(id));
+export const useArchiveQuestionnaire = () => useQuestionnaireMutation((id: string) => api.archiveQuestionnaire(id));
+export const useDuplicateQuestionnaire = () => useQuestionnaireMutation((id: string) => api.duplicateQuestionnaire(id));
+
+// ---------------- roster and assessment runs (decision D48) ----------------
+
+export const useTeams = (organizationId?: string, enabled = true) =>
+  useQuery({ queryKey: queryKeys.teams(organizationId), queryFn: ({ signal }) => api.teams(organizationId, signal), enabled });
+
+export const usePeople = (teamId?: string, enabled = true) =>
+  useQuery({ queryKey: queryKeys.people(teamId), queryFn: ({ signal }) => api.people(teamId, signal), enabled });
+
+/** A team change shows in the team list (people counts) and a person change in both lists. */
+function useRosterMutation<V, R>(fn: (v: V) => Promise<R>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: queryKeys.teamsAll }), client.invalidateQueries({ queryKey: queryKeys.peopleAll })]),
+  });
+}
+
+export const useCreateTeam = () => useRosterMutation((request: CreateTeamRequest) => api.createTeam(request));
+export const useRenameTeam = () => useRosterMutation((v: { teamId: string; name: string }) => api.renameTeam(v.teamId, v.name));
+export const useCreatePerson = () => useRosterMutation((request: CreatePersonRequest) => api.createPerson(request));
+export const useUpdatePerson = () => useRosterMutation((v: { personId: string; request: UpdatePersonRequest }) => api.updatePerson(v.personId, v.request));
+
+export const useAssessmentRuns = (params: { organizationId?: string; status?: string } = {}, enabled = true) =>
+  useQuery({ queryKey: queryKeys.assessmentRuns(params), queryFn: ({ signal }) => api.assessmentRuns(params, signal), enabled });
+
+export const useAssessmentRun = (id: string | undefined) =>
+  useQuery({ queryKey: queryKeys.assessmentRun(id ?? ''), queryFn: ({ signal }) => api.assessmentRun(id as string, signal), enabled: !!id });
+
+export function useStartRun() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (request: StartRunRequest) => api.startRun(request), onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.assessmentRunsAll }) });
+}
+
+/** Closing a run scores it, so every result list and series changes as well. */
+export function useCloseRun() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => api.closeRun(id), onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.all }) });
+}
+
+// ---------------- the respondent flow (decision D48) ----------------
+
+export const useMyRuns = (enabled = true) => useQuery({ queryKey: queryKeys.myRuns, queryFn: ({ signal }) => api.myRuns(signal), enabled });
+
+export const useMyRun = (id: string | undefined) =>
+  useQuery({ queryKey: queryKeys.myRun(id ?? ''), queryFn: ({ signal }) => api.myRun(id as string, signal), enabled: !!id });
+
+export function useSaveDraft() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; request: SaveDraftRequest }) => api.saveDraft(v.id, v.request),
+    onSuccess: (detail, v) => {
+      client.setQueryData(queryKeys.myRun(v.id), detail);
+      return client.invalidateQueries({ queryKey: queryKeys.myRuns });
+    },
+  });
+}
+
+export function useSubmitAnswers() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.submitAnswers(id),
+    onSuccess: (detail, id) => {
+      client.setQueryData(queryKeys.myRun(id), detail);
+      return client.invalidateQueries({ queryKey: queryKeys.myRuns });
+    },
+  });
 }

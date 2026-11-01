@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository State
 
 The specifications and decisions are complete (see `docs/implementation/`).
-Implementation is at **phase 15 done: engine, configuration, run persistence, the REST API with JWT security, integration tests, observability (metrics, ECS logs, access audit) and the read endpoints for the frontend; reports are blocked (F13); answers from members, teams and the organization are supported end to end (decision D45, Flyway V1-V6); the frontend (`frontend/`, React + Vite) is complete through phase 5 (foundation, executive dashboard, explainability pages, end-to-end integration, quality and release readiness; see `docs/release/`); see `docs/frontend/DTO_VIEW_MAPPING.md`** (see the plan): the Maven project (`pom.xml`, Java 21
+Implementation is at **phase 15 done: engine, configuration, run persistence, the REST API with JWT security, integration tests, observability (metrics, ECS logs, access audit) and the read endpoints for the frontend; reports are blocked (F13); answers from members, teams and the organization are supported end to end (decision D45); questionnaires authored in a builder and published as tenant template layers, a roster of teams and people, assessment runs and an anonymous respondent flow are built end to end (decisions D47 to D51, `docs/implementation/QUESTIONNAIRES_PROPOSAL.md`, Flyway V1-V9); the frontend (`frontend/`, React + Vite) is complete through phase 5 (foundation, executive dashboard, explainability pages, end-to-end integration, quality and release readiness; see `docs/release/`) and carries the questionnaire, people, run and respondent screens in a restyled dark/light interface; see `docs/frontend/DTO_VIEW_MAPPING.md`** (see the plan): the Maven project (`pom.xml`, Java 21
 via `--release 21`, Spring Boot 3.5), the package skeleton under
 `src/main/java/com/company/leadershipintelligence/` and an architecture
-test exist. No git history yet.
+test exist.
 
 Commands (Maven 3.9, JDK 21+; integration tests need Docker):
 
@@ -435,6 +435,18 @@ No request may contain scoring configuration, weights, or a trusted
 tenant/organization override. A client-supplied `questionType` is only
 validated against the configured definition. Optional `Idempotency-Key`
 header on scoring requests. Details: `docs/implementation/API_CONTRACT.md`.
+
+## Questionnaires, Roster, Runs and Respondents
+
+Owners and administrators author questionnaires in the builder (`/api/v1/questionnaires`); publishing generates a
+validated TEMPLATE layer through the ordinary configuration lifecycle in one transaction, and the questionnaire id is the
+template id. Teams and people (`/api/v1/teams`, `/people`) form the roster; an assessment run (`/api/v1/runs`) pins a
+published version and its configuration version and snapshots one participant per active person. Respondents hold the
+`RESPONDENT` role (deliberately NOT in the `Role` enum, like `PLATFORM_ADMIN`), are matched to the roster by the `email`
+claim, and reach only `/api/v1/respond/**`. Submitted answers are stored with the team and the question only (no person,
+no time, random id; a test asserts the columns); closing a run scores them once as MEMBER answers with the pinned
+configuration. Free text is collected and never scored and is not part of the generated layer. Never add a column that
+links an answer to a person, and keep the completion list free of answers.
 
 ## Platform Administration
 

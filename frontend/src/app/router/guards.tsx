@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/app/providers/auth-context';
 import { LoadingState } from '@/components/ui/StateViews';
 import { EmptyState } from '@/components/ui/StateViews';
-import { isPlatformAdmin, type Principal } from '@/services/auth/principal';
+import { canManageAssessments, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
 
 /** Anonymous visitors are sent to the login page and brought back afterwards. */
 export function RequireAuth({ children }: { children: ReactNode }) {
@@ -40,8 +40,27 @@ export function RequirePlatformAdmin({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Where a signed-in user lands: a platform administrator has no organizations, so the tenant list comes first. */
+/** Questionnaires, the roster and assessment runs are for owners and administrators; the backend refuses everyone else as well. */
+export function RequireManager({ children }: { children: ReactNode }) {
+  const { principal } = useAuth();
+  if (!canManageAssessments(principal)) {
+    return <EmptyState title="Only for owners and administrators" description="Building questionnaires, managing people and running assessments is limited to owners and administrators. Ask one of them if you need this." />;
+  }
+  return <>{children}</>;
+}
+
+/** Answering questionnaires is for respondents, who reach nothing else. */
+export function RequireRespondent({ children }: { children: ReactNode }) {
+  const { principal } = useAuth();
+  if (!isRespondent(principal)) {
+    return <EmptyState title="Only for respondents" description="This is where people answer the questionnaires they have been asked to complete." />;
+  }
+  return <>{children}</>;
+}
+
+/** Where a signed-in user lands: a platform administrator has no organizations and a respondent no dashboard. */
 export function HomeRedirect() {
   const { principal } = useAuth();
-  return <Navigate to={isPlatformAdmin(principal) ? '/platform/tenants' : '/dashboard'} replace />;
+  if (isPlatformAdmin(principal)) return <Navigate to="/platform/tenants" replace />;
+  return <Navigate to={isRespondent(principal) ? '/respond' : '/dashboard'} replace />;
 }

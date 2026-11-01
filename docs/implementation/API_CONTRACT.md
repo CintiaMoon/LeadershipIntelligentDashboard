@@ -239,3 +239,50 @@ Stored answers: a selection is kept as a sorted set, and the input hash ignores 
 
 Configuration layers: an object `{"$replace": X}` replaces what lower layers have for that key instead of merging (specv3 23.3, decision D47); it also works as a whole layer. Nothing uses it yet in the product; the questionnaire builder (phase 2) will.
 
+
+## 15. As implemented (questionnaire library: decisions D47, D50)
+
+All endpoints are tenant-scoped (tenant from the token only) and reachable by `OWNER` and `ADMIN` only, for reads as well as writes. A questionnaire of another tenant answers 404 `QUESTIONNAIRE_NOT_FOUND`. Questionnaire content is never logged.
+
+| Method and path | Purpose | Notes |
+|---|---|---|
+| `GET /api/v1/questionnaires` | list, newest first | `state`: `DRAFT`, `PUBLISHED`, `PUBLISHED_WITH_DRAFT`, `ARCHIVED` |
+| `POST /api/v1/questionnaires` | create an empty questionnaire with a first draft | body `{name}`; 201 |
+| `POST /api/v1/questionnaires/from-initial` | create a draft copied from the configuration that applies to the tenant | body `{name}`; 201; `notes` lists what the builder could not carry over |
+| `GET /api/v1/questionnaires/{id}?version=` | the open draft, else the latest published version, or exactly `version` | `problems` lists what blocks publishing a draft; `versions` lists every version |
+| `PUT /api/v1/questionnaires/{id}` | save the open draft; opens the next draft when the latest version is published | body is the builder document; unknown fields are rejected (400); a draft may be incomplete, only its shape is checked (422 `QUESTIONNAIRE_INVALID`) |
+| `POST /api/v1/questionnaires/{id}/publish` | publish the open draft as an active TEMPLATE layer | 422 `QUESTIONNAIRE_INVALID` with every problem as `details.problem01..`; 409 `QUESTIONNAIRE_STATE` without an open draft or when archived |
+| `POST /api/v1/questionnaires/{id}/archive` | hide from new use (idempotent) | the active layer stays |
+| `POST /api/v1/questionnaires/{id}/duplicate` | new questionnaire with a copy as its first draft | 201 |
+
+The builder document is `{name, description, questions[], rules[]}`. A question has `id` (assigned `Q01..` when blank), `kind` (`SINGLE_CHOICE`, `MULTI_CHOICE`, `RATING`, `LIKERT`, `NPS`, `NUMERIC`, `YES_NO`, `FREE_TEXT`), `text`, optional `title` and `help`, `required`, `dimension` (null means collected, not mapped), `weight`, `higherIsBetter`, `options[{key, label, score?}]`, `points`, `labels`, `min`, `max` and `desirableAnswer` (`YES`/`NO`). A rule has `id` (assigned `X-1..`), `name`, `description`, `explanation`, `severity`, `condition` (`op`, `conditions`, `condition`, `question` or `dimension`, `value`, `low`, `high`, `values`), `minimumSignals`, `minimumConfidence`, an optional `penalty` (`target`, `strategy`, `amount`, `stackingPolicy`, `cumulativeCap`, `category`, `priority`) and an optional `recommendation` (`title`, `description`, `priority`). The questionnaire id is also the template id for `POST /calculate`. Choices made in phase 2 are listed in `QUESTIONNAIRES_PROPOSAL.md` section 9.
+
+## 16. As implemented (roster, runs and the respondent flow: decision D48)
+
+Errors: `ROSTER_NOT_FOUND` and `RUN_NOT_FOUND` (404), `ROSTER_INVALID` and `RUN_INVALID` (422), `ROSTER_CONFLICT` and `RUN_STATE` (409). A team, person or run of another tenant, or of an organization outside the token, looks like a missing one.
+
+**Administrators (OWNER, ADMIN)**
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/v1/teams?organizationId=` | teams with the number of active people |
+| `POST /api/v1/teams` `{organizationId, name}` | create a team (201); duplicate name in the organization is 409 |
+| `PUT /api/v1/teams/{teamId}` `{name}` | rename |
+| `GET /api/v1/people?teamId=` | the roster (the read is audited) |
+| `POST /api/v1/people` `{teamId, name, email}` | add a person (201); the e-mail is stored lower-cased and is unique per tenant |
+| `PUT /api/v1/people/{personId}` `{teamId, name, email, active}` | replace; people are deactivated, never deleted |
+| `GET /api/v1/runs?organizationId=&status=OPEN\|CLOSED` | runs, newest first |
+| `POST /api/v1/runs` `{name, organizationId, questionnaireId, teamIds, dueDate?}` | start a run on the latest published version (201); one participant per active person of the teams |
+| `GET /api/v1/runs/{runId}` | progress per team and the participant list with their status; never an answer; the read is audited; carries the notice about small teams |
+| `POST /api/v1/runs/{runId}/close` | score the stored answers once as member answers with the pinned configuration; 409 when already closed or when nothing was submitted |
+
+**Respondents (role RESPONDENT, matched by the token e-mail; nothing else is reachable)**
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/v1/respond/runs` | my runs |
+| `GET /api/v1/respond/runs/{runId}` | the questions (no dimension, weight, direction, desirable answer or option score), my status and my draft |
+| `PUT /api/v1/respond/runs/{runId}/draft` `{answers:[{questionId, answer}]}` | save answers; a null or empty answer removes one; every answer is checked against its question (422 `RUN_INVALID`) |
+| `POST /api/v1/respond/runs/{runId}/submit` | store my answers with my team only and delete my draft; 422 lists the required questions still open (`details.missing01..`); 409 when already submitted or the run is closed |
+
+Answer shapes: rating, Likert, score and number questions take a JSON number; yes/no a boolean; single choice an option key; multiple choice a list of option keys; free text a string.

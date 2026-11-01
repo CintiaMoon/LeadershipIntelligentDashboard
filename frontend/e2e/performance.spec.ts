@@ -8,7 +8,7 @@ const KB = 1024;
 test.describe('performance budgets', () => {
   test('the login page downloads little JavaScript and paints quickly', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Leadership Intelligence', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Leadership Intelligent Dashboard', level: 1 })).toBeVisible();
     const { js, count, fcp } = await page.evaluate(() => {
       const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
       const scripts = resources.filter((r) => r.initiatorType === 'script' || r.name.endsWith('.js'));

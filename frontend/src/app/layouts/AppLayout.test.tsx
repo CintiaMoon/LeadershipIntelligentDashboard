@@ -1,13 +1,19 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { brand } from '@/brand';
 import { useSession } from '@/stores/session';
+import { useTheme } from '@/stores/theme';
 import { renderRoutes } from '@/tests/utils';
 import { AppLayout } from './AppLayout';
 
 const routes = [{ path: '/', element: <AppLayout />, children: [{ path: 'dashboard', element: <p>page body</p> }] }];
 
-beforeEach(() => useSession.setState({ organizationId: null }));
+beforeEach(() => {
+  useSession.setState({ organizationId: null });
+  window.localStorage.clear();
+  useTheme.getState().setTheme('dark');
+});
 
 describe('AppLayout', () => {
   it('lists the organizations of the token and selects the first one', async () => {
@@ -42,6 +48,56 @@ describe('AppLayout', () => {
     renderRoutes(routes, { route: '/dashboard' });
     expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main');
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+  });
+});
+
+describe('AppLayout appearance', () => {
+  it('shows the brand name and tagline from the one constant', () => {
+    renderRoutes(routes, { route: '/dashboard' });
+    expect(screen.getByText(brand.name)).toBeInTheDocument();
+    expect(screen.getByText(brand.tagline)).toBeInTheDocument();
+  });
+
+  it('puts the navigation in a sidebar and the controls in a top bar', () => {
+    renderRoutes(routes, { route: '/dashboard' });
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByRole('navigation', { name: 'Main' }));
+    expect(screen.getByRole('banner')).toContainElement(screen.getByLabelText('Organization'));
+  });
+
+  it('switches between the dark and the light theme with a labelled button', async () => {
+    renderRoutes(routes, { route: '/dashboard' });
+    expect(document.documentElement).not.toHaveAttribute('data-theme');
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to light theme' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
+    expect(document.documentElement).not.toHaveAttribute('data-theme');
+  });
+});
+
+describe('AppLayout navigation by role', () => {
+  const nav = () => screen.getByRole('navigation', { name: 'Main' });
+  const asTenant = (role: 'OWNER' | 'ADMIN' | 'VIEWER') => ({ subject: 'u', tenantId: 't', organizations: ['org-1'], roles: [role] });
+
+  it('lets an administrator reach the questionnaires, the runs and the people', () => {
+    renderRoutes(routes, { route: '/dashboard', auth: { principal: asTenant('ADMIN') } });
+    for (const label of ['Dashboard', 'Compare', 'Questionnaires', 'Assessment runs', 'People']) {
+      expect(within(nav()).getByRole('link', { name: label })).toBeInTheDocument();
+    }
+    expect(within(nav()).getByRole('link', { name: 'Questionnaires' })).toHaveAttribute('href', '/questionnaires');
+    expect(within(nav()).getByRole('link', { name: 'Assessment runs' })).toHaveAttribute('href', '/assessment-runs');
+  });
+
+  it('shows a viewer only what a viewer can use', () => {
+    renderRoutes(routes, { route: '/dashboard', auth: { principal: asTenant('VIEWER') } });
+    expect(within(nav()).getAllByRole('link').map((l) => l.textContent)).toEqual(['Dashboard', 'Compare']);
+  });
+
+  it('shows a respondent their assessments, with no organization to choose and no dashboard', () => {
+    const respondent = { subject: 'r', tenantId: 't', organizations: [], roles: [], respondent: true };
+    renderRoutes([{ path: '/', element: <AppLayout />, children: [{ path: 'respond', element: <p>my list</p> }] }], { route: '/respond', auth: { principal: respondent } });
+    expect(within(nav()).getAllByRole('link').map((l) => l.textContent)).toEqual(['My assessments']);
+    expect(screen.queryByLabelText('Organization')).not.toBeInTheDocument();
+    expect(screen.getByText('Respondent')).toBeInTheDocument();
   });
 });
 

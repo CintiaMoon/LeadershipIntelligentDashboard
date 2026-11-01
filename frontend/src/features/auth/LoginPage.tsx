@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/app/providers/auth-context';
+import { brand } from '@/brand';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PERSONAS } from '@/services/auth/oidc';
@@ -27,10 +29,8 @@ export function LoginPage() {
     <main className="mx-auto grid min-h-screen max-w-xl place-items-center px-4 py-12">
       <div className="w-full space-y-6">
         <div className="text-center">
-          <span aria-hidden="true" className="mx-auto grid size-12 place-items-center rounded-xl bg-accent text-lg font-bold text-white">
-            LI
-          </span>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight">Leadership Intelligence</h1>
+          <BrandMark className="mx-auto size-12" />
+          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight">{brand.productName}</h1>
           <p className="mt-1 text-sm text-ink-soft">An organizational diagnostic, not an individual performance rating.</p>
         </div>
         <Card className="p-6">

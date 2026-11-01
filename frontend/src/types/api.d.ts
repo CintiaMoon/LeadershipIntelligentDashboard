@@ -4,6 +4,231 @@
  */
 
 export interface paths {
+    "/api/v1/teams/{teamId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rename a team */
+        put: operations["renameTeam"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/respond/runs/{runId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save answers into my draft; a null or empty answer removes it */
+        put: operations["saveDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A questionnaire: its open draft, else its latest published version, or the version asked for */
+        get: operations["get"];
+        /** Save the open draft (opens the next draft when the latest version is published) */
+        put: operations["save"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/people/{personId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change a person team, name, e-mail address or active flag */
+        put: operations["updatePerson"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Teams of the caller organizations, optionally of one organization */
+        get: operations["teams"];
+        put?: never;
+        /** Create a team in an organization */
+        post: operations["createTeam"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs of the caller organizations, newest first */
+        get: operations["list"];
+        put?: never;
+        /** Start a run: pin the latest published version of a questionnaire for some teams of an organization */
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{runId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a run: score the stored answers once with the pinned configuration */
+        post: operations["close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/respond/runs/{runId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit my answers: they are stored with my team only and my draft is deleted */
+        post: operations["submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tenant's questionnaires, newest first */
+        get: operations["list_1"];
+        put?: never;
+        /** Create an empty questionnaire with a first draft */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish the open draft as an active template layer; 422 lists everything that blocks it */
+        post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A new questionnaire with a copy of this one as its first draft */
+        post: operations["duplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide the questionnaire from new use (past assessments stay explainable) */
+        post: operations["archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires/from-initial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a questionnaire whose first draft is a copy of the platform default; the notes list what the builder could not carry over */
+        post: operations["fromInitial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/tenants": {
         parameters: {
             query?: never;
@@ -12,10 +237,28 @@ export interface paths {
             cookie?: never;
         };
         /** Every tenant (platform administrators only; the read is audited) */
-        get: operations["list"];
+        get: operations["list_2"];
         put?: never;
         /** Create a tenant (platform administrators only; audited) */
-        post: operations["create"];
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** People on the roster, optionally of one team (the read is audited) */
+        get: operations["people"];
+        put?: never;
+        /** Add a person to a team */
+        post: operations["createPerson"];
         delete?: never;
         options?: never;
         head?: never;
@@ -261,6 +504,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A run with the progress of each team and who has not finished (the read is audited) */
+        get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/respond/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The runs I am asked to answer */
+        get: operations["runs_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/respond/runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A run I am asked to answer: its questions (without any scoring detail) and my draft */
+        get: operations["run_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organizationId}/trends": {
         parameters: {
             query?: never;
@@ -333,6 +627,230 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RenameTeam: {
+            name: string;
+        };
+        TeamView: {
+            id?: string;
+            organizationId?: string;
+            name?: string;
+            /** Format: int32 */
+            activePeople?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        DraftAnswer: {
+            questionId: string;
+            answer?: components["schemas"]["JsonNode"];
+        };
+        JsonNode: unknown;
+        SaveDraft: {
+            answers: components["schemas"]["DraftAnswer"][];
+        };
+        OptionView: {
+            key?: string;
+            label?: string;
+        };
+        RespondentQuestion: {
+            id?: string;
+            kind?: string;
+            title?: string;
+            text?: string;
+            help?: string;
+            required?: boolean;
+            options?: components["schemas"]["OptionView"][];
+            labels?: string[];
+            min?: number;
+            max?: number;
+        };
+        RespondentRunDetail: {
+            /** Format: uuid */
+            runId?: string;
+            name?: string;
+            questionnaireName?: string;
+            /** Format: date */
+            dueDate?: string;
+            runStatus?: string;
+            myStatus?: string;
+            questions?: components["schemas"]["RespondentQuestion"][];
+            answers?: {
+                [key: string]: unknown;
+            };
+        };
+        ConditionSpec: {
+            op?: string;
+            conditions?: unknown[];
+            condition?: unknown;
+            question?: string;
+            dimension?: string;
+            value?: number;
+            low?: number;
+            high?: number;
+            values?: number[];
+        };
+        OptionSpec: {
+            key?: string;
+            label?: string;
+            score?: number;
+        };
+        PenaltySpec: {
+            target?: string;
+            strategy?: string;
+            amount?: number;
+            stackingPolicy?: string;
+            cumulativeCap?: number;
+            category?: string;
+            /** Format: int32 */
+            priority?: number;
+        };
+        QuestionSpec: {
+            id?: string;
+            /** @enum {string} */
+            kind?: "SINGLE_CHOICE" | "MULTI_CHOICE" | "RATING" | "LIKERT" | "NPS" | "NUMERIC" | "YES_NO" | "FREE_TEXT";
+            title?: string;
+            text?: string;
+            help?: string;
+            required?: boolean;
+            dimension?: string;
+            weight?: number;
+            higherIsBetter?: boolean;
+            options?: components["schemas"]["OptionSpec"][];
+            /** Format: int32 */
+            points?: number;
+            labels?: string[];
+            min?: number;
+            max?: number;
+            desirableAnswer?: string;
+        };
+        QuestionnaireDocument: {
+            name?: string;
+            description?: string;
+            questions?: components["schemas"]["QuestionSpec"][];
+            rules?: components["schemas"]["RuleSpec"][];
+        };
+        RecommendationSpec: {
+            title?: string;
+            description?: string;
+            /** Format: int32 */
+            priority?: number;
+        };
+        RuleSpec: {
+            id?: string;
+            name?: string;
+            description?: string;
+            explanation?: string;
+            severity?: string;
+            enabled?: boolean;
+            condition?: components["schemas"]["ConditionSpec"];
+            /** Format: int32 */
+            minimumSignals?: number;
+            minimumConfidence?: number;
+            penalty?: components["schemas"]["PenaltySpec"];
+            recommendation?: components["schemas"]["RecommendationSpec"];
+        };
+        QuestionnaireDetail: {
+            id?: string;
+            name?: string;
+            state?: string;
+            archived?: boolean;
+            /** Format: int32 */
+            version?: number;
+            versionStatus?: string;
+            document?: components["schemas"]["QuestionnaireDocument"];
+            problems?: string[];
+            versions?: components["schemas"]["QuestionnaireVersionInfo"][];
+            notes?: string[];
+        };
+        QuestionnaireVersionInfo: {
+            /** Format: int32 */
+            version?: number;
+            status?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            publishedAt?: string;
+            publishedBy?: string;
+            /** Format: uuid */
+            configurationVersionId?: string;
+        };
+        UpdatePerson: {
+            teamId: string;
+            name: string;
+            email: string;
+            active?: boolean;
+        };
+        PersonView: {
+            /** Format: uuid */
+            id?: string;
+            teamId?: string;
+            organizationId?: string;
+            name?: string;
+            email?: string;
+            active?: boolean;
+        };
+        CreateTeam: {
+            organizationId: string;
+            name: string;
+        };
+        StartRun: {
+            name: string;
+            organizationId: string;
+            questionnaireId: string;
+            teamIds: string[];
+            /** Format: date */
+            dueDate?: string;
+        };
+        AssessmentRunDetail: {
+            run?: components["schemas"]["AssessmentRunSummary"];
+            teams?: components["schemas"]["TeamProgress"][];
+            participants?: components["schemas"]["ParticipantView"][];
+            notice?: string;
+        };
+        AssessmentRunSummary: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            organizationId?: string;
+            questionnaireId?: string;
+            questionnaireName?: string;
+            /** Format: int32 */
+            questionnaireVersion?: number;
+            status?: string;
+            /** Format: date */
+            dueDate?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            closedAt?: string;
+            /** Format: int32 */
+            participants?: number;
+            /** Format: int32 */
+            submitted?: number;
+            assessmentId?: string;
+            /** Format: uuid */
+            scoringRunId?: string;
+        };
+        ParticipantView: {
+            teamId?: string;
+            name?: string;
+            email?: string;
+            status?: string;
+        };
+        TeamProgress: {
+            teamId?: string;
+            teamName?: string;
+            /** Format: int32 */
+            total?: number;
+            /** Format: int32 */
+            notStarted?: number;
+            /** Format: int32 */
+            inProgress?: number;
+            /** Format: int32 */
+            submitted?: number;
+        };
+        CreateQuestionnaireRequest: {
+            name: string;
+        };
         CreateTenantRequest: {
             id: string;
             name: string;
@@ -342,6 +860,11 @@ export interface components {
             name?: string;
             /** Format: date-time */
             createdAt?: string;
+        };
+        CreatePerson: {
+            teamId: string;
+            name: string;
+            email: string;
         };
         AssessmentPart: {
             organizationId: string;
@@ -388,7 +911,6 @@ export interface components {
             weightedContribution?: number;
             label?: string;
         };
-        JsonNode: unknown;
         OverallResponse: {
             weightedAdjustedScore?: number;
             effectiveOverallPenalty?: number;
@@ -594,6 +1116,32 @@ export interface components {
             resolved?: string[];
             persistent?: string[];
         };
+        RespondentRun: {
+            /** Format: uuid */
+            runId?: string;
+            name?: string;
+            questionnaireName?: string;
+            /** Format: date */
+            dueDate?: string;
+            runStatus?: string;
+            myStatus?: string;
+        };
+        QuestionnaireSummary: {
+            id?: string;
+            name?: string;
+            state?: string;
+            archived?: boolean;
+            /** Format: int32 */
+            draftVersion?: number;
+            /** Format: int32 */
+            publishedVersion?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: date-time */
+            publishedAt?: string;
+        };
         TenantListResponse: {
             items?: components["schemas"]["TenantResponse"][];
         };
@@ -678,7 +1226,406 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    renameTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                teamId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameTeam"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TeamView"];
+                };
+            };
+        };
+    };
+    saveDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDraft"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RespondentRunDetail"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: {
+                version?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireDetail"];
+                };
+            };
+        };
+    };
+    save: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionnaireDocument"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireDetail"];
+                };
+            };
+        };
+    };
+    updatePerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                personId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePerson"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PersonView"];
+                };
+            };
+        };
+    };
+    teams: {
+        parameters: {
+            query?: {
+                organizationId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TeamView"][];
+                };
+            };
+        };
+    };
+    createTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTeam"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TeamView"];
+                };
+            };
+        };
+    };
     list: {
+        parameters: {
+            query?: {
+                organizationId?: string;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AssessmentRunSummary"][];
+                };
+            };
+        };
+    };
+    start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRun"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AssessmentRunDetail"];
+                };
+            };
+        };
+    };
+    close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AssessmentRunDetail"];
+                };
+            };
+        };
+    };
+    submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RespondentRunDetail"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireSummary"][];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateQuestionnaireRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireDetail"];
+                };
+            };
+        };
+    };
+    publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireDetail"];
+                };
+            };
+        };
+    };
+    duplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireDetail"];
+                };
+            };
+        };
+    };
+    archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireDetail"];
+                };
+            };
+        };
+    };
+    fromInitial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateQuestionnaireRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["QuestionnaireDetail"];
+                };
+            };
+        };
+    };
+    list_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -698,7 +1645,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -718,6 +1665,52 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TenantResponse"];
+                };
+            };
+        };
+    };
+    people: {
+        parameters: {
+            query?: {
+                teamId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PersonView"][];
+                };
+            };
+        };
+    };
+    createPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePerson"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PersonView"];
                 };
             };
         };
@@ -1064,6 +2057,70 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ComparisonResponse"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AssessmentRunDetail"];
+                };
+            };
+        };
+    };
+    runs_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RespondentRun"][];
+                };
+            };
+        };
+    };
+    run_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RespondentRunDetail"];
                 };
             };
         };

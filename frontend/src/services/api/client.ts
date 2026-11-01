@@ -14,7 +14,7 @@ export function configureApi(options: { getToken: () => string | null; onUnautho
 export type Query = Record<string, string | number | boolean | null | undefined>;
 
 export interface RequestOptions {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   query?: Query;
   body?: unknown;
   headers?: Record<string, string>;

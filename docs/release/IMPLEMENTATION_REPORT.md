@@ -1,6 +1,6 @@
 # Implementation report
 
-Leadership Intelligence Scoring Engine and executive dashboard. Status at the end of the quality and release phase.
+Leadership Intelligence Scoring Engine and executive dashboard, with the questionnaire builder, roster, assessment runs and respondent flow (decisions D47 to D51). Status at the end of the release phase that followed them.
 
 ## What was built
 
@@ -18,7 +18,7 @@ Leadership Intelligence Scoring Engine and executive dashboard. Status at the en
 - Executive dashboard: LIS hero with band gauge and comparison, four dimension cards, risk overview, pattern overview (group by dimension, severity, confidence) with evidence, penalty overview (applied, suppressed, ineligible, not triggered), recommendations traced to patterns, five trend views.
 - Explainability: an eight-step explanation with a waterfall, dimension detail with source-answer drill-down, pattern detail with a readable condition tree, penalty detail (requested against effective), and run comparison with an explicit "what differs" table.
 
-**Operations**: `docker-compose.yml` (PostgreSQL, mock identity provider, app, web UI), a hardened nginx image, a Postman collection of every endpoint (34 requests), Playwright suites against the real stack.
+**Operations**: `docker-compose.yml` (PostgreSQL, mock identity provider, app, web UI), a hardened nginx image, a Postman collection of every endpoint (81 requests), Playwright suites against the real stack.
 
 ## Principles that held
 
@@ -54,6 +54,19 @@ The scoring configuration is now one JSON document read when the application sta
 
 A platform administrator, a role that belongs to no tenant, can create tenants and list them, in the product and through `/api/v1/platform/tenants`. A tenant is an id (permanent) and a name. The role is kept out of the tenant `Role` enum on purpose, so no "every role may read" rule can include it; the tenant roles cannot reach these endpoints; creation and list reads are audited. See decision D46.
 
+## Questionnaires, roster, runs and the respondent flow (decisions D47 to D51)
+
+Requested after the first release run, in six phases (`docs/implementation/QUESTIONNAIRES_PROPOSAL.md`, which also lists every choice made and what is left out):
+
+1. **Engine.** A multi-select question type scored as the mean of the chosen options, list-valued answers end to end, and a `{"$replace": X}` marker so a layer can replace an object section.
+2. **Questionnaire library.** A questionnaire is authored as a document, checked against the publish rules of specv3 4.14, turned into a complete configuration layer and published as an ACTIVE template layer through the ordinary configuration lifecycle in one transaction; a published version never changes. Endpoints under `/api/v1/questionnaires` for owners and administrators; migration V8.
+3. **Roster, runs and respondents.** Teams and people; an assessment run pins a published version and its configuration version and snapshots one participant per active person; a respondent (role `RESPONDENT`, matched by the token e-mail) answers with drafts and submits. Submitted answers are stored with the team and the question only, in one transaction that also deletes the draft. Closing a run scores the answers once as member answers with the pinned configuration. Migration V9.
+4. **Restyle.** Dark by default with a light theme behind a toggle, a sidebar and top bar, a brand constant, theme-aware charts. Every colour is a design token, and tests keep both themes complete and every text and background pair at 4.5:1.
+5. **Screens.** The library, the builder (eight question kinds, rules with a nested condition editor), people, runs and the respondent form.
+6. **Release.** A browser journey from authoring to a scored run, a Postman folder for the new endpoints, and these documents.
+
+Principles that held: the questionnaire is configuration, not code (publishing runs the same validator and lifecycle as any configuration); nothing links an answer to a person (a test asserts the columns of the answers table); a respondent reaches only the respondent endpoints, and the role is kept out of the tenant `Role` enum like the platform administrator; free text is collected and never scored; an open run cannot be changed by republishing its questionnaire.
+
 ## Defects found by the later test layers (and fixed)
 
 | Found by | Defect |
@@ -63,6 +76,10 @@ A platform administrator, a role that belongs to no tenant, can create tenants a
 | axe | Chart surfaces were focusable inside `aria-hidden` containers; low-contrast faint text; link names that did not contain their visible text |
 | Viewport test | A group-by control and screen-reader-only text inside table wrappers caused horizontal scrolling on phones |
 | Header test | The web server and the API both sent security headers, producing duplicates |
+| Questionnaire contrast tests | The light theme's amber chart colour was 2.59:1 against white, below the 3:1 needed for chart graphics; the token tests found it and it was darkened (as was the grey for low severity) |
+| Questionnaire browser journey | The builder overflowed a 390 px screen by 69 px (fieldsets and a single-column grid do not shrink to fit); unit tests could not see it |
+| Questionnaire browser journey | The journey first wrote scored runs into the seeded organization and broke the dashboard tests that rely on it; it now has an organization of its own |
+| Questionnaire API tests | A rule asking for more independent signals than its condition has was caught by the builder's own check before the parser could be exercised (the test now builds a rule that passes it) |
 | Answers-from-several-people tests | The pattern detail page would have shown one respondent as "100%" and an unknown count as "null"; the validation hook for the request body, named after the field, broke every request until it became a class-level constraint; a limitation I wrote claimed a team without a run vanished from later reads, which a test disproved |
 
 ## Review summary

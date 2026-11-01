@@ -19,6 +19,20 @@ import type {
   Tenant,
   CreateTenantRequest,
   Trends,
+  QuestionnaireSummary,
+  QuestionnaireDetail,
+  QuestionnaireDocument,
+  TeamView,
+  PersonView,
+  CreateTeamRequest,
+  CreatePersonRequest,
+  UpdatePersonRequest,
+  AssessmentRunSummary,
+  AssessmentRunDetail,
+  StartRunRequest,
+  RespondentRun,
+  RespondentRunDetail,
+  SaveDraftRequest,
 } from '@/types/api';
 import { apiFetch, type Query } from './client';
 
@@ -73,6 +87,35 @@ export const api = {
     apiFetch<ScoringResult>(`/assessments/${enc(assessmentId)}/score`, { method: 'POST', headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined }),
   tenants: (signal?: AbortSignal) => apiFetch<TenantList>('/platform/tenants', { signal }),
   createTenant: (request: CreateTenantRequest) => apiFetch<Tenant>('/platform/tenants', { method: 'POST', body: request }),
+  // questionnaire library and builder (decisions D47, D50)
+  questionnaires: (signal?: AbortSignal) => apiFetch<QuestionnaireSummary[]>('/questionnaires', { signal }),
+  questionnaire: (id: string, version?: number, signal?: AbortSignal) => apiFetch<QuestionnaireDetail>(`/questionnaires/${enc(id)}`, { query: { version }, signal }),
+  createQuestionnaire: (name: string) => apiFetch<QuestionnaireDetail>('/questionnaires', { method: 'POST', body: { name } }),
+  questionnaireFromInitial: (name: string) => apiFetch<QuestionnaireDetail>('/questionnaires/from-initial', { method: 'POST', body: { name } }),
+  saveQuestionnaire: (id: string, document: QuestionnaireDocument) => apiFetch<QuestionnaireDetail>(`/questionnaires/${enc(id)}`, { method: 'PUT', body: document }),
+  publishQuestionnaire: (id: string) => apiFetch<QuestionnaireDetail>(`/questionnaires/${enc(id)}/publish`, { method: 'POST' }),
+  archiveQuestionnaire: (id: string) => apiFetch<QuestionnaireDetail>(`/questionnaires/${enc(id)}/archive`, { method: 'POST' }),
+  duplicateQuestionnaire: (id: string) => apiFetch<QuestionnaireDetail>(`/questionnaires/${enc(id)}/duplicate`, { method: 'POST' }),
+
+  // roster and assessment runs (decision D48)
+  teams: (organizationId?: string, signal?: AbortSignal) => apiFetch<TeamView[]>('/teams', { query: { organizationId }, signal }),
+  createTeam: (request: CreateTeamRequest) => apiFetch<TeamView>('/teams', { method: 'POST', body: request }),
+  renameTeam: (teamId: string, name: string) => apiFetch<TeamView>(`/teams/${enc(teamId)}`, { method: 'PUT', body: { name } }),
+  people: (teamId?: string, signal?: AbortSignal) => apiFetch<PersonView[]>('/people', { query: { teamId }, signal }),
+  createPerson: (request: CreatePersonRequest) => apiFetch<PersonView>('/people', { method: 'POST', body: request }),
+  updatePerson: (personId: string, request: UpdatePersonRequest) => apiFetch<PersonView>(`/people/${enc(personId)}`, { method: 'PUT', body: request }),
+  assessmentRuns: (params: { organizationId?: string; status?: string } = {}, signal?: AbortSignal) =>
+    apiFetch<AssessmentRunSummary[]>('/runs', { query: params as Query, signal }),
+  assessmentRun: (id: string, signal?: AbortSignal) => apiFetch<AssessmentRunDetail>(`/runs/${enc(id)}`, { signal }),
+  startRun: (request: StartRunRequest) => apiFetch<AssessmentRunDetail>('/runs', { method: 'POST', body: request }),
+  closeRun: (id: string) => apiFetch<AssessmentRunDetail>(`/runs/${enc(id)}/close`, { method: 'POST' }),
+
+  // the respondent flow (decision D48)
+  myRuns: (signal?: AbortSignal) => apiFetch<RespondentRun[]>('/respond/runs', { signal }),
+  myRun: (id: string, signal?: AbortSignal) => apiFetch<RespondentRunDetail>(`/respond/runs/${enc(id)}`, { signal }),
+  saveDraft: (id: string, request: SaveDraftRequest) => apiFetch<RespondentRunDetail>(`/respond/runs/${enc(id)}/draft`, { method: 'PUT', body: request }),
+  submitAnswers: (id: string) => apiFetch<RespondentRunDetail>(`/respond/runs/${enc(id)}/submit`, { method: 'POST' }),
+
   recalculate: (assessmentId: string, request?: RecalculateRequest) =>
     apiFetch<ScoringResult>(`/assessments/${enc(assessmentId)}/score/recalculate`, { method: 'POST', body: request }),
 };
