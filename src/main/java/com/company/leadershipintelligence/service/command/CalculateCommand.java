@@ -9,6 +9,7 @@ import com.company.leadershipintelligence.domain.valueobject.TenantId;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * An assessment and its answers submitted for scoring (decisions D13, D14, D45). The tenant comes from the security
@@ -26,17 +27,24 @@ public record CalculateCommand(
         List<ScoringInput> inputs,
         String idempotencyKey,
         Map<String, QuestionType> declaredTypes,
-        List<ScopedResponse> responses) {
+        List<ScopedResponse> responses,
+        UUID explicitConfigurationVersionId) {
+
+    public CalculateCommand(TenantId tenantId, OrganizationId organizationId, String templateId, int templateVersion,
+                            String status, Instant completedAt, List<ScoringInput> inputs, String idempotencyKey,
+                            Map<String, QuestionType> declaredTypes, List<ScopedResponse> responses) {
+        this(tenantId, organizationId, templateId, templateVersion, status, completedAt, inputs, idempotencyKey, declaredTypes, responses, null);
+    }
 
     public CalculateCommand(TenantId tenantId, OrganizationId organizationId, String templateId, int templateVersion,
                             String status, Instant completedAt, List<ScoringInput> inputs, String idempotencyKey,
                             Map<String, QuestionType> declaredTypes) {
-        this(tenantId, organizationId, templateId, templateVersion, status, completedAt, inputs, idempotencyKey, declaredTypes, List.of());
+        this(tenantId, organizationId, templateId, templateVersion, status, completedAt, inputs, idempotencyKey, declaredTypes, List.of(), null);
     }
 
     public CalculateCommand(TenantId tenantId, OrganizationId organizationId, String templateId, int templateVersion,
                             String status, Instant completedAt, List<ScoringInput> inputs, String idempotencyKey) {
-        this(tenantId, organizationId, templateId, templateVersion, status, completedAt, inputs, idempotencyKey, Map.of(), List.of());
+        this(tenantId, organizationId, templateId, templateVersion, status, completedAt, inputs, idempotencyKey, Map.of(), List.of(), null);
     }
 
     /** {@code declaredTypes} are question types a client stated for compatibility; they are only checked, never trusted. */

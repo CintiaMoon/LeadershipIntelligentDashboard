@@ -37,13 +37,13 @@ class FlywayMigrationTest extends PostgresIntegrationTest {
 
         var first = flyway.migrate();
         assertThat(first.success).isTrue();
-        assertThat(first.migrationsExecuted).isEqualTo(8);
+        assertThat(first.migrationsExecuted).isEqualTo(9);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         flyway.validate();
 
         try (Connection c = DriverManager.getConnection(url, POSTGRES.getUsername(), POSTGRES.getPassword())) {
             assertThat(query(c, "select version from flyway_schema_history where success order by installed_rank"))
-                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+                    .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9");
             assertThat(query(c, "select table_name from information_schema.tables where table_schema = 'public'"))
                     .contains("tenant", "assessment", "assessment_answer", "assessment_snapshot", "scoring_configuration",
                             "scoring_configuration_version", "scoring_run", "scoring_dimension_result", "scoring_contribution",
@@ -100,6 +100,6 @@ class FlywayMigrationTest extends PostgresIntegrationTest {
     @Test
     void theApplicationSchemaIsTheMigratedSchema() {
         Integer applied = jdbc.queryForObject("select count(*) from flyway_schema_history where success", Integer.class);
-        assertThat(applied).isEqualTo(8);
+        assertThat(applied).isEqualTo(9);
     }
 }

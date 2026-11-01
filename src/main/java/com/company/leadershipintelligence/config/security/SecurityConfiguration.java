@@ -2,6 +2,7 @@ package com.company.leadershipintelligence.config.security;
 
 import com.company.leadershipintelligence.api.exception.ApiErrorWriter;
 import com.company.leadershipintelligence.api.security.PlatformRole;
+import com.company.leadershipintelligence.api.security.RespondentRole;
 import com.company.leadershipintelligence.api.security.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,11 @@ public class SecurityConfiguration {
                         // questionnaire library and builder (decisions D47, D50): administrators only, for reads as well as writes
                         .requestMatchers("/api/v1/questionnaires", "/api/v1/questionnaires/**")
                         .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
+                        // roster and assessment runs (decision D48): administrators only
+                        .requestMatchers("/api/v1/teams", "/api/v1/teams/**", "/api/v1/people", "/api/v1/people/**", "/api/v1/runs", "/api/v1/runs/**")
+                        .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
+                        // the respondent flow: the respondent role reaches this and nothing else
+                        .requestMatchers("/api/v1/respond/**").hasRole(RespondentRole.RESPONDENT)
                         .requestMatchers(HttpMethod.POST, "/api/v1/calculate", "/api/v1/assessments/*/score",
                                 "/api/v1/assessments/*/score/recalculate").hasAnyRole(writers)
                         .requestMatchers(HttpMethod.GET, "/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**")

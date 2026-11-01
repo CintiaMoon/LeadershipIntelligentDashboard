@@ -118,7 +118,9 @@ public class ScoreAssessmentService {
         AssessmentId assessmentId = new AssessmentId("asm-" + UUID.randomUUID());
         AssessmentSnapshotId snapshotId = new AssessmentSnapshotId("snp-" + UUID.randomUUID());
         EffectiveConfiguration configuration = metrics.observe("lis.configuration.resolve",
-                () -> effective.resolve(command.tenantId(), command.organizationId(), command.templateId()));
+                () -> command.explicitConfigurationVersionId() == null
+                        ? effective.resolve(command.tenantId(), command.organizationId(), command.templateId())
+                        : effective.resolveExplicit(command.tenantId(), command.explicitConfigurationVersionId()));
         command.declaredTypes().forEach((questionId, type) -> configuration.snapshot().question(questionId).ifPresent(definition -> {
             if (definition.type() != type) {
                 throw new ScoringException(ScoringErrorCode.INVALID_ANSWER_TYPE,
@@ -129,7 +131,8 @@ public class ScoreAssessmentService {
         ScoringContext context = context(command.tenantId(), command.organizationId(), assessmentId, snapshotId, configuration);
         Computed computed = compute(context, responses, configuration);
 
-        Built built = build(computed, "CALCULATE", "DEFAULT", configuration, command.idempotencyKey(), requestHash, started);
+        Built built = build(computed, "CALCULATE", command.explicitConfigurationVersionId() == null ? "DEFAULT" : "EXPLICIT", configuration,
+                command.idempotencyKey(), requestHash, started);
         AssessmentRow assessment = new AssessmentRow(assessmentId.value(), tenant, command.organizationId().value(), command.templateId(),
                 command.templateVersion(), command.status(), command.completedAt());
         SnapshotRow snapshot = new SnapshotRow(snapshotId.value(), tenant, assessmentId.value(), 1, computed.inputHash());
@@ -545,7 +548,8 @@ public class ScoreAssessmentService {
         List<ScopedResponse> responses = c.scopedResponses();
         String answers = isEarlierForm(responses) ? InputHasher.answersHash(c.inputs()) : InputHasher.scopedAnswersHash(responses);
         return InputHasher.sha256("calculate|" + c.organizationId().value() + "|" + c.templateId() + "|" + c.templateVersion() + "|"
-                + c.status() + "|" + c.completedAt() + "|" + answers);
+                + c.status() + "|" + c.completedAt() + "|" + answers
+                + (c.explicitConfigurationVersionId() == null ? "" : "|" + c.explicitConfigurationVersionId()));
     }
 
     private ScoringRunView view(StoredRunRow r) {

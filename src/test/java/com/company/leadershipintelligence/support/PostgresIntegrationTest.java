@@ -46,7 +46,7 @@ public abstract class PostgresIntegrationTest {
 
     @BeforeEach
     void cleanConfiguration() {
-        jdbc.execute("truncate scoring_access_audit, scoring_penalty_result, scoring_imbalance_result, scoring_pattern_evidence, scoring_pattern_evaluation, "
+        jdbc.execute("truncate run_response, run_draft, run_participant, assessment_run_team, assessment_run, person, team, scoring_access_audit, scoring_penalty_result, scoring_imbalance_result, scoring_pattern_evidence, scoring_pattern_evaluation, "
                 + "scoring_contribution, scoring_dimension_result, scoring_run, assessment_answer, assessment_snapshot, assessment, "
                 + "assessment_template_version, assessment_template, organization, questionnaire_version, questionnaire, scoring_configuration_audit, "
                 + "scoring_configuration_version, scoring_configuration cascade");
