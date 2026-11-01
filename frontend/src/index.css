@@ -1,20 +1,75 @@
 @import "tailwindcss";
 
-/* Design tokens. Colour is used for meaning only (risk and status); every status also has a label or icon. */
+/*
+ * Design tokens (decision D51). Dark is the default; light is kept behind a toggle (`data-theme="light"` on <html>, see
+ * stores/theme.ts) and every pair of text and background below is checked for contrast in both. Colour is used for meaning
+ * only (risk and status); every status also has a label or icon. Components use only these tokens, never a raw colour.
+ */
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
+  --color-canvas: #050b11;
+  --color-sidebar: #070f16;
+  --color-surface: #0a151e;
+  --color-line: #1a2a37;
+  --color-ink: #eaf0f5;
+  --color-ink-soft: #a3b4c1;
+  --color-ink-faint: #8497a6;
+
+  --color-accent: #2fd29a;
+  --color-accent-soft: #0d2a24;
+  --color-accent-ink: #6fe6bb;
+  --color-on-accent: #03140d;
+
+  --color-risk-low: #a3b4c1;
+  --color-risk-low-soft: #14212b;
+  --color-risk-medium: #f2b83b;
+  --color-risk-medium-soft: #2b2208;
+  --color-risk-high: #ff9d57;
+  --color-risk-high-soft: #2f1c0b;
+  --color-risk-critical: #ff8080;
+  --color-risk-critical-soft: #341313;
+  --color-ok: #44dd9c;
+  --color-ok-soft: #0c2b20;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.3);
+}
+
+/* Chart colours live here too so charts follow the theme (components/charts/palette.ts refers to them by name). */
+:root {
+  color-scheme: dark;
+  --chart-score: #2fd29a;
+  --chart-grid: #1a2a37;
+  --chart-axis: #8da0ae;
+  --chart-team-health: #62a8ff;
+  --chart-delivery-stability: #34d399;
+  --chart-technical-risk: #fb923c;
+  --chart-leadership-load: #c792f5;
+  --chart-critical: #ff8080;
+  --chart-high: #fb923c;
+  --chart-medium: #fbbf24;
+  --chart-low: #94a3b8;
+  --chart-deduction: #fb923c;
+  --chart-suppressed: #fbbf24;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
   --color-canvas: #f6f7f9;
+  --color-sidebar: #ffffff;
   --color-surface: #ffffff;
   --color-line: #e3e6ec;
   --color-ink: #0f1a2b;
   --color-ink-soft: #46546a;
   --color-ink-faint: #566174;
 
-  --color-accent: #28457f;
-  --color-accent-soft: #e8edf7;
-  --color-accent-ink: #1c3260;
+  --color-accent: #0e6b52;
+  --color-accent-soft: #e0f3ec;
+  --color-accent-ink: #0a4d3b;
+  --color-on-accent: #ffffff;
 
   --color-risk-low: #51647d;
   --color-risk-low-soft: #eef1f5;
@@ -28,6 +83,20 @@
   --color-ok-soft: #e0f2ea;
 
   --shadow-card: 0 1px 2px rgb(15 26 43 / 0.05), 0 1px 3px rgb(15 26 43 / 0.06);
+
+  --chart-score: #0e6b52;
+  --chart-grid: #e3e6ec;
+  --chart-axis: #6b7789;
+  --chart-team-health: #28457f;
+  --chart-delivery-stability: #1f6b4a;
+  --chart-technical-risk: #b04a00;
+  --chart-leadership-load: #7a4fa3;
+  --chart-critical: #a61b1b;
+  --chart-high: #b04a00;
+  --chart-medium: #a87a0a;
+  --chart-low: #71829a;
+  --chart-deduction: #b04a00;
+  --chart-suppressed: #a87a0a;
 }
 
 html {
@@ -45,6 +114,11 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {

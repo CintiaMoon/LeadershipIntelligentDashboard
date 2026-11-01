@@ -1,13 +1,19 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { brand } from '@/brand';
 import { useSession } from '@/stores/session';
+import { useTheme } from '@/stores/theme';
 import { renderRoutes } from '@/tests/utils';
 import { AppLayout } from './AppLayout';
 
 const routes = [{ path: '/', element: <AppLayout />, children: [{ path: 'dashboard', element: <p>page body</p> }] }];
 
-beforeEach(() => useSession.setState({ organizationId: null }));
+beforeEach(() => {
+  useSession.setState({ organizationId: null });
+  window.localStorage.clear();
+  useTheme.getState().setTheme('dark');
+});
 
 describe('AppLayout', () => {
   it('lists the organizations of the token and selects the first one', async () => {
@@ -42,6 +48,29 @@ describe('AppLayout', () => {
     renderRoutes(routes, { route: '/dashboard' });
     expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main');
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+  });
+});
+
+describe('AppLayout appearance', () => {
+  it('shows the brand name and tagline from the one constant', () => {
+    renderRoutes(routes, { route: '/dashboard' });
+    expect(screen.getByText(brand.name)).toBeInTheDocument();
+    expect(screen.getByText(brand.tagline)).toBeInTheDocument();
+  });
+
+  it('puts the navigation in a sidebar and the controls in a top bar', () => {
+    renderRoutes(routes, { route: '/dashboard' });
+    expect(screen.getByRole('complementary')).toContainElement(screen.getByRole('navigation', { name: 'Main' }));
+    expect(screen.getByRole('banner')).toContainElement(screen.getByLabelText('Organization'));
+  });
+
+  it('switches between the dark and the light theme with a labelled button', async () => {
+    renderRoutes(routes, { route: '/dashboard' });
+    expect(document.documentElement).not.toHaveAttribute('data-theme');
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to light theme' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
+    expect(document.documentElement).not.toHaveAttribute('data-theme');
   });
 });
 

@@ -68,7 +68,7 @@ test('the executive journey from sign-in to comparing historical runs', async ({
   });
 
   await test.step('8. the user inspects applied and suppressed penalties', async () => {
-    await page.getByRole('banner').getByRole('link', { name: 'Dashboard' }).click();
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Dashboard' }).click();
     const applied = page.getByRole('group', { name: 'Applied' });
     await expect(applied.getByRole('article', { name: 'Burnout risk deduction' })).toContainText('12.00');
     const suppressed = page.getByRole('group', { name: 'Suppressed' });
@@ -82,7 +82,7 @@ test('the executive journey from sign-in to comparing historical runs', async ({
   });
 
   await test.step('9. the user opens the LIS explanation', async () => {
-    await page.getByRole('banner').getByRole('link', { name: 'Dashboard' }).click();
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Dashboard' }).click();
     await page.getByRole('link', { name: 'How was this calculated?' }).click();
     await expect(page.getByRole('heading', { name: 'How the Leadership Intelligence Score was calculated' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Calculation steps' }).getByRole('link')).toHaveCount(8);
@@ -95,7 +95,7 @@ test('the executive journey from sign-in to comparing historical runs', async ({
   });
 
   await test.step('10. the user compares historical scoring runs', async () => {
-    await page.getByRole('banner').getByRole('link', { name: 'Compare' }).click();
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Compare' }).click();
     await page.getByLabel(/Earlier assessment/).selectOption(runs[1].scoringRunId); // 87.50
     await page.getByLabel(/Later assessment/).selectOption(runs[2].scoringRunId); // 67.00, same basis
     await page.getByRole('button', { name: 'Compare' }).click();

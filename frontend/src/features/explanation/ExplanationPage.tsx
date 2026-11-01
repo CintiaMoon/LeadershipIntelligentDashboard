@@ -75,7 +75,7 @@ export function ExplanationPage() {
           <li key={s.id}>
             <details id={`step-${s.id}`} open={s.id === 'final' || s.id === 'adjusted'} className="group rounded-xl border border-line bg-surface shadow-card">
               <summary className="flex cursor-pointer items-center gap-3 px-5 py-4">
-                <span aria-hidden="true" className="grid size-7 place-items-center rounded-full bg-accent text-sm font-semibold text-white">
+                <span aria-hidden="true" className="grid size-7 place-items-center rounded-full bg-accent text-sm font-semibold text-on-accent">
                   {i + 1}
                 </span>
                 <h2 className="text-base font-semibold">{s.title}</h2>

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { asPersona, runsOf } from './api';
 
 // WCAG 2.2 AA automated checks on every screen, plus the keyboard paths automation cannot see. Automated checks find
@@ -12,6 +12,11 @@ async function expectNoViolations(page: Page, what: string) {
   expect(summary, `${what} has accessibility violations`).toEqual([]);
 }
 
+/** The light theme is a stored per-browser choice, so a test sets it before the page loads. */
+async function useLightTheme(page: Page) {
+  await page.addInitScript(() => window.localStorage.setItem('lis.theme', 'light'));
+}
+
 async function signIn(page: Page, persona: RegExp) {
   await page.goto('/login');
   await page.getByRole('button', { name: persona }).click();
@@ -22,13 +27,20 @@ async function signIn(page: Page, persona: RegExp) {
 test.describe('accessibility', () => {
   test('the login page', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Leadership Intelligence', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Leadership Intelligent Dashboard', level: 1 })).toBeVisible();
     await expectNoViolations(page, 'login');
   });
 
-  test('every signed-in screen has no automated WCAG 2.2 AA violations', async ({ page, request }) => {
+  test('the login page in the light theme', async ({ page }) => {
+    await useLightTheme(page);
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Leadership Intelligent Dashboard', level: 1 })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expectNoViolations(page, 'login (light)');
+  });
+
+  async function scanEverySignedInScreen(page: Page, request: APIRequestContext, theme: string) {
     // six axe scans and five full page loads in one test: about 6 s alone, but over 30 s when the other workers load the machine
-    test.setTimeout(120_000);
     const admin = await asPersona(request, 'admin');
     const runs = await runsOf(admin, 'org-2');
     const run = runs[2].scoringRunId as string;
@@ -36,7 +48,7 @@ test.describe('accessibility', () => {
     await page.getByRole('banner').getByLabel('Organization').selectOption('org-2');
     await expect(page.getByTestId('lis-value')).toBeVisible();
     await page.getByText('View the data').first().click(); // chart data tables are part of the page
-    await expectNoViolations(page, 'dashboard');
+    await expectNoViolations(page, `dashboard (${theme})`);
 
     for (const [name, path, ready] of [
       ['explanation', `/runs/${run}/explanation`, 'How the Leadership Intelligence Score was calculated'],
@@ -49,8 +61,34 @@ test.describe('accessibility', () => {
       await expect(page.getByRole('heading', { name: ready, level: 1 })).toBeVisible();
       if (name === 'explanation') await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
       if (name === 'comparison') await expect(page.getByRole('table', { name: 'Dimension scores in both assessments' })).toBeVisible();
-      await expectNoViolations(page, name);
+      await expectNoViolations(page, `${name} (${theme})`);
     }
+  }
+
+  test('every signed-in screen has no automated WCAG 2.2 AA violations (dark theme)', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    await scanEverySignedInScreen(page, request, 'dark');
+  });
+
+  test('every signed-in screen has no automated WCAG 2.2 AA violations (light theme)', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    await useLightTheme(page);
+    await scanEverySignedInScreen(page, request, 'light');
+  });
+
+  test('the theme switch works from the keyboard and survives a reload', async ({ page }) => {
+    await signIn(page, /^Administrator Full access/);
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.*/);
+    const toggle = page.getByRole('button', { name: 'Switch to light theme' });
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible();
+    // the colours really change: the page background is light after the switch
+    const background = await page.evaluate(() => getComputedStyle(document.body.parentElement as HTMLElement).backgroundColor);
+    expect(background).toBe('rgb(246, 247, 249)');
   });
 
   test('the not-found page and an error state', async ({ page }) => {

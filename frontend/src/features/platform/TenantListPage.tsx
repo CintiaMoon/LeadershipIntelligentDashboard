@@ -10,7 +10,7 @@ import { useTenants } from '@/services/queries/hooks';
 import { isPlatformAdmin } from '@/services/auth/principal';
 import { formatDateTime } from '@/utils/presentation';
 
-const link = 'inline-flex min-h-9 items-center rounded-md bg-accent px-3.5 text-sm font-medium text-white hover:bg-accent-ink';
+const link = 'inline-flex min-h-9 items-center rounded-md bg-ink px-3.5 text-sm font-medium text-canvas hover:bg-ink/90';
 
 /**
  * Every tenant, for the platform administrator (decision D46). A tenant is only an id and a name here: nothing about its
