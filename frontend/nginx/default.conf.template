@@ -1,0 +1,46 @@
+# Rendered at container start (the official nginx image substitutes ${IDP_ORIGIN}, the origin of the identity provider).
+server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+  server_tokens off;
+
+  gzip on;
+  gzip_min_length 1024;
+  gzip_types text/css application/javascript text/javascript application/json image/svg+xml text/plain;
+
+  # Security headers. They are defined once at server level: a location that adds its own header would drop these.
+  # TLS and Strict-Transport-Security belong to the proxy or load balancer in front of this container.
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ${IDP_ORIGIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+  add_header Cross-Origin-Opener-Policy "same-origin" always;
+
+  location /api/ {
+    proxy_pass http://app:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # the server-level security headers apply; the API's own copies would only duplicate them
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header X-Frame-Options;
+    proxy_hide_header Referrer-Policy;
+    proxy_hide_header Permissions-Policy;
+  }
+
+  # fingerprinted build output never changes under the same name
+  location /assets/ {
+    expires 1y;
+    try_files $uri =404;
+  }
+
+  # the application shell must always be revalidated so a new release is picked up
+  location / {
+    expires -1;
+    try_files $uri /index.html;
+  }
+}

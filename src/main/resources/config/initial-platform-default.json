@@ -1,0 +1,1858 @@
+{
+  "questions": [
+    {
+      "id": "TH01",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "TH02",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "TH03",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "TH04",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "TH05",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "DS01",
+      "type": "MULTIPLE_CHOICE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "values": {
+          "ALWAYS": 100,
+          "OFTEN": 75,
+          "SOMETIMES": 50,
+          "RARELY": 25,
+          "NEVER": 0
+        },
+        "unknownOption": "REJECT"
+      }
+    },
+    {
+      "id": "DS02",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "DS03",
+      "type": "NUMBER",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 0,
+        "max": 10,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "CLAMP"
+      }
+    },
+    {
+      "id": "DS04",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "DS05",
+      "type": "BOOLEAN",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "trueValue": 0,
+        "falseValue": 100
+      }
+    },
+    {
+      "id": "TR01",
+      "type": "NUMBER",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 0,
+        "max": 20,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "CLAMP"
+      }
+    },
+    {
+      "id": "TR02",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "TR03",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "TR04",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "TR05",
+      "type": "BOOLEAN",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "trueValue": 0,
+        "falseValue": 100
+      }
+    },
+    {
+      "id": "LL01",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "LL02",
+      "type": "NUMBER",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 0,
+        "max": 20,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "CLAMP"
+      }
+    },
+    {
+      "id": "LL03",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "NEGATIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "LL04",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    },
+    {
+      "id": "LL05",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": false
+      }
+    }
+  ],
+  "signals": [
+    {
+      "id": "TEAM_SUSTAINABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "TH01"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "WORKLOAD_MANAGEABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "TH02"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "PSYCHOLOGICAL_SAFETY",
+      "dataType": "NUMBER",
+      "sources": [
+        "TH03"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "DELIVERY_PREDICTABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "DS01"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "WIP_CONTROL",
+      "dataType": "NUMBER",
+      "sources": [
+        "DS02"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "RELEASE_STABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "DS03"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "PLANNING_REALISM",
+      "dataType": "NUMBER",
+      "sources": [
+        "DS04"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "DELIVERY_WITHOUT_HEROICS",
+      "dataType": "NUMBER",
+      "sources": [
+        "DS05"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "PRODUCTION_STABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "TR01"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "TEST_CONFIDENCE",
+      "dataType": "NUMBER",
+      "sources": [
+        "TR02"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "OBSERVABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "TR03"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "KNOWLEDGE_SPREAD",
+      "dataType": "NUMBER",
+      "sources": [
+        "TR05"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "DECISION_FLOW",
+      "dataType": "NUMBER",
+      "sources": [
+        "LL01"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "SPAN_MANAGEABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "LL02"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "DELEGATION",
+      "dataType": "NUMBER",
+      "sources": [
+        "LL03"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "LEADER_CAPACITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "LL04"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "SUCCESSION_COVERAGE",
+      "dataType": "NUMBER",
+      "sources": [
+        "LL05"
+      ],
+      "derivationVersion": "1"
+    }
+  ],
+  "dimensions": {
+    "settings": {
+      "TEAM_HEALTH": {
+        "requiredCoverage": 0.75
+      },
+      "DELIVERY_STABILITY": {
+        "requiredCoverage": 0.75
+      },
+      "TECHNICAL_RISK": {
+        "requiredCoverage": 0.75
+      },
+      "LEADERSHIP_LOAD": {
+        "requiredCoverage": 0.75
+      }
+    },
+    "mappings": [
+      {
+        "question": "TH01",
+        "dimension": "TEAM_HEALTH",
+        "weight": 1.0
+      },
+      {
+        "question": "TH02",
+        "dimension": "TEAM_HEALTH",
+        "weight": 1.0
+      },
+      {
+        "question": "TH03",
+        "dimension": "TEAM_HEALTH",
+        "weight": 1.0
+      },
+      {
+        "question": "TH04",
+        "dimension": "TEAM_HEALTH",
+        "weight": 1.0
+      },
+      {
+        "question": "TH05",
+        "dimension": "TEAM_HEALTH",
+        "weight": 1.0
+      },
+      {
+        "question": "DS01",
+        "dimension": "DELIVERY_STABILITY",
+        "weight": 1.0
+      },
+      {
+        "question": "DS02",
+        "dimension": "DELIVERY_STABILITY",
+        "weight": 1.0
+      },
+      {
+        "question": "DS03",
+        "dimension": "DELIVERY_STABILITY",
+        "weight": 1.0
+      },
+      {
+        "question": "DS04",
+        "dimension": "DELIVERY_STABILITY",
+        "weight": 1.0
+      },
+      {
+        "question": "DS05",
+        "dimension": "DELIVERY_STABILITY",
+        "weight": 1.0
+      },
+      {
+        "question": "TR01",
+        "dimension": "TECHNICAL_RISK",
+        "weight": 1.0
+      },
+      {
+        "question": "TR02",
+        "dimension": "TECHNICAL_RISK",
+        "weight": 1.0
+      },
+      {
+        "question": "TR03",
+        "dimension": "TECHNICAL_RISK",
+        "weight": 1.0
+      },
+      {
+        "question": "TR04",
+        "dimension": "TECHNICAL_RISK",
+        "weight": 1.0
+      },
+      {
+        "question": "TR05",
+        "dimension": "TECHNICAL_RISK",
+        "weight": 1.0
+      },
+      {
+        "question": "LL01",
+        "dimension": "LEADERSHIP_LOAD",
+        "weight": 1.0
+      },
+      {
+        "question": "LL02",
+        "dimension": "LEADERSHIP_LOAD",
+        "weight": 1.0
+      },
+      {
+        "question": "LL03",
+        "dimension": "LEADERSHIP_LOAD",
+        "weight": 1.0
+      },
+      {
+        "question": "LL04",
+        "dimension": "LEADERSHIP_LOAD",
+        "weight": 1.0
+      },
+      {
+        "question": "LL05",
+        "dimension": "LEADERSHIP_LOAD",
+        "weight": 1.0
+      }
+    ]
+  },
+  "patterns": [
+    {
+      "id": "TH-001",
+      "code": "TEAM_BURNOUT_RISK",
+      "version": 1,
+      "category": "TEAM_HEALTH",
+      "severity": "CRITICAL",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 2,
+        "minimumConfidence": 0.7
+      },
+      "actions": [
+        "REVIEW_TEAM_CAPACITY",
+        "REVIEW_WORKLOAD_DISTRIBUTION"
+      ],
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "operator": "LTE",
+            "signal": "WORKLOAD_MANAGEABILITY",
+            "value": 25
+          },
+          {
+            "operator": "LTE",
+            "signal": "TEAM_SUSTAINABILITY",
+            "value": 35
+          }
+        ]
+      }
+    },
+    {
+      "id": "TH-002",
+      "code": "LOW_PSYCHOLOGICAL_SAFETY",
+      "version": 1,
+      "category": "TEAM_HEALTH",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "BUILD_PSYCHOLOGICAL_SAFETY"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "PSYCHOLOGICAL_SAFETY",
+        "value": 25
+      }
+    },
+    {
+      "id": "DS-001",
+      "code": "CHRONIC_DELIVERY_UNPREDICTABILITY",
+      "version": 1,
+      "category": "DELIVERY_STABILITY",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 2,
+        "minimumConfidence": 0.7
+      },
+      "actions": [
+        "REVIEW_PLANNING_PRACTICE"
+      ],
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "operator": "LTE",
+            "signal": "DELIVERY_PREDICTABILITY",
+            "value": 25
+          },
+          {
+            "operator": "LTE",
+            "signal": "PLANNING_REALISM",
+            "value": 25
+          }
+        ]
+      }
+    },
+    {
+      "id": "DS-003",
+      "code": "EXCESSIVE_WORK_IN_PROGRESS",
+      "version": 1,
+      "category": "DELIVERY_STABILITY",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "LIMIT_WORK_IN_PROGRESS"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "WIP_CONTROL",
+        "value": 25
+      }
+    },
+    {
+      "id": "DS-005",
+      "code": "DELIVERY_HEROICS",
+      "version": 1,
+      "category": "DELIVERY_STABILITY",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "REDUCE_RELIANCE_ON_HEROICS"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "DELIVERY_WITHOUT_HEROICS",
+        "value": 0
+      }
+    },
+    {
+      "id": "DS-009",
+      "code": "RELEASE_INSTABILITY",
+      "version": 1,
+      "category": "DELIVERY_STABILITY",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "IMPROVE_RELEASE_PRACTICE"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "RELEASE_STABILITY",
+        "value": 30
+      }
+    },
+    {
+      "id": "TR-003",
+      "code": "SINGLE_POINT_OF_FAILURE",
+      "version": 1,
+      "category": "TECHNICAL_RISK",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "REDUCE_KEY_PERSON_DEPENDENCY"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "KNOWLEDGE_SPREAD",
+        "value": 0
+      }
+    },
+    {
+      "id": "TR-004",
+      "code": "WEAK_TEST_AUTOMATION",
+      "version": 1,
+      "category": "TECHNICAL_RISK",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "STRENGTHEN_TEST_AUTOMATION"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "TEST_CONFIDENCE",
+        "value": 25
+      }
+    },
+    {
+      "id": "TR-005",
+      "code": "PRODUCTION_INSTABILITY",
+      "version": 1,
+      "category": "TECHNICAL_RISK",
+      "severity": "CRITICAL",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "STABILIZE_PRODUCTION"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "PRODUCTION_STABILITY",
+        "value": 50
+      }
+    },
+    {
+      "id": "TR-006",
+      "code": "POOR_OBSERVABILITY",
+      "version": 1,
+      "category": "TECHNICAL_RISK",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "IMPROVE_OBSERVABILITY"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "OBSERVABILITY",
+        "value": 25
+      }
+    },
+    {
+      "id": "LL-001",
+      "code": "LEADERSHIP_BOTTLENECK",
+      "version": 1,
+      "category": "LEADERSHIP_LOAD",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 2,
+        "minimumConfidence": 0.7
+      },
+      "actions": [
+        "DELEGATE_DECISIONS",
+        "CLARIFY_DECISION_RIGHTS"
+      ],
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "operator": "LTE",
+            "signal": "DECISION_FLOW",
+            "value": 25
+          },
+          {
+            "operator": "LTE",
+            "signal": "DELEGATION",
+            "value": 25
+          }
+        ]
+      }
+    },
+    {
+      "id": "LL-004",
+      "code": "DECISION_LATENCY",
+      "version": 1,
+      "category": "LEADERSHIP_LOAD",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "CLARIFY_DECISION_RIGHTS"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "DECISION_FLOW",
+        "value": 25
+      }
+    },
+    {
+      "id": "LL-006",
+      "code": "LEADERSHIP_OVERLOAD",
+      "version": 1,
+      "category": "LEADERSHIP_LOAD",
+      "severity": "CRITICAL",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 2,
+        "minimumConfidence": 0.7
+      },
+      "actions": [
+        "REVIEW_LEADERSHIP_CAPACITY"
+      ],
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "operator": "LTE",
+            "signal": "LEADER_CAPACITY",
+            "value": 25
+          },
+          {
+            "operator": "LTE",
+            "signal": "SPAN_MANAGEABILITY",
+            "value": 40
+          }
+        ]
+      }
+    },
+    {
+      "id": "LL-008",
+      "code": "WEAK_SUCCESSION_COVERAGE",
+      "version": 1,
+      "category": "LEADERSHIP_LOAD",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "PLAN_SUCCESSION_COVERAGE"
+      ],
+      "condition": {
+        "operator": "LTE",
+        "signal": "SUCCESSION_COVERAGE",
+        "value": 25
+      }
+    },
+    {
+      "id": "XD-001",
+      "code": "UNSUSTAINABLE_DELIVERY_MODEL",
+      "version": 1,
+      "category": "CROSS_DIMENSIONAL",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 2,
+        "minimumConfidence": 0.7
+      },
+      "actions": [
+        "REVIEW_OPERATING_MODEL"
+      ],
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "operator": "LTE",
+            "dimension": "TEAM_HEALTH",
+            "value": 40
+          },
+          {
+            "operator": "LTE",
+            "dimension": "DELIVERY_STABILITY",
+            "value": 40
+          }
+        ]
+      }
+    },
+    {
+      "id": "XD-008",
+      "code": "HERO_CULTURE",
+      "version": 1,
+      "category": "CROSS_DIMENSIONAL",
+      "severity": "HIGH",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 2,
+        "minimumConfidence": 0.7
+      },
+      "actions": [
+        "REDUCE_RELIANCE_ON_HEROICS",
+        "REDUCE_KEY_PERSON_DEPENDENCY"
+      ],
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "operator": "LTE",
+            "signal": "DELIVERY_WITHOUT_HEROICS",
+            "value": 0
+          },
+          {
+            "operator": "LTE",
+            "signal": "KNOWLEDGE_SPREAD",
+            "value": 0
+          }
+        ]
+      }
+    }
+  ],
+  "penalties": [
+    {
+      "id": "TH-P01",
+      "code": "BURNOUT_RISK_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TH-001",
+        "version": 1
+      },
+      "target": "TEAM_HEALTH",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 12,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 12,
+      "category": "SUSTAINABILITY",
+      "priority": 10,
+      "order": 0,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.TH-P01",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "TH-P02",
+      "code": "PSYCHOLOGICAL_SAFETY_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TH-002",
+        "version": 1
+      },
+      "target": "TEAM_HEALTH",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 8,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 8,
+      "category": "PSYCHOLOGICAL_SAFETY",
+      "priority": 20,
+      "order": 1,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.TH-P02",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "DS-P01",
+      "code": "DELIVERY_UNPREDICTABILITY_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "DS-001",
+        "version": 1
+      },
+      "target": "DELIVERY_STABILITY",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 10,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 10,
+      "category": "PREDICTABILITY",
+      "priority": 30,
+      "order": 2,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.DS-P01",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "DS-P03",
+      "code": "EXCESSIVE_WIP_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "DS-003",
+        "version": 1
+      },
+      "target": "DELIVERY_STABILITY",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 6,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 6,
+      "category": "WORK_IN_PROGRESS",
+      "priority": 40,
+      "order": 3,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.DS-P03",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "DS-P05",
+      "code": "DELIVERY_HEROICS_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "DS-005",
+        "version": 1
+      },
+      "target": "DELIVERY_STABILITY",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 12,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 12,
+      "category": "HEROICS",
+      "priority": 50,
+      "order": 4,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.DS-P05",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "DS-P09",
+      "code": "RELEASE_INSTABILITY_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "DS-009",
+        "version": 1
+      },
+      "target": "DELIVERY_STABILITY",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 10,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 10,
+      "category": "RELEASES",
+      "priority": 60,
+      "order": 5,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.DS-P09",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "TR-P03",
+      "code": "SINGLE_POINT_OF_FAILURE_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TR-003",
+        "version": 1
+      },
+      "target": "TECHNICAL_RISK",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 12,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 12,
+      "category": "KNOWLEDGE",
+      "priority": 70,
+      "order": 6,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.TR-P03",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "TR-P04",
+      "code": "WEAK_TEST_AUTOMATION_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TR-004",
+        "version": 1
+      },
+      "target": "TECHNICAL_RISK",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 8,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 8,
+      "category": "TESTING",
+      "priority": 80,
+      "order": 7,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.TR-P04",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "TR-P05",
+      "code": "PRODUCTION_INSTABILITY_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TR-005",
+        "version": 1
+      },
+      "target": "TECHNICAL_RISK",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 15,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 15,
+      "category": "PRODUCTION",
+      "priority": 90,
+      "order": 8,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.TR-P05",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "TR-P06",
+      "code": "POOR_OBSERVABILITY_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TR-006",
+        "version": 1
+      },
+      "target": "TECHNICAL_RISK",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 6,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 6,
+      "category": "OBSERVABILITY",
+      "priority": 100,
+      "order": 9,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.TR-P06",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "LL-P01",
+      "code": "LEADERSHIP_BOTTLENECK_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "LL-001",
+        "version": 1
+      },
+      "target": "LEADERSHIP_LOAD",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 10,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 10,
+      "category": "DECISION_FLOW",
+      "priority": 110,
+      "order": 10,
+      "stackingPolicy": "MAX_PER_CATEGORY",
+      "enabled": true,
+      "explanationKey": "penalty.LL-P01"
+    },
+    {
+      "id": "LL-P04",
+      "code": "DECISION_LATENCY_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "LL-004",
+        "version": 1
+      },
+      "target": "LEADERSHIP_LOAD",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 8,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 8,
+      "category": "DECISION_FLOW",
+      "priority": 120,
+      "order": 11,
+      "stackingPolicy": "MAX_PER_CATEGORY",
+      "enabled": true,
+      "explanationKey": "penalty.LL-P04"
+    },
+    {
+      "id": "LL-P06",
+      "code": "LEADERSHIP_OVERLOAD_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "LL-006",
+        "version": 1
+      },
+      "target": "LEADERSHIP_LOAD",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 12,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 12,
+      "category": "CAPACITY",
+      "priority": 130,
+      "order": 12,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.LL-P06",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "LL-P08",
+      "code": "WEAK_SUCCESSION_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "LL-008",
+        "version": 1
+      },
+      "target": "LEADERSHIP_LOAD",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 5,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 5,
+      "category": "SUCCESSION",
+      "priority": 140,
+      "order": 13,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.LL-P08",
+      "maximumCumulativeDeduction": 30
+    },
+    {
+      "id": "XD-P01",
+      "code": "UNSUSTAINABLE_OPERATING_MODEL_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "XD-001",
+        "version": 1
+      },
+      "target": "OVERALL",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 8,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 8,
+      "category": "OPERATING_MODEL",
+      "priority": 150,
+      "order": 14,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.XD-P01",
+      "maximumCumulativeDeduction": 15
+    },
+    {
+      "id": "XD-P08",
+      "code": "HERO_CULTURE_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "XD-008",
+        "version": 1
+      },
+      "target": "OVERALL",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 10,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 10,
+      "category": "DEPENDENCY",
+      "priority": 160,
+      "order": 15,
+      "stackingPolicy": "CAPPED_STACK",
+      "enabled": true,
+      "explanationKey": "penalty.XD-P08",
+      "maximumCumulativeDeduction": 15
+    }
+  ],
+  "imbalances": [
+    {
+      "id": "DELIVERY_TECHNICAL_GAP",
+      "version": 1,
+      "left": "DELIVERY_STABILITY",
+      "right": "TECHNICAL_RISK",
+      "direction": "LEFT_MINUS_RIGHT",
+      "operator": "GAP_GTE",
+      "threshold": 30,
+      "severity": "HIGH",
+      "basis": "RAW_DIMENSION_SCORE",
+      "enabled": true,
+      "explanationKey": "imbalance.DELIVERY_TECHNICAL_GAP",
+      "recommendationKey": "recommend.DELIVERY_TECHNICAL_GAP"
+    }
+  ],
+  "overall": {
+    "weights": {
+      "TEAM_HEALTH": 0.25,
+      "DELIVERY_STABILITY": 0.25,
+      "TECHNICAL_RISK": 0.25,
+      "LEADERSHIP_LOAD": 0.25
+    },
+    "tolerance": 0.0001,
+    "lisInterpretation": [
+      {
+        "min": 0,
+        "max": 40,
+        "label": "CRITICAL"
+      },
+      {
+        "min": 40,
+        "max": 60,
+        "label": "AT_RISK"
+      },
+      {
+        "min": 60,
+        "max": 80,
+        "label": "HEALTHY"
+      },
+      {
+        "min": 80,
+        "max": 100,
+        "label": "STRONG"
+      }
+    ],
+    "dimensionInterpretation": [
+      {
+        "min": 0,
+        "max": 40,
+        "label": "CRITICAL"
+      },
+      {
+        "min": 40,
+        "max": 60,
+        "label": "AT_RISK"
+      },
+      {
+        "min": 60,
+        "max": 80,
+        "label": "HEALTHY"
+      },
+      {
+        "min": 80,
+        "max": 100,
+        "label": "STRONG"
+      }
+    ]
+  },
+  "responses": {
+    "defaultMethod": "MEDIAN",
+    "minResponses": 5,
+    "signalShare": 0.5,
+    "fullConfidenceResponses": 10
+  },
+  "recommendations": [
+    {
+      "key": "REVIEW_TEAM_CAPACITY",
+      "title": "Review team capacity",
+      "description": "Compare the planned workload with the team's real capacity and agree what can move or stop.",
+      "priority": 10
+    },
+    {
+      "key": "REVIEW_WORKLOAD_DISTRIBUTION",
+      "title": "Review workload distribution",
+      "description": "Check whether work is concentrated on a few people and rebalance it.",
+      "priority": 20
+    },
+    {
+      "key": "BUILD_PSYCHOLOGICAL_SAFETY",
+      "title": "Build psychological safety",
+      "description": "Make it routine to raise problems early, for example with blameless reviews, and respond to concerns visibly.",
+      "priority": 30
+    },
+    {
+      "key": "REVIEW_PLANNING_PRACTICE",
+      "title": "Review planning practice",
+      "description": "Compare past plans with outcomes and adjust how work is sized and committed.",
+      "priority": 40
+    },
+    {
+      "key": "LIMIT_WORK_IN_PROGRESS",
+      "title": "Limit work in progress",
+      "description": "Agree a limit on parallel work and finish work before starting more.",
+      "priority": 50
+    },
+    {
+      "key": "REDUCE_RELIANCE_ON_HEROICS",
+      "title": "Reduce reliance on heroic effort",
+      "description": "Find out why extra effort is needed and fix the cause, so delivery does not depend on it.",
+      "priority": 60
+    },
+    {
+      "key": "IMPROVE_RELEASE_PRACTICE",
+      "title": "Improve release practice",
+      "description": "Review recent rollbacks and urgent fixes and strengthen checks before release.",
+      "priority": 70
+    },
+    {
+      "key": "REDUCE_KEY_PERSON_DEPENDENCY",
+      "title": "Reduce key-person dependency",
+      "description": "Spread critical knowledge across more than one person, for example through pairing and documentation.",
+      "priority": 80
+    },
+    {
+      "key": "STRENGTHEN_TEST_AUTOMATION",
+      "title": "Strengthen test automation",
+      "description": "Add automated tests where changes are riskiest and keep them fast and reliable.",
+      "priority": 90
+    },
+    {
+      "key": "STABILIZE_PRODUCTION",
+      "title": "Stabilize production",
+      "description": "Review the recent incidents, fix the repeating causes and agree how to prevent them.",
+      "priority": 100
+    },
+    {
+      "key": "IMPROVE_OBSERVABILITY",
+      "title": "Improve observability",
+      "description": "Improve monitoring and logging so problems are found and understood quickly.",
+      "priority": 110
+    },
+    {
+      "key": "DELEGATE_DECISIONS",
+      "title": "Delegate decisions",
+      "description": "Agree which decisions the team can take without approval and make it explicit.",
+      "priority": 120
+    },
+    {
+      "key": "CLARIFY_DECISION_RIGHTS",
+      "title": "Clarify decision rights",
+      "description": "Write down who decides what, and review decisions that waited the longest.",
+      "priority": 130
+    },
+    {
+      "key": "REVIEW_LEADERSHIP_CAPACITY",
+      "title": "Review leadership capacity",
+      "description": "Look at the leader's commitments and direct reports and decide what to hand over or add support for.",
+      "priority": 140
+    },
+    {
+      "key": "PLAN_SUCCESSION_COVERAGE",
+      "title": "Plan succession coverage",
+      "description": "Name who covers critical leadership duties and prepare them.",
+      "priority": 150
+    },
+    {
+      "key": "REVIEW_OPERATING_MODEL",
+      "title": "Review the operating model",
+      "description": "Look at how work is organized across teams and agree changes that make it sustainable.",
+      "priority": 160
+    },
+    {
+      "key": "recommend.DELIVERY_TECHNICAL_GAP",
+      "title": "Close the gap between delivery and technical resilience",
+      "description": "Delivery is strong compared with technical resilience. Invest in the technical foundations before the gap turns into incidents.",
+      "priority": 170
+    }
+  ],
+  "presentation": {
+    "patterns": {
+      "TH-001": {
+        "name": "Team burnout risk",
+        "description": "Heavy workload together with an unsustainable pace.",
+        "explanation": "The workload was reported as too heavy and the pace as unsustainable, a combination that tends to precede attrition and quality problems. This describes working conditions, not any individual."
+      },
+      "TH-002": {
+        "name": "Low psychological safety",
+        "description": "People do not feel safe to speak up.",
+        "explanation": "People reported that it is not safe to raise concerns or disagree, which hides problems until they are expensive. This describes working conditions, not any individual."
+      },
+      "DS-001": {
+        "name": "Chronic delivery unpredictability",
+        "description": "Commitments are rarely met and plans rarely match outcomes.",
+        "explanation": "Commitments were rarely delivered when planned and plans rarely matched what happened, so dates cannot be relied on. This describes working conditions, not any individual."
+      },
+      "DS-003": {
+        "name": "Excessive work in progress",
+        "description": "The team works on too many things at once.",
+        "explanation": "The team reported working on too many things at once, which slows everything down and hides bottlenecks. This describes working conditions, not any individual."
+      },
+      "DS-005": {
+        "name": "Delivery heroics",
+        "description": "Delivery depends on extra hours or heroic effort.",
+        "explanation": "Delivery was reported to depend on people regularly working extra hours or making heroic efforts, which is not repeatable and wears people out. This describes working conditions, not any individual."
+      },
+      "DS-009": {
+        "name": "Release instability",
+        "description": "Many recent releases needed a rollback or an urgent fix.",
+        "explanation": "Seven or more of the last ten releases needed a rollback or an urgent fix, so releasing is risky. This describes working conditions, not any individual."
+      },
+      "TR-003": {
+        "name": "Single point of failure",
+        "description": "A part of the system depends on one person.",
+        "explanation": "A part of the system was reported to be safely changeable by only one person. That is a risk to continuity, not a judgement of that person."
+      },
+      "TR-004": {
+        "name": "Weak test automation",
+        "description": "Automated tests do not give confidence to change the system.",
+        "explanation": "Automated tests were reported to give little confidence to change the system, so changes are slow or risky. This describes working conditions, not any individual."
+      },
+      "TR-005": {
+        "name": "Production instability",
+        "description": "Production incidents affect customers often.",
+        "explanation": "Ten or more production incidents affected customers in the last quarter, so production is not stable. This describes working conditions, not any individual."
+      },
+      "TR-006": {
+        "name": "Poor observability",
+        "description": "Problems are slow to detect and diagnose.",
+        "explanation": "The team reported that problems in production are slow to detect and diagnose. This describes working conditions, not any individual."
+      },
+      "LL-001": {
+        "name": "Leadership bottleneck",
+        "description": "Decisions wait for a leader and the leader steps into team work.",
+        "explanation": "Decisions were reported to wait for a leader and the leader to step into work the team could do, so the leader has become a bottleneck. This describes working conditions, not any individual."
+      },
+      "LL-004": {
+        "name": "Decision latency",
+        "description": "Decisions wait for a leader's approval.",
+        "explanation": "Decisions were reported to wait for a leader's approval almost always, which delays the work. This describes working conditions, not any individual."
+      },
+      "LL-006": {
+        "name": "Leadership overload",
+        "description": "Leaders have little room and many direct reports.",
+        "explanation": "Leaders reported having little time for strategic work and people, together with twelve or more direct reports. This describes working conditions, not any individual."
+      },
+      "LL-008": {
+        "name": "Weak succession coverage",
+        "description": "Critical leadership duties are not covered.",
+        "explanation": "It was reported that nobody could take over critical leadership duties if the leader were away. This describes working conditions, not any individual."
+      },
+      "XD-001": {
+        "name": "Unsustainable delivery model",
+        "description": "Both team health and delivery stability are low.",
+        "explanation": "Team Health and Delivery Stability are both low before any deduction, so the way work is organized cannot continue as it is."
+      },
+      "XD-008": {
+        "name": "Hero culture",
+        "description": "Delivery depends on heroic effort and on single people.",
+        "explanation": "Delivery was reported to rely on heroic effort and a part of the system on one person, a pattern in which results depend on a few people. This describes working conditions, not any individual."
+      }
+    },
+    "penalties": {
+      "TH-P01": {
+        "name": "Burnout risk deduction",
+        "description": "Lowers Team Health when team burnout risk is detected with enough evidence.",
+        "explanation": "Team Health is lowered because team burnout risk was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 12 points."
+      },
+      "TH-P02": {
+        "name": "Psychological safety deduction",
+        "description": "Lowers Team Health when low psychological safety is detected with enough evidence.",
+        "explanation": "Team Health is lowered because low psychological safety was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 8 points."
+      },
+      "DS-P01": {
+        "name": "Delivery unpredictability deduction",
+        "description": "Lowers Delivery Stability when chronic delivery unpredictability is detected with enough evidence.",
+        "explanation": "Delivery Stability is lowered because chronic delivery unpredictability was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 10 points."
+      },
+      "DS-P03": {
+        "name": "Work in progress deduction",
+        "description": "Lowers Delivery Stability when excessive work in progress is detected with enough evidence.",
+        "explanation": "Delivery Stability is lowered because excessive work in progress was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 6 points."
+      },
+      "DS-P05": {
+        "name": "Delivery heroics deduction",
+        "description": "Lowers Delivery Stability when delivery heroics is detected with enough evidence.",
+        "explanation": "Delivery Stability is lowered because delivery heroics was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 12 points."
+      },
+      "DS-P09": {
+        "name": "Release instability deduction",
+        "description": "Lowers Delivery Stability when release instability is detected with enough evidence.",
+        "explanation": "Delivery Stability is lowered because release instability was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 10 points."
+      },
+      "TR-P03": {
+        "name": "Single point of failure deduction",
+        "description": "Lowers Technical Risk when single point of failure is detected with enough evidence.",
+        "explanation": "Technical Risk is lowered because single point of failure was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 12 points."
+      },
+      "TR-P04": {
+        "name": "Test automation deduction",
+        "description": "Lowers Technical Risk when weak test automation is detected with enough evidence.",
+        "explanation": "Technical Risk is lowered because weak test automation was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 8 points."
+      },
+      "TR-P05": {
+        "name": "Production instability deduction",
+        "description": "Lowers Technical Risk when production instability is detected with enough evidence.",
+        "explanation": "Technical Risk is lowered because production instability was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 15 points."
+      },
+      "TR-P06": {
+        "name": "Observability deduction",
+        "description": "Lowers Technical Risk when poor observability is detected with enough evidence.",
+        "explanation": "Technical Risk is lowered because poor observability was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 6 points."
+      },
+      "LL-P01": {
+        "name": "Leadership bottleneck deduction",
+        "description": "Lowers Leadership Load when leadership bottleneck is detected with enough evidence.",
+        "explanation": "Leadership Load is lowered because leadership bottleneck was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 10 points."
+      },
+      "LL-P04": {
+        "name": "Decision latency deduction",
+        "description": "Lowers Leadership Load when decision latency is detected with enough evidence.",
+        "explanation": "Leadership Load is lowered because decision latency was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 8 points."
+      },
+      "LL-P06": {
+        "name": "Leadership overload deduction",
+        "description": "Lowers Leadership Load when leadership overload is detected with enough evidence.",
+        "explanation": "Leadership Load is lowered because leadership overload was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 12 points."
+      },
+      "LL-P08": {
+        "name": "Succession coverage deduction",
+        "description": "Lowers Leadership Load when weak succession coverage is detected with enough evidence.",
+        "explanation": "Leadership Load is lowered because weak succession coverage was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 5 points."
+      },
+      "XD-P01": {
+        "name": "Operating model deduction",
+        "description": "Lowers the overall score when unsustainable delivery model is detected with enough evidence.",
+        "explanation": "The overall score is lowered because unsustainable delivery model was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 8 points."
+      },
+      "XD-P08": {
+        "name": "Hero culture deduction",
+        "description": "Lowers the overall score when hero culture is detected with enough evidence.",
+        "explanation": "The overall score is lowered because hero culture was detected with sufficient confidence. The deduction scales with the pattern's severity and never exceeds 10 points."
+      }
+    },
+    "dimensions": {
+      "TEAM_HEALTH": {
+        "name": "Team Health",
+        "description": "How healthy and sustainable the team environment is. 100 is healthy."
+      },
+      "DELIVERY_STABILITY": {
+        "name": "Delivery Stability",
+        "description": "How predictable and sustainable delivery is. 100 is predictable."
+      },
+      "TECHNICAL_RISK": {
+        "name": "Technical Risk",
+        "description": "How well technical risk is controlled. 100 means low risk."
+      },
+      "LEADERSHIP_LOAD": {
+        "name": "Leadership Load",
+        "description": "How manageable the load on leaders is. 100 means a healthy load."
+      }
+    },
+    "signals": {
+      "TEAM_SUSTAINABILITY": {
+        "name": "Team sustainability",
+        "description": "How sustainable the team's pace is. 100 is fully sustainable."
+      },
+      "WORKLOAD_MANAGEABILITY": {
+        "name": "Workload manageability",
+        "description": "How manageable the workload is. 100 is very manageable; a low value means high workload pressure."
+      },
+      "PSYCHOLOGICAL_SAFETY": {
+        "name": "Psychological safety",
+        "description": "How safe people feel to speak up. 100 is fully safe."
+      },
+      "DELIVERY_PREDICTABILITY": {
+        "name": "Delivery predictability",
+        "description": "How often delivery matches the plan. 100 is always."
+      },
+      "WIP_CONTROL": {
+        "name": "Control of work in progress",
+        "description": "How well work in progress is kept in check. 100 means it is never excessive."
+      },
+      "RELEASE_STABILITY": {
+        "name": "Release stability",
+        "description": "How stable releases are. 100 means none of the last ten needed a rollback or urgent fix."
+      },
+      "PLANNING_REALISM": {
+        "name": "Planning realism",
+        "description": "How closely plans match outcomes. 100 is a close match."
+      },
+      "DELIVERY_WITHOUT_HEROICS": {
+        "name": "Delivery without heroics",
+        "description": "Whether delivery avoids relying on heroic effort. 100 means it does; 0 means it depends on it."
+      },
+      "PRODUCTION_STABILITY": {
+        "name": "Production stability",
+        "description": "How stable production is. 100 means no customer-affecting incidents."
+      },
+      "TEST_CONFIDENCE": {
+        "name": "Test confidence",
+        "description": "How much automated tests protect changes. 100 is full confidence."
+      },
+      "OBSERVABILITY": {
+        "name": "Observability",
+        "description": "How quickly problems are detected and diagnosed. 100 is very quickly."
+      },
+      "KNOWLEDGE_SPREAD": {
+        "name": "Knowledge spread",
+        "description": "Whether knowledge of the system is shared. 100 means it is; 0 means a part depends on one person."
+      },
+      "DECISION_FLOW": {
+        "name": "Decision flow",
+        "description": "How freely decisions flow without waiting for a leader. 100 means they never wait."
+      },
+      "SPAN_MANAGEABILITY": {
+        "name": "Span manageability",
+        "description": "How manageable the number of direct reports is. 100 means none; a low value means very many."
+      },
+      "DELEGATION": {
+        "name": "Delegation",
+        "description": "How well work is delegated. 100 means the leader rarely steps in."
+      },
+      "LEADER_CAPACITY": {
+        "name": "Leadership capacity",
+        "description": "How much room leaders have for strategic work and people. 100 is plenty."
+      },
+      "SUCCESSION_COVERAGE": {
+        "name": "Succession coverage",
+        "description": "How well leadership duties are covered. 100 is fully covered."
+      }
+    },
+    "questions": {
+      "TH01": {
+        "name": "Sustainable pace",
+        "description": "Our team can keep up its current pace over the long term. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "TH02": {
+        "name": "Workload",
+        "description": "How heavy is the team's workload compared with what it can handle? (1 = very light, 5 = far too heavy)"
+      },
+      "TH03": {
+        "name": "Psychological safety",
+        "description": "People on the team feel safe to raise concerns and to disagree. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "TH04": {
+        "name": "Collaboration",
+        "description": "The team collaborates well across roles and with other teams. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "TH05": {
+        "name": "Role clarity",
+        "description": "Everyone on the team knows what they are responsible for. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "DS01": {
+        "name": "Commitments met",
+        "description": "How often are planned commitments delivered when planned? (ALWAYS, OFTEN, SOMETIMES, RARELY or NEVER)"
+      },
+      "DS02": {
+        "name": "Work in progress",
+        "description": "How often is the team working on too many things at once? (1 = never, 5 = constantly)"
+      },
+      "DS03": {
+        "name": "Release stability",
+        "description": "How many of the last ten releases needed a rollback or an urgent fix? (0 to 10)"
+      },
+      "DS04": {
+        "name": "Realistic planning",
+        "description": "Estimates and plans match what actually happens. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "DS05": {
+        "name": "Delivery without heroics",
+        "description": "Does delivery depend on people regularly working extra hours or making heroic efforts? (yes or no)"
+      },
+      "TR01": {
+        "name": "Customer-affecting incidents",
+        "description": "How many production incidents affected customers in the last quarter? (0 to 20; more counts as 20)"
+      },
+      "TR02": {
+        "name": "Test confidence",
+        "description": "Automated tests give the team confidence to change the system. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "TR03": {
+        "name": "Observability",
+        "description": "The team can quickly detect and diagnose problems in production. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "TR04": {
+        "name": "Technical debt",
+        "description": "How much does technical debt slow the team down? (1 = not at all, 5 = severely)"
+      },
+      "TR05": {
+        "name": "Knowledge spread",
+        "description": "Is there a part of the system that only one person can safely change? (yes or no)"
+      },
+      "LL01": {
+        "name": "Decisions waiting",
+        "description": "How often do decisions wait for a leader's approval? (1 = rarely, 5 = almost always)"
+      },
+      "LL02": {
+        "name": "Span of control",
+        "description": "How many people report directly to the leader? (0 to 20; more counts as 20)"
+      },
+      "LL03": {
+        "name": "Delegation",
+        "description": "How often does the leader step in to do work the team could do? (1 = rarely, 5 = constantly)"
+      },
+      "LL04": {
+        "name": "Leadership capacity",
+        "description": "Leaders have time for strategic work and for their people. (1 = strongly disagree, 5 = strongly agree)"
+      },
+      "LL05": {
+        "name": "Succession",
+        "description": "Someone could take over critical leadership duties if the leader were away. (1 = strongly disagree, 5 = strongly agree)"
+      }
+    }
+  }
+}

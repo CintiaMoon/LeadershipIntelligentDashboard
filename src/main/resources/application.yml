@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: leadership-intelligence
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/lis}
+    username: ${DB_USER:lis}
+    password: ${DB_PASSWORD:lis}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: true
+      use-big-decimal-for-floats: true
+    generator:
+      write-bigdecimal-as-plain: true
+  mvc:
+    problemdetails:
+      enabled: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+logging:
+  structured:
+    format:
+      console: ecs
+lis:
+  engine:
+    version: 3.0.0
+    algorithm-version: 1.0.0
+  logging:
+    include-tenant-id: false
+  configuration:
+    initial:
+      # the platform scoring configuration is a JSON file read at startup; see docs/configuration/INITIAL_CONFIGURATION.md
+      enabled: true
+      location: classpath:config/initial-platform-default.json
+      mode: if-missing

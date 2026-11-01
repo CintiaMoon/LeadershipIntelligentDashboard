@@ -1,0 +1,152 @@
+{
+  "interactiveLogin": false,
+  "tokenCallbacks": [
+    {
+      "issuerId": "default",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "client_id",
+          "match": "owner",
+          "claims": {
+            "sub": "owner-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-1",
+              "org-2"
+            ],
+            "roles": [
+              "OWNER"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "admin",
+          "claims": {
+            "sub": "admin-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-1",
+              "org-2"
+            ],
+            "roles": [
+              "ADMIN"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "leader",
+          "claims": {
+            "sub": "leader-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-1",
+              "org-2"
+            ],
+            "roles": [
+              "ENGINEERING_LEADER"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "analyst",
+          "claims": {
+            "sub": "analyst-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-1",
+              "org-2"
+            ],
+            "roles": [
+              "ANALYST"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "viewer",
+          "claims": {
+            "sub": "viewer-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-1",
+              "org-2"
+            ],
+            "roles": [
+              "VIEWER"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "org1-viewer",
+          "claims": {
+            "sub": "org1-viewer-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-1"
+            ],
+            "roles": [
+              "VIEWER"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "other-admin",
+          "claims": {
+            "sub": "other-admin-user",
+            "tenant_id": "other-tenant",
+            "org_ids": [
+              "org-1"
+            ],
+            "roles": [
+              "ADMIN"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "sandbox-admin",
+          "claims": {
+            "sub": "sandbox-admin-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-sandbox"
+            ],
+            "roles": [
+              "ADMIN"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "sandbox-leader",
+          "claims": {
+            "sub": "sandbox-leader-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-sandbox"
+            ],
+            "roles": [
+              "ENGINEERING_LEADER"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "platform-admin",
+          "claims": {
+            "sub": "platform-admin-user",
+            "roles": [
+              "PLATFORM_ADMIN"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

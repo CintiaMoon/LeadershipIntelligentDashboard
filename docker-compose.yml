@@ -1,0 +1,68 @@
+# Local development stack.
+#   docker compose up -d postgres mock-oauth2     only the services; run the app with: mvn spring-boot:run -Dspring-boot.run.profiles=dev
+#   docker compose up -d --build                  everything: app on http://localhost:8080, web UI on http://localhost:3000
+# The "dev" profile seeds two demo tenants and the ILLUSTRATIVE sample configuration. Never use it in production.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lis
+      POSTGRES_USER: lis
+      POSTGRES_PASSWORD: lis
+    ports:
+      - "5432:5432"
+    volumes:
+      - lis-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lis -d lis"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Stand-in identity provider for local use: serves a JWK set and issues tokens with the claims the API expects
+  # (tenant_id, org_ids, roles). The client_id selects the persona; see docker/mock-oauth2/config.json.
+  mock-oauth2:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    environment:
+      JSON_CONFIG_PATH: /config/config.json
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./docker/mock-oauth2/config.json:/config/config.json:ro
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mock-oauth2:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/lis
+      DB_USER: lis
+      DB_PASSWORD: lis
+      LIS_SECURITY_JWK_SET_URI: http://mock-oauth2:8080/default/jwks
+      # tokens are issued to browsers that reach the mock provider on localhost:8081, so that is the issuer they carry
+      LIS_SECURITY_ISSUER: http://localhost:8081/default
+    ports:
+      - "8080:8080"
+
+  # The web application (nginx serving the built SPA and proxying /api to the app). The persona picker is enabled for
+  # this local stack only; production builds leave VITE_DEV_PERSONAS=false.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_OIDC_AUTHORITY: http://localhost:8081/default
+        VITE_OIDC_CLIENT_ID: lis-web
+        VITE_DEV_PERSONAS: "true"
+    depends_on:
+      - app
+    environment:
+      IDP_ORIGIN: http://localhost:8081
+    ports:
+      - "3000:80"
+
+volumes:
+  lis-pgdata:

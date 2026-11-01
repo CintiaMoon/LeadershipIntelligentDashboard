@@ -1,0 +1,416 @@
+{
+  "questions": [
+    {
+      "id": "Q01",
+      "type": "SCALE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 1,
+        "max": 5,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT",
+        "allowDecimals": true
+      }
+    },
+    {
+      "id": "Q02",
+      "type": "MULTIPLE_CHOICE",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "values": {
+          "NEVER": 0,
+          "RARELY": 25,
+          "SOMETIMES": 50,
+          "OFTEN": 75,
+          "ALWAYS": 100
+        },
+        "unknownOption": "REJECT"
+      }
+    },
+    {
+      "id": "Q03",
+      "type": "BOOLEAN",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "trueValue": 100,
+        "falseValue": 0
+      }
+    },
+    {
+      "id": "Q04",
+      "type": "TEXT",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "matcherVersion": "1",
+        "signals": [
+          {
+            "id": "SINGLE_POINT_OF_FAILURE",
+            "matchMode": "KEYWORD_ANY",
+            "keywords": [
+              "only",
+              "single",
+              "one person",
+              "key person"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "Q05",
+      "type": "NUMBER",
+      "missingPolicy": "IGNORE",
+      "normalization": {
+        "min": 0,
+        "max": 100,
+        "direction": "POSITIVE",
+        "outOfRangePolicy": "REJECT"
+      }
+    }
+  ],
+  "signals": [
+    {
+      "id": "TEAM_SUSTAINABILITY",
+      "dataType": "NUMBER",
+      "sources": [
+        "Q01"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "WORKLOAD_PRESSURE",
+      "dataType": "NUMBER",
+      "sources": [
+        "Q05"
+      ],
+      "derivationVersion": "1"
+    },
+    {
+      "id": "SINGLE_POINT_OF_FAILURE",
+      "dataType": "BOOLEAN",
+      "sources": [
+        "Q04"
+      ],
+      "derivationVersion": "1",
+      "reliability": 0.8
+    }
+  ],
+  "dimensions": {
+    "settings": {
+      "TEAM_HEALTH": {
+        "requiredCoverage": 0.75
+      },
+      "DELIVERY_STABILITY": {
+        "requiredCoverage": 0.75
+      },
+      "TECHNICAL_RISK": {
+        "requiredCoverage": 0.75
+      },
+      "LEADERSHIP_LOAD": {
+        "requiredCoverage": 0.75
+      }
+    },
+    "mappings": [
+      {
+        "question": "Q01",
+        "dimension": "TEAM_HEALTH",
+        "weight": 1.0
+      },
+      {
+        "question": "Q02",
+        "dimension": "DELIVERY_STABILITY",
+        "weight": 1.0
+      },
+      {
+        "question": "Q03",
+        "dimension": "TECHNICAL_RISK",
+        "weight": 1.0
+      },
+      {
+        "question": "Q05",
+        "dimension": "LEADERSHIP_LOAD",
+        "weight": 1.0
+      }
+    ]
+  },
+  "patterns": [
+    {
+      "id": "TH-001",
+      "code": "TEAM_BURNOUT_RISK",
+      "version": 1,
+      "category": "TEAM_HEALTH",
+      "severity": "CRITICAL",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 2,
+        "minimumConfidence": 0.7
+      },
+      "actions": [
+        "REVIEW_TEAM_CAPACITY",
+        "REVIEW_WORKLOAD_DISTRIBUTION"
+      ],
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "operator": "GTE",
+            "signal": "WORKLOAD_PRESSURE",
+            "value": 75
+          },
+          {
+            "operator": "LTE",
+            "signal": "TEAM_SUSTAINABILITY",
+            "value": 35
+          }
+        ]
+      }
+    },
+    {
+      "id": "TH-002",
+      "code": "KEY_PERSON_DEPENDENCY",
+      "version": 1,
+      "category": "TEAM_HEALTH",
+      "severity": "MEDIUM",
+      "enabled": true,
+      "penaltyEligible": true,
+      "evidence": {
+        "minimumSignals": 1,
+        "minimumConfidence": 0.5
+      },
+      "actions": [
+        "REDUCE_KEY_PERSON_DEPENDENCY"
+      ],
+      "condition": {
+        "operator": "EQ",
+        "signal": "SINGLE_POINT_OF_FAILURE",
+        "value": true
+      }
+    }
+  ],
+  "penalties": [
+    {
+      "id": "TH-P01",
+      "code": "BURNOUT_RISK_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TH-001",
+        "version": 1
+      },
+      "target": "TEAM_HEALTH",
+      "strategy": {
+        "type": "SEVERITY_BASED",
+        "baseDeduction": 12,
+        "multipliers": {
+          "LOW": 0,
+          "MEDIUM": 0.4,
+          "HIGH": 0.7,
+          "CRITICAL": 1.0
+        }
+      },
+      "maximumDeduction": 12,
+      "category": "SUSTAINABILITY",
+      "priority": 0,
+      "order": 0,
+      "stackingPolicy": "MAX_PER_CATEGORY",
+      "enabled": true,
+      "explanationKey": "penalty.TH-P01"
+    },
+    {
+      "id": "TH-P02",
+      "code": "KEY_PERSON_PENALTY",
+      "version": 1,
+      "trigger": {
+        "pattern": "TH-002",
+        "version": 1
+      },
+      "target": "TEAM_HEALTH",
+      "strategy": {
+        "type": "FIXED",
+        "deduction": 5
+      },
+      "maximumDeduction": 5,
+      "category": "SUSTAINABILITY",
+      "priority": 1,
+      "order": 1,
+      "stackingPolicy": "MAX_PER_CATEGORY",
+      "enabled": true,
+      "explanationKey": "penalty.TH-P02"
+    }
+  ],
+  "imbalances": [
+    {
+      "id": "DELIVERY_TECHNICAL_GAP",
+      "version": 1,
+      "left": "DELIVERY_STABILITY",
+      "right": "TECHNICAL_RISK",
+      "direction": "LEFT_MINUS_RIGHT",
+      "operator": "GAP_GTE",
+      "threshold": 30,
+      "severity": "HIGH",
+      "basis": "RAW_DIMENSION_SCORE",
+      "enabled": true,
+      "explanationKey": "imbalance.DELIVERY_TECHNICAL_GAP",
+      "recommendationKey": "recommend.DELIVERY_TECHNICAL_GAP"
+    }
+  ],
+  "overall": {
+    "weights": {
+      "TEAM_HEALTH": 0.25,
+      "DELIVERY_STABILITY": 0.25,
+      "TECHNICAL_RISK": 0.25,
+      "LEADERSHIP_LOAD": 0.25
+    },
+    "tolerance": 0.0001,
+    "lisInterpretation": [
+      {
+        "min": 0,
+        "max": 40,
+        "label": "CRITICAL"
+      },
+      {
+        "min": 40,
+        "max": 60,
+        "label": "AT_RISK"
+      },
+      {
+        "min": 60,
+        "max": 80,
+        "label": "HEALTHY"
+      },
+      {
+        "min": 80,
+        "max": 100,
+        "label": "STRONG"
+      }
+    ],
+    "dimensionInterpretation": [
+      {
+        "min": 0,
+        "max": 40,
+        "label": "CRITICAL"
+      },
+      {
+        "min": 40,
+        "max": 60,
+        "label": "AT_RISK"
+      },
+      {
+        "min": 60,
+        "max": 80,
+        "label": "HEALTHY"
+      },
+      {
+        "min": 80,
+        "max": 100,
+        "label": "STRONG"
+      }
+    ]
+  },
+  "responses": {
+    "defaultMethod": "MEDIAN",
+    "minResponses": 5,
+    "signalShare": 0.5,
+    "fullConfidenceResponses": 10
+  },
+  "recommendations": [
+    {
+      "key": "REVIEW_TEAM_CAPACITY",
+      "title": "Review team capacity",
+      "description": "Compare the planned workload with the team's available capacity and agree what can move.",
+      "priority": 10
+    },
+    {
+      "key": "REVIEW_WORKLOAD_DISTRIBUTION",
+      "title": "Review workload distribution",
+      "description": "Check whether work is concentrated on a few people and rebalance it.",
+      "priority": 20
+    },
+    {
+      "key": "REDUCE_KEY_PERSON_DEPENDENCY",
+      "title": "Reduce key-person dependency",
+      "description": "Spread critical knowledge across more than one person, for example through pairing and documentation.",
+      "priority": 30
+    }
+  ],
+  "presentation": {
+    "patterns": {
+      "TH-001": {
+        "name": "Team burnout risk",
+        "description": "Sustained workload pressure combined with weak team sustainability.",
+        "explanation": "High workload pressure was reported together with low team sustainability, a combination that tends to precede attrition and quality problems. This describes the team's working conditions, not any individual."
+      },
+      "TH-002": {
+        "name": "Key-person dependency",
+        "description": "Critical knowledge depends on a single person.",
+        "explanation": "The free-text notes describe a dependency on one key person. That is a risk to the team's continuity, not a judgement of that person."
+      }
+    },
+    "penalties": {
+      "TH-P01": {
+        "name": "Burnout risk deduction",
+        "description": "Reduces Team Health when the burnout pattern is detected with enough evidence.",
+        "explanation": "Team Health is lowered because the burnout risk pattern was detected with sufficient confidence. The deduction is capped by the configured maximum."
+      },
+      "TH-P02": {
+        "name": "Key-person dependency deduction",
+        "description": "Lowers Team Health when a key-person dependency is detected.",
+        "explanation": "Team Health is lowered because a key-person dependency was detected."
+      }
+    },
+    "dimensions": {
+      "TEAM_HEALTH": {
+        "name": "Team Health",
+        "description": "How healthy and sustainable the team environment is."
+      },
+      "DELIVERY_STABILITY": {
+        "name": "Delivery Stability",
+        "description": "How predictable and sustainable delivery is."
+      },
+      "TECHNICAL_RISK": {
+        "name": "Technical Risk",
+        "description": "How well technical risk is controlled. 100 means low risk."
+      },
+      "LEADERSHIP_LOAD": {
+        "name": "Leadership Load",
+        "description": "How manageable the load on leaders is. 100 means a healthy load."
+      }
+    },
+    "signals": {
+      "TEAM_SUSTAINABILITY": {
+        "name": "Team sustainability",
+        "description": "How sustainable the team's pace is."
+      },
+      "WORKLOAD_PRESSURE": {
+        "name": "Workload pressure",
+        "description": "How much pressure the current workload creates."
+      },
+      "SINGLE_POINT_OF_FAILURE": {
+        "name": "Single point of failure",
+        "description": "Whether critical knowledge depends on one person."
+      }
+    },
+    "questions": {
+      "Q01": {
+        "name": "Team sustainability",
+        "description": "How sustainable the team's pace feels."
+      },
+      "Q02": {
+        "name": "Delivery predictability",
+        "description": "How often delivery is predictable."
+      },
+      "Q03": {
+        "name": "Technical safeguards",
+        "description": "Whether technical safeguards are in place."
+      },
+      "Q04": {
+        "name": "Knowledge concentration",
+        "description": "Free-text notes on key-person dependence."
+      },
+      "Q05": {
+        "name": "Workload level",
+        "description": "How heavy the current workload is."
+      }
+    }
+  }
+}
