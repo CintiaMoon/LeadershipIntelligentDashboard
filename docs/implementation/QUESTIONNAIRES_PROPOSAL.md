@@ -102,7 +102,7 @@ Migrations: V8 (questionnaire library), V9 (teams, people, runs, participants, d
 | 3 roster, runs and respondent backend | **done**: V9 (`team`, `person`, `assessment_run`, `assessment_run_team`, `run_participant`, `run_draft`, `run_response`), `/api/v1/teams`, `/people`, `/runs` (OWNER and ADMIN) and `/api/v1/respond/**` (RESPONDENT only), `CalculateCommand` takes an optional explicit configuration version. 15 new tests; backend 640 tests. Choices below. |
 | 4 restyle | **done**: dark default and light behind a toggle, left sidebar and top bar, brand constant, theme-aware chart palette. Frontend 268 unit tests, 59 browser tests (axe in both themes). Choices below. |
 | 5 new screens | **done**: questionnaire library, new-questionnaire page and builder (questions, rules with a nested condition editor, summary and publish checks), people (teams and roster), assessment runs (list, start, detail with close), and the respondent flow (my assessments, answer form with drafts). Frontend 391 unit tests; 67 browser tests, with every new screen scanned by axe in both themes and checked on a phone. Choices below. |
-| 6 end to end and release | not started |
+| 6 end to end and release | **done**: browser journey (`frontend/e2e/assessments.spec.ts`), a Postman folder for the new endpoints (81 requests in the collection, 109 executed, 126 assertions, 0 failures), and the release documents (`docs/release/`: implementation report, test results, traceability, known limitations 37 to 48, deployment guide with the respondent role and e-mail claim). |
 
 
 ## 9. Phase 2 choices (for review)

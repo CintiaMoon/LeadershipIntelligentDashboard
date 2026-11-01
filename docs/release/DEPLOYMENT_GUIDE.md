@@ -34,9 +34,9 @@ The `dev` profile seeds two demo tenants and the illustrative sample configurati
 | `management.endpoints.web.exposure.include` | no | `health,info,metrics,prometheus`; metrics and Prometheus are limited to OWNER and ADMIN by the application |
 | `lis.engine.version`, `lis.engine.algorithm-version` | no | recorded with every run |
 
-Token contract: signed JWT with `sub`, `tenant_id` (the tenant; taken from nowhere else), `org_ids` (organizations the user may reach) and `roles` (`OWNER`, `ADMIN`, `ENGINEERING_LEADER`, `ANALYST`, `VIEWER`). Writes need OWNER, ADMIN or ENGINEERING_LEADER; source answers need OWNER, ADMIN or ANALYST; evidence values are redacted for VIEWER; choosing an explicit configuration version needs OWNER or ADMIN.
+Token contract: signed JWT with `sub`, `tenant_id` (the tenant; taken from nowhere else), `org_ids` (organizations the user may reach) and `roles` (`OWNER`, `ADMIN`, `ENGINEERING_LEADER`, `ANALYST`, `VIEWER`; see "Respondents" below for the role of people who answer questionnaires). Building questionnaires, keeping the roster and running assessments need OWNER or ADMIN. Writes need OWNER, ADMIN or ENGINEERING_LEADER; source answers need OWNER, ADMIN or ANALYST; evidence values are redacted for VIEWER; choosing an explicit configuration version needs OWNER or ADMIN.
 
-Database: create an empty database and a user that can create tables in it. Flyway applies seven migrations (`V1` to `V7`; `V7` lets the audit hold a row without a tenant; `V6` adds the scopes of answers and runs and keeps every earlier row as an organization-level answer or run, so upgrading a populated database is safe, which was tested). Scoring history and active configuration versions are protected by triggers; back up the database like any system of record. Run migrations from one instance at a time.
+Database: create an empty database and a user that can create tables in it. Flyway applies nine migrations (`V1` to `V9`; `V8` adds the questionnaire library with a trigger that keeps a published version immutable; `V9` adds teams, people, assessment runs, participants, drafts and the table of submitted answers, which has no column that names a person; `V7` lets the audit hold a row without a tenant; `V6` adds the scopes of answers and runs and keeps every earlier row as an organization-level answer or run, so upgrading a populated database is safe, which was tested). Scoring history and active configuration versions are protected by triggers; back up the database like any system of record. Run migrations from one instance at a time.
 
 ## Web UI configuration (build time)
 
@@ -53,6 +53,16 @@ The container sends a Content Security Policy, `X-Content-Type-Options`, `X-Fram
 ## The platform administrator
 
 Creating and listing tenants is for one role, `PLATFORM_ADMIN`, in the `roles` claim. It belongs to no tenant: its token has **no** `tenant_id` and no `org_ids`, so it can reach nothing tenant-scoped, and the tenant roles can reach nothing of platform administration. Grant it in the identity provider only to the few people who operate the platform, never to a tenant's users. In the product they land on the Tenants screen (list, filter, create); the same operations exist as `GET` and `POST /api/v1/platform/tenants`. Each creation and each list read is recorded in `scoring_access_audit` with the subject. A tenant id is permanent: choose the one your identity provider will issue as `tenant_id`. Nothing renames, disables or deletes a tenant (limitation 4).
+
+## Respondents
+
+People who answer questionnaires are not users of the product in the tenant sense. Give them the role `RESPONDENT` in the `roles` claim and a `tenant_id`, and issue the **verified** e-mail address as the `email` claim. Nothing else is needed: no `org_ids`. The product matches the token to the roster entry whose e-mail address equals the claim (lower-cased) in the token's tenant, so:
+
+- an address on the roster that the provider does not verify lets someone answer as another person: issue only verified addresses (limitation 45);
+- a respondent token reaches `/api/v1/respond/**` and nothing else, and the tenant roles do not reach it; do not give the role to people who also administer, or they will need two tokens;
+- a person who is not on the roster has nothing to answer and sees an empty list.
+
+Owners and administrators keep the roster in the product (People) and start runs (Assessment runs). The roster holds names and e-mail addresses, which are personal data with no retention rule yet (limitation 44). The local mock provider has `respondent-1` to `respondent-6` (`respondentN@demo.test`) and `assess-admin` (an administrator of the scratch organization `org-assess`), for the development stack and the browser tests only.
 
 ## Putting a configuration in place
 
@@ -73,7 +83,7 @@ Tenants are created by the platform administrator in the product (see above) or 
 ## Verifying a deployment
 
 1. `GET /actuator/health` returns `UP`.
-2. With a token of a real user: `GET /api/v1/organizations/{org}/dashboard` returns 200 (or an empty dashboard).
+2. With a token of a real user: `GET /api/v1/organizations/{org}/dashboard` returns 200 (or an empty dashboard). With an administrator token, `GET /api/v1/questionnaires` returns 200; with a respondent token, `GET /api/v1/respond/runs` returns 200 and `GET /api/v1/runs` returns 403.
 3. `newman run docs/postman/lis.postman_collection.json` against a non-production environment (set `baseUrl` and `authUrl`; the persona mechanism of the collection works with the mock provider only, so supply tokens for a real provider).
 4. In a browser: sign in, open the dashboard, open the explanation of a run, confirm the notice text appears with the score.
 5. `GET /actuator/prometheus` as an OWNER or ADMIN shows `scoring_requests_total` and the `scoring_duration_seconds` timers.

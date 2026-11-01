@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Leadership Intelligence Scoring Engine",
-    "description": "Every endpoint of the API. Start the stack with `docker compose up -d --build`, then run folder 1 top to bottom. Tokens come from the local mock identity provider (client_id = persona: owner, admin, leader, analyst, viewer, org1-viewer, other-admin). Change the collection variable \"persona\" to act as another role.",
+    "description": "Every endpoint of the API. Start the stack with `docker compose up -d --build`, then run folder 1 top to bottom. Tokens come from the local mock identity provider (client_id = persona: owner, admin, leader, analyst, viewer, org1-viewer, other-admin, platform-admin, assess-admin, respondent-1 to respondent-6). Change the collection variable \"persona\" to act as another role.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -92,6 +92,26 @@
     },
     {
       "key": "newTenantId",
+      "value": ""
+    },
+    {
+      "key": "questionnaireId",
+      "value": ""
+    },
+    {
+      "key": "teamId",
+      "value": ""
+    },
+    {
+      "key": "assessmentRunId",
+      "value": ""
+    },
+    {
+      "key": "assessmentScoringRunId",
+      "value": ""
+    },
+    {
+      "key": "stamp",
       "value": ""
     }
   ],
@@ -1828,6 +1848,1659 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Questionnaires, roster, runs and respondents",
+      "description": "The whole path from authoring a questionnaire to a scored run, in order, in the scratch organization org-assess (persona assess-admin; respondents are respondent-1 to respondent-6). Run the folder top to bottom. It can be run again: names are unique per run and the roster is moved, not duplicated.",
+      "item": [
+        {
+          "name": "Create a questionnaire",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Owners and administrators only. The id is also the template id. Saves questionnaireId.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman questionnaire {{stamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('stamp', Date.now().toString(36));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json();",
+                  "pm.test('an empty draft', () => { pm.expect(d.state).to.eql('DRAFT'); pm.expect(d.version).to.eql(1); });",
+                  "pm.collectionVariables.set('questionnaireId', d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save the draft (a questionnaire with a rule)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Replaces the open draft. A draft may be incomplete; unknown fields are rejected.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman questionnaire {{stamp}}\",\n  \"description\": \"Created by the collection\",\n  \"questions\": [\n    {\n      \"id\": \"Q01\",\n      \"kind\": \"RATING\",\n      \"text\": \"How sustainable is the pace?\",\n      \"required\": true,\n      \"dimension\": \"TEAM_HEALTH\"\n    },\n    {\n      \"id\": \"Q02\",\n      \"kind\": \"RATING\",\n      \"text\": \"How predictable is delivery?\",\n      \"dimension\": \"DELIVERY_STABILITY\"\n    },\n    {\n      \"id\": \"Q03\",\n      \"kind\": \"RATING\",\n      \"text\": \"How well is technical risk controlled?\",\n      \"dimension\": \"TECHNICAL_RISK\"\n    },\n    {\n      \"id\": \"Q04\",\n      \"kind\": \"RATING\",\n      \"text\": \"How manageable is the load on leaders?\",\n      \"dimension\": \"LEADERSHIP_LOAD\"\n    },\n    {\n      \"id\": \"Q05\",\n      \"kind\": \"FREE_TEXT\",\n      \"text\": \"Anything else?\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"name\": \"Unsustainable pace\",\n      \"description\": \"The team reports an unsustainable pace.\",\n      \"severity\": \"HIGH\",\n      \"enabled\": true,\n      \"condition\": {\n        \"op\": \"LTE\",\n        \"question\": \"Q01\",\n        \"value\": 25\n      },\n      \"minimumSignals\": 1,\n      \"minimumConfidence\": 0.5,\n      \"penalty\": {\n        \"target\": \"TEAM_HEALTH\",\n        \"strategy\": \"FIXED\",\n        \"amount\": 5,\n        \"stackingPolicy\": \"STACK\"\n      },\n      \"recommendation\": {\n        \"title\": \"Review the workload\",\n        \"description\": \"Compare the plan with what the team can do.\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('ids assigned, rule X-1', () => { pm.expect(d.document.rules[0].id).to.eql('X-1'); });",
+                  "pm.test('nothing is missing', () => pm.expect(d.problems).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save an unknown field -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"x\",\"surprise\":1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "Turns the draft into an active TEMPLATE layer through the configuration lifecycle, in one transaction.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}",
+                "publish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('published', () => { pm.expect(d.state).to.eql('PUBLISHED'); pm.expect(d.versionStatus).to.eql('PUBLISHED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish again with no open draft -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}",
+                "publish"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('code QUESTIONNAIRE_STATE', () => pm.expect(pm.response.json().code).to.eql('QUESTIONNAIRE_STATE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List the questionnaires",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('contains it', () => pm.expect(pm.response.json().some((q) => q.id === pm.collectionVariables.get('questionnaireId'))).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read it as another tenant -> 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "other-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));",
+                  "pm.test('code QUESTIONNAIRE_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('QUESTIONNAIRE_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the library as a viewer -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "viewer"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a team",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "A team belongs to an organization the token carries. Saves teamId.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizationId\": \"org-assess\",\n  \"name\": \"Postman team {{stamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('teamId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create the same team again -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizationId\": \"org-assess\",\n  \"name\": \"Postman team {{stamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('code ROSTER_CONFLICT', () => pm.expect(pm.response.json().code).to.eql('ROSTER_CONFLICT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a team in an organization the token does not carry -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/teams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizationId\": \"org-1\",\n  \"name\": \"Nope\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Put the five respondents on the team",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "The script adds or moves respondent1@demo.test to respondent5@demo.test onto the team; the request then lists the team. The read is audited.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/people?teamId={{teamId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "people"
+              ],
+              "query": [
+                {
+                  "key": "teamId",
+                  "value": "{{teamId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Puts the five respondents on the team: adds the people who are not on the roster yet and moves the ones who are (the roster",
+                  "// is permanent, so this collection can be run again).",
+                  "const base = pm.collectionVariables.get('baseUrl');",
+                  "const auth = { 'Authorization': 'Bearer ' + pm.variables.get('accessToken'), 'Content-Type': 'application/json' };",
+                  "const teamId = pm.collectionVariables.get('teamId');",
+                  "pm.sendRequest({ url: base + '/api/v1/people', method: 'GET', header: auth }, (e, r) => {",
+                  "  if (e) { throw e; }",
+                  "  const existing = r.json();",
+                  "  [1, 2, 3, 4, 5].forEach((n) => {",
+                  "    const email = 'respondent' + n + '@demo.test';",
+                  "    const found = existing.find((p) => p.email === email);",
+                  "    const body = found ? { teamId: teamId, name: 'Respondent ' + n, email: email, active: true } : { teamId: teamId, name: 'Respondent ' + n, email: email };",
+                  "    pm.sendRequest({ url: base + '/api/v1/people' + (found ? '/' + found.id : ''), method: found ? 'PUT' : 'POST', header: auth, body: { mode: 'raw', raw: JSON.stringify(body) } }, (e2, r2) => {",
+                  "      if (e2 || r2.code >= 300) { throw new Error('could not put ' + email + ' on the team: ' + (r2 ? r2.code : e2)); }",
+                  "    });",
+                  "  });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('five active people on the team', () => pm.expect(pm.response.json().filter((p) => p.teamId === pm.collectionVariables.get('teamId') && p.active).length).to.eql(5));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add a person with an invalid e-mail address -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "people"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teamId\": \"{{teamId}}\",\n  \"name\": \"Nobody\",\n  \"email\": \"not-an-address\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));",
+                  "pm.test('code ROSTER_INVALID', () => pm.expect(pm.response.json().code).to.eql('ROSTER_INVALID'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start a run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Pins the questionnaire version published now and snapshots one participant per active person. Saves assessmentRunId.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman run {{stamp}}\",\n  \"organizationId\": \"org-assess\",\n  \"questionnaireId\": \"{{questionnaireId}}\",\n  \"teamIds\": [\n    \"{{teamId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json();",
+                  "pm.test('open with five participants', () => { pm.expect(d.run.status).to.eql('OPEN'); pm.expect(d.run.participants).to.eql(5); });",
+                  "pm.collectionVariables.set('assessmentRunId', d.run.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start a run for a draft-only questionnaire -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"x\",\n  \"organizationId\": \"org-assess\",\n  \"questionnaireId\": \"q-doesnotexist\",\n  \"teamIds\": [\n    \"{{teamId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));",
+                  "pm.test('code RUN_INVALID', () => pm.expect(pm.response.json().code).to.eql('RUN_INVALID'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Respondent 1 lists their runs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('contains the run, not started', () => { const r = pm.response.json().find((x) => x.runId === pm.collectionVariables.get('assessmentRunId')); pm.expect(r.myStatus).to.eql('NOT_STARTED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Respondent 1 reads the questions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const text = pm.response.text();",
+                  "pm.test('five questions', () => pm.expect(pm.response.json().questions.length).to.eql(5));",
+                  "pm.test('nothing about scoring', () => { ['dimension', 'weight', 'higherIsBetter', 'desirableAnswer', 'TEAM_HEALTH'].forEach((w) => pm.expect(text).to.not.include(w)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Respondent 1 saves an answer that does not fit -> 422",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}",
+                "draft"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 9\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));",
+                  "pm.test('code RUN_INVALID', () => pm.expect(pm.response.json().code).to.eql('RUN_INVALID'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Respondent 1 submits with a required question open -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));",
+                  "pm.test('names the open question', () => pm.expect(pm.response.json().details.missing01).to.eql('Q01'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Respondent 1 saves a draft",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}",
+                "draft"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 2\n    },\n    {\n      \"questionId\": \"Q02\",\n      \"answer\": 2\n    },\n    {\n      \"questionId\": \"Q03\",\n      \"answer\": 2\n    },\n    {\n      \"questionId\": \"Q04\",\n      \"answer\": 2\n    },\n    {\n      \"questionId\": \"Q05\",\n      \"answer\": \"More focus time\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('in progress with the draft', () => { const d = pm.response.json(); pm.expect(d.myStatus).to.eql('IN_PROGRESS'); pm.expect(d.answers.Q01).to.eql(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Respondent 1 submits",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('submitted, and the answers are not shown again', () => { const d = pm.response.json(); pm.expect(d.myStatus).to.eql('SUBMITTED'); pm.expect(Object.keys(d.answers).length).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Respondent 1 submits again -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('code RUN_STATE', () => pm.expect(pm.response.json().code).to.eql('RUN_STATE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Someone who is not on the roster has nothing to answer -> 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-6"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));",
+                  "pm.test('code RUN_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('RUN_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A respondent reaches nothing else -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A respondent cannot read scoring results -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A tenant role is not a respondent -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Who has finished (respondents 2 to 5 answer first)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "The read is audited. Respondents 2 to 5 answer in the script of this request.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs/{{assessmentRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs",
+                "{{assessmentRunId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Respondents 2 to 5 answer in this request's script: each gets a token, saves a draft and submits.",
+                  "const base = pm.collectionVariables.get('baseUrl');",
+                  "const authUrl = pm.collectionVariables.get('authUrl');",
+                  "const runId = pm.collectionVariables.get('assessmentRunId');",
+                  "const answers = { answers: [1, 2, 3, 4].map((n) => ({ questionId: 'Q0' + n, answer: 2 })) };",
+                  "[2, 3, 4, 5].forEach((n) => {",
+                  "  pm.sendRequest({ url: authUrl + '/default/token', method: 'POST', header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
+                  "    body: { mode: 'urlencoded', urlencoded: [{ key: 'grant_type', value: 'client_credentials' }, { key: 'client_id', value: 'respondent-' + n }, { key: 'client_secret', value: 'secret' }] } }, (e, r) => {",
+                  "    if (e) { throw e; }",
+                  "    const h = { 'Authorization': 'Bearer ' + r.json().access_token, 'Content-Type': 'application/json' };",
+                  "    pm.sendRequest({ url: base + '/api/v1/respond/runs/' + runId + '/draft', method: 'PUT', header: h, body: { mode: 'raw', raw: JSON.stringify(answers) } }, (e2, r2) => {",
+                  "      if (e2 || r2.code !== 200) { throw new Error('respondent-' + n + ' could not save a draft: ' + (r2 ? r2.code : e2)); }",
+                  "      pm.sendRequest({ url: base + '/api/v1/respond/runs/' + runId + '/submit', method: 'POST', header: h }, (e3, r3) => {",
+                  "        if (e3 || r3.code !== 200) { throw new Error('respondent-' + n + ' could not submit: ' + (r3 ? r3.code : e3)); }",
+                  "      });",
+                  "    });",
+                  "  });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('all five finished', () => pm.expect(d.run.submitted).to.eql(5));",
+                  "pm.test('the list holds a person and a status, never an answer', () => d.participants.forEach((p) => pm.expect(Object.keys(p).sort()).to.eql(['email', 'name', 'status', 'teamId'])));",
+                  "pm.test('the notice about small teams', () => pm.expect(d.notice).to.include('who is missing'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Close the run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "Scores the stored answers once as member answers with the pinned configuration. Saves assessmentScoringRunId.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs/{{assessmentRunId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs",
+                "{{assessmentRunId}}",
+                "close"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('closed with a result', () => { pm.expect(d.run.status).to.eql('CLOSED'); pm.expect(d.run.scoringRunId).to.be.a('string'); });",
+                  "pm.collectionVariables.set('assessmentScoringRunId', d.run.scoringRunId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Close it again -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs/{{assessmentRunId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs",
+                "{{assessmentRunId}}",
+                "close"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('code RUN_STATE', () => pm.expect(pm.response.json().code).to.eql('RUN_STATE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The result of the run",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs/{{assessmentScoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs",
+                "{{assessmentScoringRunId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('scored', () => pm.expect(d.scoreStatus).to.eql('VALID'));",
+                  "pm.test('Team Health is 25 (every answer 2 on a 1 to 5 rating)', () => pm.expect(d.dimensions.TEAM_HEALTH.rawScore).to.eql(25));",
+                  "pm.test('the rule detected its pattern', () => pm.expect(d.patterns.find((p) => p.patternId === 'X-1').status).to.eql('MATCHED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A closed run takes no more answers -> 409",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/respond/runs/{{assessmentRunId}}/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "respond",
+                "runs",
+                "{{assessmentRunId}}",
+                "draft"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the run as another tenant -> 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "other-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs/{{assessmentRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs",
+                "{{assessmentRunId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));",
+                  "pm.test('code RUN_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('RUN_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Archive the questionnaire",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}/archive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}",
+                "archive"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('archived', () => pm.expect(pm.response.json().state).to.eql('ARCHIVED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit an archived questionnaire -> 409",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman questionnaire {{stamp}}\",\n  \"description\": \"Created by the collection\",\n  \"questions\": [\n    {\n      \"id\": \"Q01\",\n      \"kind\": \"RATING\",\n      \"text\": \"How sustainable is the pace?\",\n      \"required\": true,\n      \"dimension\": \"TEAM_HEALTH\"\n    },\n    {\n      \"id\": \"Q02\",\n      \"kind\": \"RATING\",\n      \"text\": \"How predictable is delivery?\",\n      \"dimension\": \"DELIVERY_STABILITY\"\n    },\n    {\n      \"id\": \"Q03\",\n      \"kind\": \"RATING\",\n      \"text\": \"How well is technical risk controlled?\",\n      \"dimension\": \"TECHNICAL_RISK\"\n    },\n    {\n      \"id\": \"Q04\",\n      \"kind\": \"RATING\",\n      \"text\": \"How manageable is the load on leaders?\",\n      \"dimension\": \"LEADERSHIP_LOAD\"\n    },\n    {\n      \"id\": \"Q05\",\n      \"kind\": \"FREE_TEXT\",\n      \"text\": \"Anything else?\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"name\": \"Unsustainable pace\",\n      \"description\": \"The team reports an unsustainable pace.\",\n      \"severity\": \"HIGH\",\n      \"enabled\": true,\n      \"condition\": {\n        \"op\": \"LTE\",\n        \"question\": \"Q01\",\n        \"value\": 25\n      },\n      \"minimumSignals\": 1,\n      \"minimumConfidence\": 0.5,\n      \"penalty\": {\n        \"target\": \"TEAM_HEALTH\",\n        \"strategy\": \"FIXED\",\n        \"amount\": 5,\n        \"stackingPolicy\": \"STACK\"\n      },\n      \"recommendation\": {\n        \"title\": \"Review the workload\",\n        \"description\": \"Compare the plan with what the team can do.\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('code QUESTIONNAIRE_STATE', () => pm.expect(pm.response.json().code).to.eql('QUESTIONNAIRE_STATE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start a run on an archived questionnaire -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "runs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"x\",\n  \"organizationId\": \"org-assess\",\n  \"questionnaireId\": \"{{questionnaireId}}\",\n  \"teamIds\": [\n    \"{{teamId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));",
+                  "pm.test('says archived', () => pm.expect(pm.response.json().message).to.include('archived'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate the questionnaire",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/{{questionnaireId}}/duplicate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "{{questionnaireId}}",
+                "duplicate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('a new draft', () => { const d = pm.response.json(); pm.expect(d.state).to.eql('DRAFT'); pm.expect(d.id).to.not.eql(pm.collectionVariables.get('questionnaireId')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a questionnaire from the initial one",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questionnaires/from-initial",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questionnaires",
+                "from-initial"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman copy {{stamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('a draft with notes about what could not be carried over', () => { const d = pm.response.json(); pm.expect(d.state).to.eql('DRAFT'); pm.expect(d.notes).to.be.an('array'); pm.expect(d.document.questions.length).to.be.above(0); });"
                 ]
               }
             }

@@ -148,3 +148,24 @@ Requested after the first release run: a screen an administrator can use to crea
 | Tenant roles and the platform role cannot reach each other's data | request rules; the role carries no tenant | `PlatformTenantsApiIntegrationTest`, `platform.spec` | DONE |
 | Creation and list reads are recorded | `scoring_access_audit` rows `TENANT_CREATED` and `TENANTS_LISTED`, Flyway V7 | `PlatformTenantsApiIntegrationTest`, `FlywayMigrationTest` | DONE |
 | Change, disable or delete a tenant; organizations and users | not built | | NOT DONE (limitation 4) |
+
+## Questionnaires, roster, runs and respondents (decisions D47 to D51, specv3 4.2.1 and 4.14)
+
+Requested after the first release run: a builder for questionnaires, assessment runs, and a way for people to answer. The design, every choice made and what is left out are in `docs/implementation/QUESTIONNAIRES_PROPOSAL.md`.
+
+| Requirement | Implementation | Tests | Status |
+|---|---|---|---|
+| A questionnaire is versioned and published as a tenant template layer; a published version is immutable | `QuestionnaireService`, `QuestionnaireGenerator`, migration V8 (immutability trigger), the ordinary configuration lifecycle | `QuestionnaireApiIntegrationTest` (publish, supersede, direct SQL refused), `QuestionnaireGeneratorTest` | DONE |
+| Publishing needs every dimension to have a scored question and a layer that passes the configuration validator; free text is never mapped | `QuestionnaireValidator`, the configuration parser | `QuestionnaireValidatorTest`, `QuestionnaireApiIntegrationTest` (refused publishes leave nothing behind) | DONE |
+| Eight question kinds, including a scored multiple choice | `MULTI_SELECT` (specv3 4.2.1), `QuestionKind` | `MultiSelectApiIntegrationTest`, `QuestionnaireGeneratorTest`, `BuilderPage.test`, `RespondPages.test` | DONE |
+| Administrators author patterns and penalties in the builder | rules with a condition tree, penalty and recommendation | `QuestionnaireValidatorTest`, `ConditionEditor.test`, `BuilderPage.test`, `assessments.spec` | DONE (thresholds unvalidated, limitation 37) |
+| Start from the initial questionnaire | `PlatformDefaultImporter`, `POST /questionnaires/from-initial` | `PlatformDefaultImporterTest`, `NewQuestionnairePage.test` | DONE (what cannot be carried over is listed, limitation 39) |
+| A roster of people in teams; the respondent is matched by e-mail | `RosterService`, `RosterStore`, migration V9, `RespondentRole` | `RunsApiIntegrationTest`, `PeoplePage.test` | DONE |
+| An assessment run pins a published version; starting snapshots the active people of the chosen teams | `AssessmentRunService`, `assessment_run`, `run_participant` | `RunsApiIntegrationTest`, `RunPages.test`, `assessments.spec` | DONE |
+| Anonymous responses: stored with the team only, no person, time or order; the draft is deleted on submit; the completion record never holds answers | `RunStore.insertResponse`, `RespondentService.submit` (one transaction) | `RunsApiIntegrationTest` (the columns of the answers table, drafts gone, nothing identifying in the participant list), `assessments.spec` | DONE (limits in 42 and 43) |
+| A respondent reaches only the respondent endpoints and sees no scoring detail | `RESPONDENT` outside the `Role` enum, `/api/v1/respond/**` rule, `RespondentQuestion` | `RunsApiIntegrationTest` (role matrix), `RespondPages.test`, `assessments.spec`, Postman folder 6 | DONE |
+| Required questions are enforced at submit; every answer is checked when given | `AnswerChecker`, `RespondentService` | `RunsApiIntegrationTest`, `RespondPages.test` | DONE |
+| The administrator closes a run, which scores it once with the pinned version; free text is not scored | `AssessmentRunService.close`, optional explicit configuration version in `CalculateCommand` | `RunsApiIntegrationTest` (including a questionnaire republished while the run was open), `RunPages.test`, `assessments.spec` | DONE (limitation 41) |
+| Who has not finished is visible to administrators, with a notice about small teams | participant list, `COMPLETION_NOTICE` | `RunPages.test`, `RunsApiIntegrationTest` (audited) | DONE |
+| Restyle the whole application like the mock-ups | design tokens, sidebar layout, theme toggle, brand constant | `tokens.test`, `theme.test`, `AppLayout.test`, `accessibility.spec` (both themes) | DONE (differences in limitation 48) |
+| Reminders, e-mail, reopening a run, free-text display, retention of the roster | not built | | NOT DONE (limitations 43, 44 and 46) |

@@ -6,17 +6,19 @@ Every figure below comes from a command run during the release phase on a develo
 
 | Layer | Command | Result |
 |---|---|---|
-| Backend unit and integration | `mvn -B verify` | **546 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
+| Backend unit and integration | `mvn -B verify` | **640 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
 | Frontend static analysis | `npm run lint`, `npm run typecheck` | clean (0 problems) |
-| Frontend unit and component | `npm test` | **249 tests in 36 files, all pass** |
+| Frontend unit and component | `npm test` | **391 tests in 48 files, all pass** (statements 92.2 %, branches 82.2 %, functions 88.4 %, lines 94.1 %) |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |
-| End to end (real stack, real browser) | `npm run e2e` | **56 tests, all pass** |
-| API contract | `newman run docs/postman/lis.postman_collection.json` | **44 requests, 54 assertions, 0 failures** |
+| End to end (real stack, real browser) | `npm run e2e` | **67 tests, all pass** |
+| API contract | `newman run docs/postman/lis.postman_collection.json` | **109 requests executed (81 in the collection; the rest are token calls), 126 assertions, 0 failures**, run twice in a row |
 
 Answers from several people (decision D45) were added after the first release run: 53 backend tests, 37 frontend unit tests, 4 end-to-end tests and 3 Postman requests (the collection now has 37 requests; newman reports 42 executed requests because it also counts the token calls of the authentication script). The earlier figures were 460, 171, 45 and 40 executed requests.
 | Frontend dependencies | `npm audit` | **0 vulnerabilities** (production and development) |
 
-## Backend (546 tests)
+## Backend (640 tests)
+
+Added with questionnaires, the roster, runs and respondents (decisions D47 to D51): **104 backend tests** over three phases. Phase 1 (49): the multi-select type, list-valued answers (input hash order-independent, stored form, request limits, answers view) and the `$replace` marker. Phase 2 (40): the normalizer, the publish validator (every rule), the generator (the layer merged over a platform default passes the configuration parser; no platform identifier leaks; every question kind maps with its direction and scores; the same document always gives the same layer), the copy of the platform default (the bundled 20-question configuration becomes a publishable draft whose layer re-parses), and 17 API tests against PostgreSQL (create, save with assigned identifiers, a draft that can never be published is refused, publishing activates a template layer under the questionnaire id, an assessment of it is scored with its questions and its rule, a refused publish leaves nothing behind, editing a published version opens a draft and republishing supersedes it, a published version cannot be changed or deleted even with direct SQL, archive and duplicate, tenant isolation, roles). Phase 3 (15 integration tests): the roster (unique names and e-mail addresses, scope by organization, audited reads), starting a run (only active people, only chosen teams, every refusal), the respondent view (own runs only, no scoring detail), drafts with every answer checked when given, required questions, one submit, the columns of the answers table (no person, no time), closing (organization and team runs, free text never scored, a team of two has a run without a score), a run closed after its questionnaire was republished (explicit pinned version), and the role matrix (managers, respondents, other roles, anonymous, a token without an e-mail).
 
 Added with platform administration (decision D46): 10 backend integration tests (a platform administrator creates and lists tenants; ids are trimmed; a taken id is refused and changes nothing; ids and names that are not allowed are refused; the five tenant roles get 403 and anonymous callers 401; a token with a tenant role cannot use the platform endpoints; the platform role reaches nothing tenant-scoped; a created tenant scores assessments at once and sees only its own data; creation and list reads are audited without the name and not logged; audit rows without a tenant are invisible to tenants), the migration count, 41 frontend unit tests (token decoding without a tenant and the role not granted by any tenant role, route guard and home redirect, navigation, the list with its states, filter and refresh, the form with every validation, taken-id, server-error, double-submit and cancel cases, the sign-in return address) and 7 browser scenarios with a real identity provider (`platform.spec`: landing and navigation, creating a tenant and finding it through the list and the API, refusals on the field, tenant roles locked out in the interface and the API, the platform role locked out of tenant data, accessibility and phone width). The browser test found a real defect: everyone was sent to the dashboard after sign-in, which would have shown the platform administrator an empty page.
 
@@ -28,7 +30,11 @@ Notable groups: domain unit tests for every pipeline stage (normalization strate
 
 Engine performance baseline (`EnginePerformanceBaselineTest`): 0.77 ms per run for 55 questions, 4.4 ms for 1005 questions (linear). V3 section 35.1 defines no absolute latency target.
 
-## Frontend unit and component tests (171)
+## Frontend unit and component tests (391)
+
+Added with the restyle and the new screens: tests of the theme store (default, switch, persistence, storage refused), the layout (brand, sidebar, role-based navigation, theme toggle), the design tokens (both themes complete, every text and background pair at 4.5:1, chart colours as custom properties, no colour literal or stock palette class in any component), the builder model, the questionnaire library, the new-questionnaire page, the builder (adding, changing, moving and removing questions and options, rules, save, publish with and without unsaved changes, a refused publish listing every problem, read-only and archived states), the condition editor (comparisons, groups, conversion between them, depth limit, read only), people, the three run pages (list, start, detail with the confirmation before closing), my assessments, the answer form for every question kind (drafts, required questions, submitted and closed states, server refusals), the route guards and the respondent principal. Statements 92.2 %, branches 82.2 %, functions 88.4 %, lines 94.1 %; the figures of earlier runs were not produced under identical conditions, so compare the covered code, not the percentages.
+
+Earlier figures follow.
 
 Coverage with `vitest --coverage` (v8), measured again after answers from several people were added: statements 92.5 %, branches 82.7 %, functions 90.1 %, lines 95.5 %. The first release run reported 82.1 % statements; the two figures were not produced under identical conditions and I did not investigate the difference, so compare the covered code, not the percentages.
 
@@ -36,7 +42,11 @@ The new groups: response summaries and their validation, the combination panel, 
 
 Groups: presentation helpers and error mapping; the API client against a mock server (headers, query building, error bodies, 401 handling); token decoding and the role helpers; route guards and the layout; response validation; the trace parser; condition wording; every dashboard section including loading, empty, error, retry, redaction and filtering states; the waterfall; the explanation, dimension, pattern, penalty and comparison pages including role differences and the form validation.
 
-## End to end (45 tests, real stack)
+## End to end (67 tests, real stack)
+
+Added with questionnaires, runs and respondents: `assessments` (8 tests, `org-assess` as a scratch organization of its own) and 3 accessibility tests (the sign-in page and every signed-in screen in both themes, and the theme switch from the keyboard). The journey: an administrator builds a questionnaire in the browser, is told what is missing, adds a rule and publishes; builds a team and its five people once; starts a run and sees nobody has started; a respondent signs in, sees only their own assessments, is blocked by a required question, saves a draft, reloads and continues, and submits; the four other respondents answer; the administrator closes the run, the organization result is scored (Team Health 25, the rule's pattern matched) and the explanation opens. Further checks: the participant list holds only name, address, team and status; a respondent token gets 403 on every manager endpoint; a person not on the roster gets 404. Axe (WCAG 2.2 AA) scans the library, the new-questionnaire page, people, the run list, starting a run, an open and a closed run, the builder (read only, and as a draft with every kind of question and a rule), my assessments and the answer form with a missing answer, in the dark and the light theme, with no horizontal scrolling at 390 px. The suite found the builder overflow (fixed) and showed that a test must not write into the seeded organizations.
+
+Earlier suites follow.
 
 | Spec | Tests | What it proves |
 |---|---|---|
