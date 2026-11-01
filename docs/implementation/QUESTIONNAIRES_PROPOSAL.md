@@ -98,9 +98,21 @@ Migrations: V8 (questionnaire library), V9 (teams, people, runs, participants, d
 |---|---|
 | 0 decisions and wording | **done**, approved |
 | 1 engine | **done**: `MULTI_SELECT` (config, strategy, parser), list-valued answers end to end (input hash, stored form, request limits, answers view, frontend display), empty selection is missing data, `{"$replace": X}` in the configuration merger. 49 new tests; backend 585 tests, frontend 252. Answers with one value per question score exactly as before. |
-| 2 questionnaire backend | not started |
+| 2 questionnaire backend | **done**: V8 (`questionnaire`, `questionnaire_version`, immutability trigger), builder document, normalizer, validator (publish checks of specv3 4.14), generator (builder document to template layer), publish through the ordinary configuration lifecycle in one transaction, `/api/v1/questionnaires` (list, get, create, save draft, publish, archive, duplicate, from-initial; OWNER and ADMIN only). 40 new tests; backend 625 tests. Choices below. |
 | 3 roster, runs and respondent backend | not started |
 | 4 restyle | not started |
 | 5 new screens | not started |
 | 6 end to end and release | not started |
 
+
+## 9. Phase 2 choices (for review)
+
+- **The questionnaire id is the template id.** It is generated (`q-` and 12 hex characters), because `assessment_template.id` is one namespace for all tenants. Publishing registers the template and its version, so assessments of a questionnaire need no other setup. `POST /calculate` with `templateId` = the questionnaire id scores with its layer.
+- **Free text is not in the scoring layer.** The engine's `TEXT` type needs keyword flag rules and cannot be mapped to a dimension, which is not what "collected, never scored" means. Free-text questions live only in the questionnaire document; the respondent flow (phase 3) collects them and the close step will not send them to scoring. Every other question, scored or not, is a configuration question with a signal `SIG_<question id>` whose value is the normalized 0 to 100 answer.
+- **Option scores.** Unscored options are spaced evenly in the order shown, **first option 0, last option 100**. If the intended default is the opposite, it is one line in `QuestionnaireGenerator.score`. The `SEVERITY_BASED` multipliers of an authored penalty are fixed at LOW 0, MEDIUM 0.4, HIGH 0.7, CRITICAL 1.0, the values of the platform default. All of these are unvalidated authoring defaults.
+- **What the layer contains and inherits.** It replaces questions, signals, dimension mappings, patterns, penalties, imbalances (none) and recommendations as lists, and replaces the question, signal, pattern and penalty display sections with `{"$replace": ...}`. It inherits the dimension settings (required coverage), overall weights and interpretation, response settings and the dimension display names from the platform default, so a platform change to those reaches every questionnaire. The builder has no imbalance rules.
+- **Publish is one transaction** through `ConfigurationService` (create draft, validate, activate with the publisher as approver). Any failure, including a parser rejection of the generated layer, leaves no configuration version behind.
+- **Archive hides, it does not deactivate.** An archived questionnaire cannot be edited or published; its layer stays active so past assessments remain explainable and recalculable. Phase 3 refuses new runs on an archived questionnaire.
+- **Authored rule limits.** Conditions compare a question's normalized value or a raw dimension score (EQ, NE, GT, GTE, LT, LTE, BETWEEN, IN, NOT_IN, EXISTS, NOT_EXISTS, with AND, OR, NOT). A rule has at most one penalty (FIXED or SEVERITY_BASED; STACK, MAX, MAX_PER_CATEGORY, PRIORITY or CAPPED_STACK, never EXCLUSIVE_GROUP) and one recommendation.
+- **From the initial questionnaire** copies the configuration that applies to the tenant (platform default plus the tenant override). Text-derived flags, gap and contains conditions, other penalty strategies, extra penalties and actions of one pattern, imbalance rules and missing-data policies are left out and listed in `notes` of the response (shown once, not stored).
+- **Not done in phase 2:** `required` is stored and returned but only the respondent flow (phase 3) enforces it; there is no un-archive; no endpoint lists the published layer's configuration version beyond its id in `versions`.

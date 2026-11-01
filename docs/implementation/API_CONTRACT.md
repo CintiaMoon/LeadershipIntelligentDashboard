@@ -239,3 +239,20 @@ Stored answers: a selection is kept as a sorted set, and the input hash ignores 
 
 Configuration layers: an object `{"$replace": X}` replaces what lower layers have for that key instead of merging (specv3 23.3, decision D47); it also works as a whole layer. Nothing uses it yet in the product; the questionnaire builder (phase 2) will.
 
+
+## 15. As implemented (questionnaire library: decisions D47, D50)
+
+All endpoints are tenant-scoped (tenant from the token only) and reachable by `OWNER` and `ADMIN` only, for reads as well as writes. A questionnaire of another tenant answers 404 `QUESTIONNAIRE_NOT_FOUND`. Questionnaire content is never logged.
+
+| Method and path | Purpose | Notes |
+|---|---|---|
+| `GET /api/v1/questionnaires` | list, newest first | `state`: `DRAFT`, `PUBLISHED`, `PUBLISHED_WITH_DRAFT`, `ARCHIVED` |
+| `POST /api/v1/questionnaires` | create an empty questionnaire with a first draft | body `{name}`; 201 |
+| `POST /api/v1/questionnaires/from-initial` | create a draft copied from the configuration that applies to the tenant | body `{name}`; 201; `notes` lists what the builder could not carry over |
+| `GET /api/v1/questionnaires/{id}?version=` | the open draft, else the latest published version, or exactly `version` | `problems` lists what blocks publishing a draft; `versions` lists every version |
+| `PUT /api/v1/questionnaires/{id}` | save the open draft; opens the next draft when the latest version is published | body is the builder document; unknown fields are rejected (400); a draft may be incomplete, only its shape is checked (422 `QUESTIONNAIRE_INVALID`) |
+| `POST /api/v1/questionnaires/{id}/publish` | publish the open draft as an active TEMPLATE layer | 422 `QUESTIONNAIRE_INVALID` with every problem as `details.problem01..`; 409 `QUESTIONNAIRE_STATE` without an open draft or when archived |
+| `POST /api/v1/questionnaires/{id}/archive` | hide from new use (idempotent) | the active layer stays |
+| `POST /api/v1/questionnaires/{id}/duplicate` | new questionnaire with a copy as its first draft | 201 |
+
+The builder document is `{name, description, questions[], rules[]}`. A question has `id` (assigned `Q01..` when blank), `kind` (`SINGLE_CHOICE`, `MULTI_CHOICE`, `RATING`, `LIKERT`, `NPS`, `NUMERIC`, `YES_NO`, `FREE_TEXT`), `text`, optional `title` and `help`, `required`, `dimension` (null means collected, not mapped), `weight`, `higherIsBetter`, `options[{key, label, score?}]`, `points`, `labels`, `min`, `max` and `desirableAnswer` (`YES`/`NO`). A rule has `id` (assigned `X-1..`), `name`, `description`, `explanation`, `severity`, `condition` (`op`, `conditions`, `condition`, `question` or `dimension`, `value`, `low`, `high`, `values`), `minimumSignals`, `minimumConfidence`, an optional `penalty` (`target`, `strategy`, `amount`, `stackingPolicy`, `cumulativeCap`, `category`, `priority`) and an optional `recommendation` (`title`, `description`, `priority`). The questionnaire id is also the template id for `POST /calculate`. Choices made in phase 2 are listed in `QUESTIONNAIRES_PROPOSAL.md` section 9.

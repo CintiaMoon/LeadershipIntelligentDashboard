@@ -48,7 +48,7 @@ public abstract class PostgresIntegrationTest {
     void cleanConfiguration() {
         jdbc.execute("truncate scoring_access_audit, scoring_penalty_result, scoring_imbalance_result, scoring_pattern_evidence, scoring_pattern_evaluation, "
                 + "scoring_contribution, scoring_dimension_result, scoring_run, assessment_answer, assessment_snapshot, assessment, "
-                + "assessment_template_version, assessment_template, organization, scoring_configuration_audit, "
+                + "assessment_template_version, assessment_template, organization, questionnaire_version, questionnaire, scoring_configuration_audit, "
                 + "scoring_configuration_version, scoring_configuration cascade");
         effectiveCache.invalidateAll();
         clock.set(java.time.Instant.parse("2026-11-01T10:00:00Z"));

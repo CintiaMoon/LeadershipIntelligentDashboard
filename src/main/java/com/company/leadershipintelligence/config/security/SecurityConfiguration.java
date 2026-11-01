@@ -53,6 +53,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         // platform administration (decision D46): only the platform role, and nothing tenant-scoped is reachable with it
                         .requestMatchers("/api/v1/platform/**").hasRole(PlatformRole.PLATFORM_ADMIN)
+                        // questionnaire library and builder (decisions D47, D50): administrators only, for reads as well as writes
+                        .requestMatchers("/api/v1/questionnaires", "/api/v1/questionnaires/**")
+                        .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
                         .requestMatchers(HttpMethod.POST, "/api/v1/calculate", "/api/v1/assessments/*/score",
                                 "/api/v1/assessments/*/score/recalculate").hasAnyRole(writers)
                         .requestMatchers(HttpMethod.GET, "/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**")
