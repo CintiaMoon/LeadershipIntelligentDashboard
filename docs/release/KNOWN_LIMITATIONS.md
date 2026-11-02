@@ -11,7 +11,7 @@ Ordered by how much they matter for going live. Nothing here is hidden elsewhere
 
 ## Product gaps
 
-5. **Reports (PDF, CSV and the five report types) are not built.** The specification does not define them (decision F13), so no endpoint or screen exists.
+5. **Reports (PDF, CSV and the five report types) are not built yet.** They are specified by decisions D59 to D64 (`REPORTS_PROPOSAL.md`, approved 2026-11-02) and under construction; no endpoint or screen exists until then.
 6. **Assessment capture is basic.** Owners and administrators build questionnaires, keep a roster, start runs and close them; respondents answer in the product (decisions D47 to D51). There are no reminders or e-mail, no reopening of a closed run, no change of the teams of a started run, no autosave of drafts, no bulk import of people and no paging of the lists. Free-text answers are collected and kept with the run but nothing shows them yet. Everything authored in the builder is unvalidated by construction.
 7. **Maximum deduction of a penalty is not shown.** It is not recorded in the stored trace (D42). Showing it needs a trace-version change and a migration; the penalty page states the omission.
 8. **History only includes valid runs.** A run with INSUFFICIENT_DATA has no score to trend (D37). If every assessment of an organization is insufficient the dashboard shows "No scored assessments yet", which is slightly imprecise.
