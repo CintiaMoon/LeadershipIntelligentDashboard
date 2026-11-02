@@ -104,3 +104,15 @@ You chose forms for **numbers and wording**, shown as a **Form** tab beside the 
 - **Early checks** (advisory; the server still decides): weights add up to 1 within the tolerance, bands cover 0 to 100 without a gap, shares are between 0 and 1.
 - **Overrides**: a layer that does not carry a section shows that it uses the layer below; adding the section is done in JSON.
 - **Found on the way**: the lifecycle cannot discard a draft (only ACTIVE and PAUSED versions can be archived), so the Archive button is shown only on a paused version; drafts that are not wanted stay as drafts.
+
+## 10. Forms for questions, signals, patterns and imbalance rules (2026-11-02)
+
+You chose all four remaining parts. The Form tab now has nine sections: Overall score, Coverage and group answers, Questions, Signals, Patterns, Imbalance, Penalties, Advice and Display texts.
+
+- **Questions**: missing-answer policy and the way group answers are combined; by kind, the range and direction and what happens out of range (scale and number), the score for yes and no, the score of each choice and what an unknown choice does; which dimensions the question feeds and with what weight. A question can be added (scale, number, yes or no, choice) with starting values and removed when no signal or pattern uses it; its dimension mappings go with it.
+- **Signals**: which questions a signal comes from, its derivation version and reliability; a signal can be added, and removed when no pattern uses it.
+- **Patterns**: category, severity, the two evidence settings, the enabled and penalty-eligible switches, the advice given, and the condition as a tree (all of, any of, none of; comparisons, ranges, lists, presence, a question having a signal, the gap between two operands) written in the same JSON the parser reads. Each pattern shows its condition as a sentence.
+- **Imbalance rules**: the two dimensions, how the gap is measured, the operator, the points, the severity and the switch.
+- **Still JSON only**: adding or removing a pattern or an imbalance rule, changing a question's kind, renaming an id, the text-matching questions and the part of a penalty that names its pattern and target.
+- **Safety**: removal is refused while something refers to the item, with the reason shown; an item that was not touched is never rewritten (a test loads the real default, edits nothing and expects the identical document).
+- **Found on the way**: the accessibility scan again caught buttons whose accessible name lacked their visible text, and the Docker image build (which has only the frontend folder) failed on a test that read the backend's default configuration file, so that test now reads it when the repository is present.
