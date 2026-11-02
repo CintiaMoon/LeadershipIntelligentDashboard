@@ -63,7 +63,7 @@ Idempotency (V3 §27.4): identity = tenantId + assessmentSnapshotId + inputHash 
 | GET | `/scoring-runs?assessmentId=&organizationId=&from=&to=` | step 3 run summaries with `comparable` flag (D27) | none |
 | GET | `/organizations/{id}/dashboard` | step 4, after run summaries and recommendations | D27, D28 |
 | GET | `/scoring-runs/history`, `/scoring-runs/compare` | step 3-4, comparison only when `comparable` (D27) | D27 |
-| GET, POST | `/reports` | **blocked**, no spec | F13 |
+| GET | `/reports/{type}?runId=&format=json\|csv\|pdf` (comparison: `baseRunId=&runId=`) | APPROVED, not built (D59 to D64, `REPORTS_PROPOSAL.md`): types `LEADERSHIP_INTELLIGENCE`, `DIMENSION_ANALYSIS`, `PATTERN_PENALTY`, `HISTORICAL_COMPARISON`; generated on demand from the stored run, nothing stored; no `GET`/`POST /reports` list | F13 resolved |
 
 FE `/scoring-runs/{id}/contributions` is not separate: contributions are returned by `/dimensions` (V3 §28.6). Pagination and filtering for the pattern and penalty lists (FE §10.1, §11.2) are PROPOSED: `page`, `size`, `sort` and filters named after the FE filter lists.
 
@@ -152,7 +152,7 @@ Error responses never leak stack traces, configuration internals or raw assessme
 
 ## 6. Open contract decisions
 
-None blocking. Reports (F13) have no spec. Production question catalog and fixtures are still needed (V3 §42). Decisions D9-D30 are in `ARCHITECTURE_GAPS.md`.
+None blocking. Reports (F13) are specified by D59 to D64 and not yet built. Production question catalog and fixtures are still needed (V3 §42). Decisions D9-D30 are in `ARCHITECTURE_GAPS.md`.
 
 ## 7. Recommendations (D28)
 

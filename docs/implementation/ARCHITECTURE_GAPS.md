@@ -61,6 +61,7 @@
 | D48 | APPROVED (specv3 4.14): assessment runs, roster of people, `RESPONDENT` role (not in the `Role` enum), drafts linked to a participant only until submit, answers stored with the team only, administrator closes and scores. | User |
 | D49 | APPROVED (specv3 4.2.1): `MULTI_SELECT` question type scored as the mean of the selected options' values; list-valued answers. | User |
 | D50 | APPROVED: patterns and penalties authored in the builder, generated ids, catalog ids not reused. | User |
+| D59-D64 | APPROVED (resolves F13, `REPORTS_PROPOSAL.md`): four report types rendered from the stored run and its explanation, never recalculated; generated on demand and not stored (`GET /reports/{type}`); JSON, CSV and PDF (OpenPDF); no answers or per-member data; same access as run reads, audited; deterministic. | User |
 | D51 | APPROVED: restyle of the whole application like the supplied screens (dark, sidebar); the product name is the constant "Leadership Intelligent Dashboard", changeable in one place. | User |
 
 ## A. Conflicts
@@ -132,7 +133,7 @@
 | F7 **RESOLVED (D20)** | Organizations and roles. | See D19, D20. |
 | F11 | "LIS impact" per pattern/penalty would be a second calculation (V3 §19.4 forbids). | Show only values recorded in the trace. |
 | F12 | Imbalance confidence/evidence. V3 §12.3 now includes evidence references, threshold, gap direction, left/right values. | Return those; confidence not defined. |
-| F13 | Reports. | Blocked. |
+| F13 **RESOLVED (D59-D64)** | Reports. | See `REPORTS_PROPOSAL.md`. |
 | F14 | Confidence band. V3 §14.3: INSUFFICIENT, WEAK, MODERATE, STRONG (illustrative, configurable). | Backend returns value and band label. |
 | F15 **RESOLVED (D24)** | Trace schema. | See D24. |
 
@@ -142,4 +143,4 @@ Resolved this round: C4 (D9), CL1 (D10), C13 (D11), C11 and C12 (D12).
 Resolved this round (continued): G1, G14 (D13), G18 (D14).
 Resolved this round (continued): G3, F7, G15, G16, F8, F15, F2, F3, F5, F6, G9, G13, CL2 (D19-D30).
 Resolved earlier: G5 (D15), G6 (D16), G10 (D17), G12 (D18).
-Open: none blocking. Production content (real question catalog, mappings, approved fixtures, calibration per V3 §42) and F13 reports remain unspecified. Everything else is resolved or a documented proposal that proceeds unless you object.
+Open: none blocking. Production content (real question catalog, mappings, approved fixtures, calibration per V3 §42) remain unspecified; F13 reports are specified (D59-D64). Everything else is resolved or a documented proposal that proceeds unless you object.
