@@ -1,0 +1,513 @@
+[
+  {
+    "name": "Best answers",
+    "answers": [
+      {
+        "questionId": "TH01",
+        "answer": 5
+      },
+      {
+        "questionId": "TH02",
+        "answer": 1
+      },
+      {
+        "questionId": "TH03",
+        "answer": 5
+      },
+      {
+        "questionId": "TH04",
+        "answer": 5
+      },
+      {
+        "questionId": "TH05",
+        "answer": 5
+      },
+      {
+        "questionId": "DS01",
+        "answer": "ALWAYS"
+      },
+      {
+        "questionId": "DS02",
+        "answer": 1
+      },
+      {
+        "questionId": "DS03",
+        "answer": 0
+      },
+      {
+        "questionId": "DS04",
+        "answer": 5
+      },
+      {
+        "questionId": "DS05",
+        "answer": false
+      },
+      {
+        "questionId": "TR01",
+        "answer": 0
+      },
+      {
+        "questionId": "TR02",
+        "answer": 5
+      },
+      {
+        "questionId": "TR03",
+        "answer": 5
+      },
+      {
+        "questionId": "TR04",
+        "answer": 1
+      },
+      {
+        "questionId": "TR05",
+        "answer": false
+      },
+      {
+        "questionId": "LL01",
+        "answer": 1
+      },
+      {
+        "questionId": "LL02",
+        "answer": 0
+      },
+      {
+        "questionId": "LL03",
+        "answer": 1
+      },
+      {
+        "questionId": "LL04",
+        "answer": 5
+      },
+      {
+        "questionId": "LL05",
+        "answer": 5
+      }
+    ],
+    "expectations": {
+      "status": "VALID",
+      "overall": {
+        "min": 100,
+        "max": 100
+      },
+      "patternsNotMatched": [
+        "DS-001",
+        "DS-003",
+        "DS-005",
+        "DS-009",
+        "LL-001",
+        "LL-004",
+        "LL-006",
+        "LL-008",
+        "TH-001",
+        "TH-002",
+        "TR-003",
+        "TR-004",
+        "TR-005",
+        "TR-006",
+        "XD-001",
+        "XD-008"
+      ]
+    }
+  },
+  {
+    "name": "Worst answers",
+    "answers": [
+      {
+        "questionId": "TH01",
+        "answer": 1
+      },
+      {
+        "questionId": "TH02",
+        "answer": 5
+      },
+      {
+        "questionId": "TH03",
+        "answer": 1
+      },
+      {
+        "questionId": "TH04",
+        "answer": 1
+      },
+      {
+        "questionId": "TH05",
+        "answer": 1
+      },
+      {
+        "questionId": "DS01",
+        "answer": "NEVER"
+      },
+      {
+        "questionId": "DS02",
+        "answer": 5
+      },
+      {
+        "questionId": "DS03",
+        "answer": 10
+      },
+      {
+        "questionId": "DS04",
+        "answer": 1
+      },
+      {
+        "questionId": "DS05",
+        "answer": true
+      },
+      {
+        "questionId": "TR01",
+        "answer": 20
+      },
+      {
+        "questionId": "TR02",
+        "answer": 1
+      },
+      {
+        "questionId": "TR03",
+        "answer": 1
+      },
+      {
+        "questionId": "TR04",
+        "answer": 5
+      },
+      {
+        "questionId": "TR05",
+        "answer": true
+      },
+      {
+        "questionId": "LL01",
+        "answer": 5
+      },
+      {
+        "questionId": "LL02",
+        "answer": 20
+      },
+      {
+        "questionId": "LL03",
+        "answer": 5
+      },
+      {
+        "questionId": "LL04",
+        "answer": 1
+      },
+      {
+        "questionId": "LL05",
+        "answer": 1
+      }
+    ],
+    "expectations": {
+      "status": "VALID",
+      "overall": {
+        "min": 0,
+        "max": 10
+      },
+      "patternsMatched": [
+        "DS-001",
+        "DS-003",
+        "DS-005",
+        "DS-009",
+        "LL-001",
+        "LL-004",
+        "LL-006",
+        "LL-008",
+        "TH-001",
+        "TH-002",
+        "TR-003",
+        "TR-004",
+        "TR-005",
+        "TR-006",
+        "XD-001",
+        "XD-008"
+      ]
+    }
+  },
+  {
+    "name": "Burnout profile",
+    "answers": [
+      {
+        "questionId": "TH01",
+        "answer": 1
+      },
+      {
+        "questionId": "TH02",
+        "answer": 5
+      },
+      {
+        "questionId": "TH03",
+        "answer": 5
+      },
+      {
+        "questionId": "TH04",
+        "answer": 5
+      },
+      {
+        "questionId": "TH05",
+        "answer": 5
+      },
+      {
+        "questionId": "DS01",
+        "answer": "ALWAYS"
+      },
+      {
+        "questionId": "DS02",
+        "answer": 1
+      },
+      {
+        "questionId": "DS03",
+        "answer": 0
+      },
+      {
+        "questionId": "DS04",
+        "answer": 5
+      },
+      {
+        "questionId": "DS05",
+        "answer": false
+      },
+      {
+        "questionId": "TR01",
+        "answer": 0
+      },
+      {
+        "questionId": "TR02",
+        "answer": 5
+      },
+      {
+        "questionId": "TR03",
+        "answer": 5
+      },
+      {
+        "questionId": "TR04",
+        "answer": 1
+      },
+      {
+        "questionId": "TR05",
+        "answer": false
+      },
+      {
+        "questionId": "LL01",
+        "answer": 1
+      },
+      {
+        "questionId": "LL02",
+        "answer": 0
+      },
+      {
+        "questionId": "LL03",
+        "answer": 1
+      },
+      {
+        "questionId": "LL04",
+        "answer": 5
+      },
+      {
+        "questionId": "LL05",
+        "answer": 5
+      }
+    ],
+    "expectations": {
+      "status": "VALID",
+      "overall": {
+        "min": 80,
+        "max": 99
+      },
+      "dimensions": {
+        "TEAM_HEALTH": {
+          "min": 40,
+          "max": 80
+        }
+      },
+      "patternsMatched": [
+        "TH-001"
+      ]
+    }
+  },
+  {
+    "name": "One low answer on psychological safety",
+    "answers": [
+      {
+        "questionId": "TH01",
+        "answer": 5
+      },
+      {
+        "questionId": "TH02",
+        "answer": 1
+      },
+      {
+        "questionId": "TH03",
+        "answer": 1
+      },
+      {
+        "questionId": "TH04",
+        "answer": 5
+      },
+      {
+        "questionId": "TH05",
+        "answer": 5
+      },
+      {
+        "questionId": "DS01",
+        "answer": "ALWAYS"
+      },
+      {
+        "questionId": "DS02",
+        "answer": 1
+      },
+      {
+        "questionId": "DS03",
+        "answer": 0
+      },
+      {
+        "questionId": "DS04",
+        "answer": 5
+      },
+      {
+        "questionId": "DS05",
+        "answer": false
+      },
+      {
+        "questionId": "TR01",
+        "answer": 0
+      },
+      {
+        "questionId": "TR02",
+        "answer": 5
+      },
+      {
+        "questionId": "TR03",
+        "answer": 5
+      },
+      {
+        "questionId": "TR04",
+        "answer": 1
+      },
+      {
+        "questionId": "TR05",
+        "answer": false
+      },
+      {
+        "questionId": "LL01",
+        "answer": 1
+      },
+      {
+        "questionId": "LL02",
+        "answer": 0
+      },
+      {
+        "questionId": "LL03",
+        "answer": 1
+      },
+      {
+        "questionId": "LL04",
+        "answer": 5
+      },
+      {
+        "questionId": "LL05",
+        "answer": 5
+      }
+    ],
+    "expectations": {
+      "status": "VALID",
+      "overall": {
+        "min": 85,
+        "max": 99
+      },
+      "patternsMatched": [
+        "TH-002"
+      ],
+      "patternsNotMatched": [
+        "TH-001"
+      ]
+    }
+  },
+  {
+    "name": "Middling answers",
+    "answers": [
+      {
+        "questionId": "TH01",
+        "answer": 3
+      },
+      {
+        "questionId": "TH02",
+        "answer": 3
+      },
+      {
+        "questionId": "TH03",
+        "answer": 3
+      },
+      {
+        "questionId": "TH04",
+        "answer": 3
+      },
+      {
+        "questionId": "TH05",
+        "answer": 3
+      },
+      {
+        "questionId": "DS01",
+        "answer": "SOMETIMES"
+      },
+      {
+        "questionId": "DS02",
+        "answer": 3
+      },
+      {
+        "questionId": "DS03",
+        "answer": 5
+      },
+      {
+        "questionId": "DS04",
+        "answer": 3
+      },
+      {
+        "questionId": "DS05",
+        "answer": false
+      },
+      {
+        "questionId": "TR01",
+        "answer": 10
+      },
+      {
+        "questionId": "TR02",
+        "answer": 3
+      },
+      {
+        "questionId": "TR03",
+        "answer": 3
+      },
+      {
+        "questionId": "TR04",
+        "answer": 3
+      },
+      {
+        "questionId": "TR05",
+        "answer": false
+      },
+      {
+        "questionId": "LL01",
+        "answer": 3
+      },
+      {
+        "questionId": "LL02",
+        "answer": 10
+      },
+      {
+        "questionId": "LL03",
+        "answer": 3
+      },
+      {
+        "questionId": "LL04",
+        "answer": 3
+      },
+      {
+        "questionId": "LL05",
+        "answer": 3
+      }
+    ],
+    "expectations": {
+      "status": "VALID",
+      "overall": {
+        "min": 30,
+        "max": 80
+      }
+    }
+  }
+]

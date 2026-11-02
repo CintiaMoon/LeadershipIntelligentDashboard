@@ -118,11 +118,11 @@ public class ConfigurationService {
         ScoringConfigurationVersionEntity version = load(caller, versionId);
         ScoringConfigurationEntity slot = slotOf(version);
         move(version, ConfigurationStatus.VALIDATING);
-        Optional<String> problem = problemWith(version, slot);
-        if (problem.isPresent()) {
+        List<String> problems = problemsWith(version, slot);
+        if (!problems.isEmpty()) {
             move(version, ConfigurationStatus.DRAFT);
-            record(slot, version, "VALIDATION_FAILED", caller, Map.of("problem", problem.get()));
-            return new ValidationResult(false, List.of(problem.get()));
+            record(slot, version, "VALIDATION_FAILED", caller, Map.of("problem", problems.get(0), "problems", problems.size()));
+            return new ValidationResult(false, problems);
         }
         record(slot, version, "VALIDATED", caller, Map.of());
         return new ValidationResult(true, List.of());
@@ -139,9 +139,9 @@ public class ConfigurationService {
         if (approval == null || approval.approvedBy() == null || approval.approvedBy().isBlank()) {
             return failActivation(caller, slot, version, "approval metadata (approvedBy) is required");
         }
-        Optional<String> problem = problemWith(version, slot);
-        if (problem.isPresent()) {
-            return failActivation(caller, slot, version, problem.get());
+        List<String> problems = problemsWith(version, slot);
+        if (!problems.isEmpty()) {
+            return failActivation(caller, slot, version, problems.size() == 1 ? problems.get(0) : problems.get(0) + " (and " + (problems.size() - 1) + " more)");
         }
         Instant now = clock.instant();
         for (ScoringConfigurationVersionEntity other : versions.findAllOf(slot.getId())) {
@@ -198,6 +198,52 @@ public class ConfigurationService {
         return slot.map(s -> versions.findAllOf(s.getId()).stream().map(v -> view(s, v)).toList()).orElse(List.of());
     }
 
+    /**
+     * Sends a version that awaits approval back to DRAFT with the reviewer's reason (decision D53). The comment is part of the audit
+     * record; it is free text written by a person and must not contain answers (nothing here ever receives one).
+     */
+    @Transactional
+    public ConfigurationVersionView reject(Caller caller, UUID versionId, String comment) {
+        ScoringConfigurationVersionEntity version = load(caller, versionId);
+        ScoringConfigurationEntity slot = slotOf(version);
+        if (version.getStatus() != ConfigurationStatus.VALIDATING) {
+            throw illegal("version " + versionId + " is " + version.getStatus() + "; only a version awaiting approval can be rejected");
+        }
+        move(version, ConfigurationStatus.DRAFT);
+        record(slot, version, "REJECTED", caller, Map.of("comment", comment == null ? "" : comment));
+        return view(slot, version);
+    }
+
+    /**
+     * A new DRAFT in the same layer with the content of any version of it (decision D58): how a change is rolled back, since an
+     * active version is never edited.
+     */
+    @Transactional
+    public ConfigurationVersionView copyAsDraft(Caller caller, UUID versionId) {
+        ScoringConfigurationVersionEntity version = load(caller, versionId);
+        ScoringConfigurationEntity slot = slotOf(version);
+        ConfigurationTarget target = new ConfigurationTarget(slot.getScopeType(), slot.getTenantId() == null ? null : new com.company.leadershipintelligence.domain.valueobject.TenantId(slot.getTenantId()), slot.getScopeId());
+        return createDraft(caller, target, slot.getName(), version.getPayload());
+    }
+
+    /** The layer with this id, which must belong to the caller's tenant (or be the platform default for the platform caller); otherwise it looks missing. */
+    @Transactional(readOnly = true)
+    public ConfigurationTarget targetOf(Caller caller, UUID layerId) {
+        ScoringConfigurationEntity slot = configurations.findById(layerId).orElse(null);
+        boolean visible = slot != null && (caller.isPlatform() ? slot.getTenantId() == null : caller.tenantId().value().equals(slot.getTenantId()));
+        if (!visible) {
+            throw new ScoringException(ScoringErrorCode.CONFIGURATION_VERSION_NOT_FOUND, "configuration layer not found", Map.of());
+        }
+        return new ConfigurationTarget(slot.getScopeType(), slot.getTenantId() == null ? null : new com.company.leadershipintelligence.domain.valueobject.TenantId(slot.getTenantId()), slot.getScopeId());
+    }
+
+    /** Writes an action of the management workflow (preview, approval) to the audit trail of the version; details are numbers and ids. */
+    @Transactional
+    public void recordAction(Caller caller, UUID versionId, String action, Map<String, ?> detail) {
+        ScoringConfigurationVersionEntity version = load(caller, versionId);
+        record(slotOf(version), version, action, caller, detail);
+    }
+
     // ---------------- internals ----------------
 
     private ConfigurationVersionView change(Caller caller, UUID versionId, ConfigurationStatus next, String action) {
@@ -218,7 +264,8 @@ public class ConfigurationService {
                 Map.of("versionId", version.getId().toString()));
     }
 
-    private Optional<String> problemWith(ScoringConfigurationVersionEntity version, ScoringConfigurationEntity slot) {
+    /** Every problem of the version (decision D54); empty when it is valid. A layer is checked merged over the active platform default. */
+    private List<String> problemsWith(ScoringConfigurationVersionEntity version, ScoringConfigurationEntity slot) {
         try {
             JsonNode document = parser.read(version.getPayload());
             JsonNode effective = document;
@@ -228,11 +275,21 @@ public class ConfigurationService {
                     effective = merger.merge(List.of(base.get(), document));
                 }
             }
-            parser.parse(effective, new ConfigurationVersion("validation-" + version.getId()));
-            return Optional.empty();
+            return parser.diagnose(effective, new ConfigurationVersion("validation-" + version.getId()));
         } catch (ScoringException e) {
-            return Optional.of(e.code() + ": " + e.getMessage());
+            return List.of(e.code() + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Checks a version without changing it: every problem found, empty when it would pass validation. For the review of a draft
+     * before it is submitted.
+     */
+    @Transactional(readOnly = true)
+    public ValidationResult check(Caller caller, UUID versionId) {
+        ScoringConfigurationVersionEntity version = load(caller, versionId);
+        List<String> problems = problemsWith(version, slotOf(version));
+        return new ValidationResult(problems.isEmpty(), problems);
     }
 
     private Optional<JsonNode> activePlatformDocument() {

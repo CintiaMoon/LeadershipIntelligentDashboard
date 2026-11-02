@@ -286,3 +286,26 @@ Errors: `ROSTER_NOT_FOUND` and `RUN_NOT_FOUND` (404), `ROSTER_INVALID` and `RUN_
 | `POST /api/v1/respond/runs/{runId}/submit` | store my answers with my team only and delete my draft; 422 lists the required questions still open (`details.missing01..`); 409 when already submitted or the run is closed |
 
 Answer shapes: rating, Likert, score and number questions take a JSON number; yes/no a boolean; single choice an option key; multiple choice a list of option keys; free text a string.
+
+## 17. As implemented (configuration management: decisions D52 to D57)
+
+Two ways in with the same endpoints. Owners and administrators manage the **tenant override** and the **organization overrides** of the organizations in their token under `/api/v1/configuration` (analysts may read); the platform administrator manages the **platform default** under `/api/v1/platform/configuration` (nothing else reaches it). Questionnaire (template) layers belong to the questionnaire builder and are not managed here. A version, layer or fixture outside the caller's reach looks missing (404 `CONFIGURATION_VERSION_NOT_FOUND`). Paths below are relative to either base.
+
+| Method and path | Purpose |
+|---|---|
+| `GET /layers` | the layers the caller manages, each with its active version and the one being worked on; `unvalidated` is true without a calibration reference |
+| `GET /versions?scope=TENANT\|ORGANIZATION&organizationId=` | the versions of one layer, newest first, without their documents (on the platform path the layer is always the platform default) |
+| `GET /versions/{versionId}` | one version with its document and its review record |
+| `POST /versions` `{scope, organizationId?, document?}` | a new draft (201): the given document, or a copy of the layer's active version; `scope` is TENANT (default) or ORGANIZATION |
+| `PUT /versions/{versionId}` (the whole configuration document) | replace a draft's document; any other status is 409 |
+| `POST /versions/{versionId}/copy` | a new draft with the content of any version of the layer (201): how a change is rolled back |
+| `POST /versions/{versionId}/validate` | every problem of the version, without changing it: the first problem of each question, signal, pattern, penalty, imbalance and recommendation and of each other section, with its JSON path (at most 50), and the cross-references only when nothing else is wrong |
+| `POST /versions/{versionId}/preview` | scores the layer's fixtures, and the tenant's recent assessments (up to 50, within the caller's organizations) when `lis.configuration.preview.use-recent-assessments` is true, with the draft in place and as it is now, in memory only; returns ids, scores, bands, patterns, penalties and what changed, never an answer; the read of assessments is audited (`CONFIGURATION_PREVIEW`, counts only). A platform preview uses fixtures only |
+| `POST /versions/{versionId}/submit` | validates (every problem is returned and the version stays a draft) and previews; a valid draft moves to VALIDATING, which here means awaiting approval |
+| `POST /versions/{versionId}/approve` `{note, effectiveFrom?, calibrationReference?, knownLimitations?}` | approves and activates; 403 `CONFIGURATION_APPROVAL_REFUSED` for anyone who created, edited or submitted it (unless `lis.configuration.approval.require-second-person` is false); 409 `CONFIGURATION_FIXTURES_FAILED` while a fixture fails (`details.fixture01..` name them); 400 without a note |
+| `POST /versions/{versionId}/reject` `{comment}` | back to draft with the reason (anyone who manages the layer, including the author) |
+| `POST /versions/{versionId}/pause`, `/resume`, `/archive` | lifecycle changes of an active version (an active version is never edited) |
+| `GET /layers/{layerId}/fixtures`, `POST` (201), `PUT /{fixtureId}`, `DELETE /{fixtureId}` (204) | the fixtures of a layer: `{name, answers:[{questionId, answer}], expectations:{status?, overall?:{min,max}, dimensions?, patternsMatched?, patternsNotMatched?}}`; 422 `FIXTURE_INVALID` (a name is unique per layer) |
+
+A version carries its **review record** once submitted: submitter, validation problems, preview summary (counts and a before/after distribution) and fixture results, then who approved it, the note, the calibration reference and the known limitations, or who rejected it and why. The record of an approved version does not change (database trigger). Every action is also in the configuration audit trail (`CREATED`, `UPDATED`, `VALIDATED`, `REJECTED`, `ACTIVATED`, `APPROVED`).
+

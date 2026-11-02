@@ -106,44 +106,118 @@ public final class ConfigurationDocumentParser {
         return parse(read(json), version);
     }
 
+    /**
+     * Every problem the document has, not only the first (specv3.md Section 30.6, decision D54): each question, signal, pattern,
+     * penalty, imbalance and recommendation is read on its own, and so is each remaining section, and the first problem of each is
+     * reported with its JSON path. The references between sections are checked last and only when nothing else was wrong, so
+     * one broken signal does not hide as a hundred unknown-signal errors. Empty when the document is valid. At most 50 are returned.
+     */
+    public List<String> diagnose(JsonNode document, ConfigurationVersion version) {
+        List<String> problems = new ArrayList<>();
+        try {
+            build(document, version, problems);
+        } catch (ScoringException e) {
+            problems.add(e.getMessage());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            problems.add("invalid configuration value: " + e.getMessage());
+        }
+        return problems.size() > MAX_PROBLEMS ? List.copyOf(problems.subList(0, MAX_PROBLEMS)) : List.copyOf(problems);
+    }
+
+    private static final int MAX_PROBLEMS = 50;
+
     private ScoringConfigurationSnapshot build(JsonNode document, ConfigurationVersion version) {
+        return build(document, version, null);
+    }
+
+    /** Runs a step; when collecting, a problem is recorded and the step yields null, otherwise it is thrown (the first one wins). */
+    private static <T> T step(List<String> problems, java.util.function.Supplier<T> action) {
+        if (problems == null) {
+            return action.get();
+        }
+        try {
+            return action.get();
+        } catch (ScoringException e) {
+            problems.add(e.getMessage());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            problems.add("invalid configuration value: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private static void problem(List<String> problems, String message) {
+        if (problems == null) {
+            throw DocumentFields.error(message);
+        }
+        problems.add(message);
+    }
+
+    private static <T> List<T> orEmpty(List<T> list) {
+        return list == null ? List.of() : list;
+    }
+
+    private ScoringConfigurationSnapshot build(JsonNode document, ConfigurationVersion version, List<String> problems) {
         DocumentFields root = DocumentFields.of(document, "$");
         Map<String, QuestionDefinition> questions = new LinkedHashMap<>();
-        for (DocumentFields f : root.objects("questions")) {
-            QuestionDefinition question = question(f);
-            if (questions.put(question.questionId(), question) != null) {
-                throw DocumentFields.error("duplicate question " + question.questionId());
+        for (DocumentFields f : orEmpty(step(problems, () -> root.objects("questions")))) {
+            QuestionDefinition question = step(problems, () -> question(f));
+            if (question != null && questions.put(question.questionId(), question) != null) {
+                problem(problems, "duplicate question " + question.questionId());
             }
         }
         Map<String, SignalDefinition> signals = new LinkedHashMap<>();
-        for (DocumentFields f : root.optionalObjects("signals")) {
-            SignalDefinition signal = signal(f);
-            if (signals.put(signal.signalId(), signal) != null) {
-                throw DocumentFields.error("duplicate signal " + signal.signalId());
+        for (DocumentFields f : orEmpty(step(problems, () -> root.optionalObjects("signals")))) {
+            SignalDefinition signal = step(problems, () -> signal(f));
+            if (signal != null && signals.put(signal.signalId(), signal) != null) {
+                problem(problems, "duplicate signal " + signal.signalId());
             }
         }
-        DimensionScoringConfig dimensions = dimensions(root.object("dimensions"));
+        DimensionScoringConfig dimensions = step(problems, () -> dimensions(root.object("dimensions")));
         List<PatternDefinition> patterns = new ArrayList<>();
-        root.optionalObjects("patterns").forEach(f -> patterns.add(pattern(f)));
-        List<PenaltyDefinition> penalties = new ArrayList<>();
-        root.optionalObjects("penalties").forEach(f -> penalties.add(penalty(f)));
-        List<ImbalanceRule> imbalances = new ArrayList<>();
-        root.optionalObjects("imbalances").forEach(f -> imbalances.add(imbalance(f)));
-        OverallScoringConfig overall = overall(root.object("overall"));
-        Map<String, RecommendationDefinition> recommendations = new LinkedHashMap<>();
-        for (DocumentFields f : root.optionalObjects("recommendations")) {
-            RecommendationDefinition recommendation = new RecommendationDefinition(f.text("key"), f.text("title"), f.text("description"),
-                    f.optionalInteger("priority", 100));
-            f.done();
-            if (recommendations.put(recommendation.key(), recommendation) != null) {
-                throw DocumentFields.error("duplicate recommendation " + recommendation.key());
+        for (DocumentFields f : orEmpty(step(problems, () -> root.optionalObjects("patterns")))) {
+            PatternDefinition pattern = step(problems, () -> pattern(f));
+            if (pattern != null) {
+                patterns.add(pattern);
             }
         }
-        PresentationCatalog presentation = root.optionalObject("presentation").map(this::presentation).orElse(PresentationCatalog.empty());
-        ResponseSettings responses = root.optionalObject("responses").map(this::responses).orElse(ResponseSettings.defaults());
-        root.done();
-        return new ScoringConfigurationSnapshot(version, questions, signals, dimensions, patterns, penalties, imbalances, overall,
-                recommendations, presentation, responses);
+        List<PenaltyDefinition> penalties = new ArrayList<>();
+        for (DocumentFields f : orEmpty(step(problems, () -> root.optionalObjects("penalties")))) {
+            PenaltyDefinition penalty = step(problems, () -> penalty(f));
+            if (penalty != null) {
+                penalties.add(penalty);
+            }
+        }
+        List<ImbalanceRule> imbalances = new ArrayList<>();
+        for (DocumentFields f : orEmpty(step(problems, () -> root.optionalObjects("imbalances")))) {
+            ImbalanceRule rule = step(problems, () -> imbalance(f));
+            if (rule != null) {
+                imbalances.add(rule);
+            }
+        }
+        OverallScoringConfig overall = step(problems, () -> overall(root.object("overall")));
+        Map<String, RecommendationDefinition> recommendations = new LinkedHashMap<>();
+        for (DocumentFields f : orEmpty(step(problems, () -> root.optionalObjects("recommendations")))) {
+            RecommendationDefinition recommendation = step(problems, () -> {
+                RecommendationDefinition r = new RecommendationDefinition(f.text("key"), f.text("title"), f.text("description"),
+                        f.optionalInteger("priority", 100));
+                f.done();
+                return r;
+            });
+            if (recommendation != null && recommendations.put(recommendation.key(), recommendation) != null) {
+                problem(problems, "duplicate recommendation " + recommendation.key());
+            }
+        }
+        PresentationCatalog presentation = step(problems, () -> root.optionalObject("presentation").map(this::presentation).orElse(PresentationCatalog.empty()));
+        ResponseSettings responses = step(problems, () -> root.optionalObject("responses").map(this::responses).orElse(ResponseSettings.defaults()));
+        step(problems, () -> {
+            root.done();
+            return Boolean.TRUE;
+        });
+        if (problems != null && !problems.isEmpty()) {
+            return null;
+        }
+        return step(problems, () -> new ScoringConfigurationSnapshot(version, questions, signals, dimensions, patterns, penalties, imbalances, overall,
+                recommendations, presentation, responses));
     }
 
     // ---------------- responses (decision D45) ----------------

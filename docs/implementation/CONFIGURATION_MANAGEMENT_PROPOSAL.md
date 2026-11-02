@@ -1,6 +1,6 @@
 # Proposal D52 to D58: calibrating and managing scoring configuration
 
-Status: **PROPOSED, not approved. Nothing is implemented.** `specv3.md` sections 23.5, 23.6, 30.6 and 42 already require a lifecycle, approval metadata, representative fixtures, a score-distribution preview and calibration artifacts before a configuration becomes active. Today the platform default changes only by editing a file and restarting (`lis.configuration.initial.mode=SYNC`), with a fixed approver, no endpoint, no screen, no preview and no fixtures. Under the precedence rule (specv3 > architect.md > frontend-spec.md > CLAUDE.md) a rule such as "a second person approves" is new business behaviour and needs your approval first.
+Status: **APPROVED on 2026-11-02 with the choices in section 6. C1 has started; C2 (backend) is done; C3 (screens with structured forms) is next.** `specv3.md` sections 23.5, 23.6, 30.6 and 42 already require a lifecycle, approval metadata, representative fixtures, a score-distribution preview and calibration artifacts before a configuration becomes active. Today the platform default changes only by editing a file and restarting (`lis.configuration.initial.mode=SYNC`), with a fixed approver, no endpoint, no screen, no preview and no fixtures. Under the precedence rule (specv3 > architect.md > frontend-spec.md > CLAUDE.md) a rule such as "a second person approves" is new business behaviour and needs your approval first.
 
 ## 1. What exists and what is missing
 
@@ -62,3 +62,25 @@ Status: **PROPOSED, not approved. Nothing is implemented.** `specv3.md` sections
 4. **D56:** block approval while a fixture fails (recommended), or only warn?
 5. **D58:** a JSON editor with validation, comparison and preview now (recommended), or wait for structured forms?
 6. **C1:** will you review the worksheet yourself, or who should? I can apply your decisions to the JSON, but I cannot validate the numbers.
+
+## 6. Decisions taken (2026-11-02)
+
+| Question | Answer | Effect on the proposal |
+|---|---|---|
+| 1. Who manages what (D52) | Yes, as proposed | Platform administrator: the platform default. Owner and administrator: their tenant and organization overrides |
+| 2. Second-person approval (D53) | **On** | `lis.configuration.approval.require-second-person` defaults to `true`; the platform default needs two platform administrators. Stricter than proposed: the approver must differ from the creator, from everyone who edited the version and from whoever submitted it |
+| 3. Preview against real assessments (D55) | **Preview** | Owners and administrators may preview against their tenant's recent assessments, in memory and audited. Read as "yes to previewing against recent assessments"; `lis.configuration.preview.use-recent-assessments` (default `true`) switches it to fixtures only |
+| 4. Fixtures (D56) | My recommendation | Approval is **refused** while any fixture of the slot fails |
+| 5. Editor (D58) | **Wait for structured forms** | No JSON editor will ship. The API works on the whole configuration document, so structured forms can be built on it; the Configuration screens (C3) are planned with structured forms, and the comparison, preview, fixtures and approval screens do not depend on how a draft is edited |
+
+## 7. C2 as built (2026-11-02)
+
+- **Migration V10**: `configuration_review` (the calibration and approval record of a version, immutable once approved) and `configuration_fixture` (per layer, unique name).
+- **D54**: `ConfigurationDocumentParser.diagnose` reports the first problem of each item and section (at most 50); `parse` still stops at the first, so every other use of it is unchanged. `ConfigurationService` submit, activate and the new `check` use it.
+- **D55 and D56**: `ConfigurationEvaluator` scores answers against a candidate configuration in memory and checks fixture expectations; `EffectiveConfigurationService.resolveWithCandidate` merges a draft over the layers it sits on; `ConfigurationPreviewService` produces the preview (fixtures, recent assessments, a before/after distribution) and audits the read of assessments. Five starter fixtures ship beside the bundled configuration (`initial-platform-default.fixtures.json`) and are put in place once when the platform default has none; they hold for it (a test checks).
+- **D53 and D57**: `ConfigurationReviewService` runs the workflow. The approver must differ from the creator, every editor and the submitter (read from the audit trail); approval is refused while a fixture fails; the record stores the note, the calibration reference and the known limitations.
+- **D52 and D58**: `/api/v1/configuration/**` and `/api/v1/platform/configuration/**` (one abstract controller, two thin subclasses that build the caller from the verified token). Settings: `lis.configuration.approval.require-second-person` (default true), `lis.configuration.preview.use-recent-assessments` (default true) and `lis.configuration.preview.max-assessments` (default 50).
+- **Found on the way:** a failed read inside a transactional call marks the surrounding transaction rollback-only even when the caller catches it, so the candidate resolver is declared not to roll back for scoring exceptions; and a refused approval simply rolls back and leaves the version awaiting approval (its ACTIVATION_FAILED audit row, if activation itself fails, rolls back with it).
+- **Tests**: 46 new backend tests (686 in all): the all-problems diagnosis (9), starter fixtures and the evaluator (5), the workflow, gates, preview and isolation against PostgreSQL (19), the two switchable settings (2), the API with the role matrix (9), the loader's starter fixtures (2). The Postman collection has a folder for it (143 requests executed in all, 179 assertions, no failures, run twice).
+- **Development identities added**: `platform-admin-2` and `assess-owner` (so a second person exists for the platform default and for the scratch organization).
+

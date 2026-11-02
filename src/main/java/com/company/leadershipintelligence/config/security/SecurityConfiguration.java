@@ -57,6 +57,10 @@ public class SecurityConfiguration {
                         // questionnaire library and builder (decisions D47, D50): administrators only, for reads as well as writes
                         .requestMatchers("/api/v1/questionnaires", "/api/v1/questionnaires/**")
                         .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
+                        // scoring configuration of a tenant (decisions D52 to D58): analysts may read, owners and administrators change
+                        .requestMatchers(HttpMethod.GET, "/api/v1/configuration", "/api/v1/configuration/**")
+                        .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name(), Role.ANALYST.name())
+                        .requestMatchers("/api/v1/configuration", "/api/v1/configuration/**").hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
                         // roster and assessment runs (decision D48): administrators only
                         .requestMatchers("/api/v1/teams", "/api/v1/teams/**", "/api/v1/people", "/api/v1/people/**", "/api/v1/runs", "/api/v1/runs/**")
                         .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
