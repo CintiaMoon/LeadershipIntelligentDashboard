@@ -63,7 +63,7 @@ Idempotency (V3 §27.4): identity = tenantId + assessmentSnapshotId + inputHash 
 | GET | `/scoring-runs?assessmentId=&organizationId=&from=&to=` | step 3 run summaries with `comparable` flag (D27) | none |
 | GET | `/organizations/{id}/dashboard` | step 4, after run summaries and recommendations | D27, D28 |
 | GET | `/scoring-runs/history`, `/scoring-runs/compare` | step 3-4, comparison only when `comparable` (D27) | D27 |
-| GET | `/reports/{type}?runId=&format=json\|csv\|pdf` (comparison: `baseRunId=&runId=`) | APPROVED, not built (D59 to D64, `REPORTS_PROPOSAL.md`): types `LEADERSHIP_INTELLIGENCE`, `DIMENSION_ANALYSIS`, `PATTERN_PENALTY`, `HISTORICAL_COMPARISON`; generated on demand from the stored run, nothing stored; no `GET`/`POST /reports` list | F13 resolved |
+| GET | `/reports/{type}?runId=&format=json\|csv\|pdf` (comparison: `baseRunId=&runId=`) | JSON and CSV built; PDF returns 400 until phase D3 (D59 to D64, `REPORTS_PROPOSAL.md`): types `LEADERSHIP_INTELLIGENCE`, `DIMENSION_ANALYSIS`, `PATTERN_PENALTY`, `HISTORICAL_COMPARISON`; generated on demand from the stored run, nothing stored; no `GET`/`POST /reports` list | F13 resolved |
 
 FE `/scoring-runs/{id}/contributions` is not separate: contributions are returned by `/dimensions` (V3 §28.6). Pagination and filtering for the pattern and penalty lists (FE §10.1, §11.2) are PROPOSED: `page`, `size`, `sort` and filters named after the FE filter lists.
 
@@ -164,7 +164,7 @@ Recommendation text comes from a versioned configuration catalog keyed by action
 - Extension error codes beyond V3 §28.11: `INVALID_REQUEST` (400, 405, 415), `UNAUTHENTICATED` (401), `ACCESS_DENIED` (403, role).
 - Sub-resource bodies are envelopes with `scoringRunId` and the stored findings (`dimensions` and `adjusted`, `patterns`, `penalties` with `effectiveByTarget` and `tieBreakVersion`, `imbalances`) plus a `redacted` flag; `/explanation` returns `{ scoringRunId, redacted, trace }`.
 - The result carries `source`, `configurationSelection` and `counts` as additive fields; absent values are omitted, so an insufficient dimension has no score fields.
-- Not implemented: reports (F13, no specification).
+- Reports (D59 to D64): `GET /api/v1/reports/{type}` returns JSON and CSV; PDF follows in phase D3 and until then `format=pdf` is a 400.
 
 ## 9. As implemented (phases 14-15)
 
@@ -176,6 +176,7 @@ Read endpoints (any known role; tenant and `org_ids` enforced; a foreign organiz
 | GET | `/assessments/{assessmentId}` | same item shape |
 | GET | `/scoring-runs?organizationId=&assessmentId=&from=&to=&cursor=&limit=` | newest first; items have `previousScoringRunId`, `previousScore`, `change` (only when `comparable`), `comparable`, `notComparableReasons` (D37) |
 | GET | `/scoring-runs/compare?baseRunId=&runId=` | `comparable`, `notComparableReasons`, `scoreChange`, `dimensions[]` (base, score, change), `patterns` (appeared, resolved, persistent), `notice` |
+| GET | `/reports/{type}?runId=&format=json\|csv` | A report document `{type, title, redacted, notice, sections[{id, heading, note, columns[], rows[][]}]}`, no generation time, so the same run gives the same document. The type is `LEADERSHIP_INTELLIGENCE`, `DIMENSION_ANALYSIS`, `PATTERN_PENALTY` or `HISTORICAL_COMPARISON` (any case, dashes allowed); the comparison also takes `baseRunId` and refuses it elsewhere. CSV is a UTF-8 download with a byte-order mark, one block per section (heading, columns, rows), and defuses cells that start with `=`, `+`, `-` (non-numbers), `@`, tab or carriage return. Same scope as the run reads (a foreign run is 404), same redaction for the VIEWER role (per-question values withheld), no answers in any format, each generation audited as `REPORT_GENERATED` (type, format, redacted; never the content). 400 for an unknown type or format, a bad or missing run id, or `baseRunId` on a single-run report |
 | GET | `/scoring-runs/{id}/recommendations` | `{recommendations[], unmappedActionKeys[], notice}`; each entry has key, title, description, priority, severity, sources (D38) |
 | GET | `/organizations/{organizationId}/dashboard` | `latestPerTemplate[]`, `recentRuns[]`, `assessmentsByStatus`, `notice` |
 

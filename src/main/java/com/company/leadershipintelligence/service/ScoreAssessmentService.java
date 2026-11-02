@@ -443,6 +443,12 @@ public class ScoreAssessmentService {
         accessAudit.record(tenant.value(), actor, "EXPLANATION_READ", runId, "{\"redacted\":" + redacted + "}", clock.instant());
     }
 
+    /** Records that a caller generated a report of a run (decision D61): who and when, type and format, never the content. */
+    public void auditReport(TenantId tenant, String actor, UUID runId, String type, String format, boolean redacted) {
+        accessAudit.record(tenant.value(), actor, "REPORT_GENERATED", runId,
+                "{\"type\":\"" + type + "\",\"format\":\"" + format + "\",\"redacted\":" + redacted + "}", clock.instant());
+    }
+
     private Optional<ScoringRunView> repeatedRequest(String tenant, String idempotencyKey, String requestHash) {
         if (idempotencyKey == null) {
             return Optional.empty();

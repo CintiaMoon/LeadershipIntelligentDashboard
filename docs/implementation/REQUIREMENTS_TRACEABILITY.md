@@ -166,7 +166,7 @@ Detail lives in `docs/frontend/COMPONENT_INVENTORY.md` and `API_DEPENDENCIES.md`
 | R-F05 | Penalty explorer, applied and suppressed | FE §9.4, §11 | `/penalties` (V3 §28.8) | A-penalties | NOT_STARTED |
 | R-F06 | Imbalance analysis | FE §12 | `/imbalances` (V3 §28.9) | A-imbalances | NOT_STARTED |
 | R-F07 | Trends, history, comparison | FE §13 | history/compare (not in V3), V3 §36.3 | A-history | NOT_STARTED (D27) |
-| R-F08 | Reports | FE §14 | D59-D64 (`REPORTS_PROPOSAL.md`) | A-reports | APPROVED, not built |
+| R-F08 | Reports | FE §14 | D59-D64 (`REPORTS_PROPOSAL.md`) | A-reports | BACKEND BUILT (JSON, CSV); PDF and screen pending |
 | R-F09 | Assessments, lifecycle, recalculation | FE §15 | `/calculate` (D13), derived list/details, V3 §20.2 statuses | A-assessments | NOT_STARTED |
 | R-F10 | Roles, route authorization, 401/403 | FE §5, §19 | roles, JWT | A-security | NOT_STARTED |
 | R-F11 | Frontend never calculates scores | FE §2.5, §22.5 | complete backend payloads | frontend lint and tests | NOT_STARTED |

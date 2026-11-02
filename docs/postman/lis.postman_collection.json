@@ -4940,6 +4940,338 @@
           ]
         }
       ]
+    },
+    {
+      "name": "8. Reports",
+      "item": [
+        {
+          "name": "Leadership Intelligence report (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/LEADERSHIP_INTELLIGENCE?runId={{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "LEADERSHIP_INTELLIGENCE"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "One run: score, dimensions, patterns, penalties, imbalances, evidence, advice and methodology. Rendered from the stored run; nothing is recalculated."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('titled, with the intended-use notice', () => { pm.expect(r.title).to.eql('Leadership Intelligence Report'); pm.expect(r.notice).to.include('not an individual performance rating'); });",
+                  "pm.test('has a methodology section', () => pm.expect(r.sections.map(s => s.id)).to.include('methodology'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dimension Analysis report (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/DIMENSION_ANALYSIS?runId={{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "DIMENSION_ANALYSIS"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Dimension scores and what each question contributed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('has contributions', () => pm.expect(pm.response.json().sections.map(s => s.id)).to.include('contributions'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pattern and Penalty report (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/PATTERN_PENALTY?runId={{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "PATTERN_PENALTY"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Every pattern and the outcome of every penalty."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('has patterns and penalties', () => pm.expect(pm.response.json().sections.map(s => s.id)).to.include.members(['patterns','penalties']));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historical Comparison report (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/HISTORICAL_COMPARISON?baseRunId={{baseRunId}}&runId={{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "HISTORICAL_COMPARISON"
+              ],
+              "query": [
+                {
+                  "key": "baseRunId",
+                  "value": "{{baseRunId}}",
+                  "disabled": false
+                },
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Two runs; run /calculate twice first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('says whether the runs are comparable', () => pm.expect(pm.response.json().sections.map(s => s.id)).to.include('comparable'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Leadership Intelligence report (CSV download)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/LEADERSHIP_INTELLIGENCE?runId={{scoringRunId}}&format=csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "LEADERSHIP_INTELLIGENCE"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                },
+                {
+                  "key": "format",
+                  "value": "csv",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "The same report as a CSV file (UTF-8 with a byte-order mark)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('is a CSV attachment', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv'); pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment'); });",
+                  "pm.test('starts with the title', () => pm.expect(pm.response.text().replace(/^﻿/, '')).to.match(/^Leadership Intelligence Report/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An unknown report type -> 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/RISK?runId={{scoringRunId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "RISK"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PDF is not available yet -> 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/LEADERSHIP_INTELLIGENCE?runId={{scoringRunId}}&format=pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "LEADERSHIP_INTELLIGENCE"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "{{scoringRunId}}",
+                  "disabled": false
+                },
+                {
+                  "key": "format",
+                  "value": "pdf",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "PDF arrives in a later phase (D3)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A run that does not exist -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/LEADERSHIP_INTELLIGENCE?runId=00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "LEADERSHIP_INTELLIGENCE"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
