@@ -231,6 +231,30 @@
               "ADMIN"
             ]
           }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "platform-admin-2",
+          "claims": {
+            "sub": "platform-admin-2-user",
+            "roles": [
+              "PLATFORM_ADMIN"
+            ]
+          }
+        },
+        {
+          "requestParam": "client_id",
+          "match": "assess-owner",
+          "claims": {
+            "sub": "assess-owner-user",
+            "tenant_id": "demo-tenant",
+            "org_ids": [
+              "org-assess"
+            ],
+            "roles": [
+              "OWNER"
+            ]
+          }
         }
       ]
     }

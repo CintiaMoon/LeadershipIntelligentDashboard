@@ -64,8 +64,11 @@ class InitialConfigurationLoaderIntegrationTest extends PostgresIntegrationTest 
     @Autowired
     ObjectMapper json;
 
+    @Autowired
+    com.company.leadershipintelligence.service.configuration.ConfigurationReviewService review;
+
     private InitialConfigurationLoader loader(String location, Mode mode) {
-        return new InitialConfigurationLoader(configurations, resources, new InitialConfigurationProperties(true, location, mode), environment);
+        return new InitialConfigurationLoader(configurations, resources, new InitialConfigurationProperties(true, location, mode), environment, review, json);
     }
 
     private List<ConfigurationVersionView> history() {
@@ -250,5 +253,30 @@ class InitialConfigurationLoaderIntegrationTest extends PostgresIntegrationTest 
         assertThat(teams.get(2).get("teamId").asText()).isEqualTo("tiny");
         assertThat(teams.get(2).get("scoreStatus").asText()).isEqualTo("INSUFFICIENT_DATA");
         assertThat(teams.get(2).has("leadershipIntelligenceScore")).isFalse();
+    }
+
+    @org.junit.jupiter.api.Test
+    void theStarterFixturesAreAddedOnceAndAreLeftAloneAfterwards() {
+        loader(BUNDLED, Mode.IF_MISSING).load();
+        var manager = com.company.leadershipintelligence.service.configuration.Manager.platform("ops");
+        java.util.UUID layer = history().get(0).configurationId();
+        assertThat(review.fixtures(manager, layer)).extracting(f -> f.name()).containsExactlyInAnyOrder("Best answers", "Worst answers", "Burnout profile",
+                "One low answer on psychological safety", "Middling answers");
+        // a person removes one, a restart does not bring it back
+        review.deleteFixture(manager, layer, review.fixtures(manager, layer).get(0).id());
+        loader(BUNDLED, Mode.IF_MISSING).load();
+        assertThat(review.fixtures(manager, layer)).hasSize(4);
+    }
+
+    @org.junit.jupiter.api.Test
+    void everyStarterFixtureHoldsForTheActivatedBundledConfiguration() {
+        loader(BUNDLED, Mode.IF_MISSING).load();
+        var manager = com.company.leadershipintelligence.service.configuration.Manager.platform("ops");
+        var version = review.get(manager, history().get(0).id());
+        // the fixtures are run exactly as the approval gate runs them, against the version that is active
+        var draft = review.createDraft(manager, ConfigurationTarget.platform(), null);
+        var results = review.preview(manager, draft.id()).fixtures();
+        assertThat(version.status()).isEqualTo(com.company.leadershipintelligence.domain.enums.ConfigurationStatus.ACTIVE);
+        assertThat(results).hasSize(5).allSatisfy(r -> assertThat(r.passed()).as(r.name() + " " + r.failures()).isTrue());
     }
 }

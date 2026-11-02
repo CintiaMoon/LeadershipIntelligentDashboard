@@ -60,3 +60,20 @@ export type RespondentRun = S['RespondentRun'];
 export type RespondentRunDetail = S['RespondentRunDetail'];
 export type RespondentQuestion = S['RespondentQuestion'];
 export type SaveDraftRequest = S['SaveDraft'];
+
+// Configuration management (decisions D52 to D58).
+export type ConfigLayer = S['ConfigurationLayer'];
+export type ConfigVersionSummary = S['ConfigurationVersionSummary'];
+export type ConfigVersion = S['ConfigurationVersionDetail'];
+export type ConfigReview = S['ReviewView'];
+export type ConfigPreview = S['PreviewResult'];
+export type ConfigPreviewSummary = S['PreviewSummary'];
+export type ConfigPreviewItem = S['PreviewItem'];
+export type ConfigDistribution = S['Distribution'];
+export type ConfigOutcome = S['ConfigurationOutcome'];
+export type ConfigFixture = S['FixtureView'];
+export type ConfigFixtureResult = S['FixtureResultView'];
+export type ConfigValidation = S['ValidationResult'];
+export type ConfigFixtureSpec = S['FixtureSpec'];
+export type ConfigApproveRequest = S['Approve'];
+

@@ -1,0 +1,16 @@
+{
+  "_comment": "The recorded decisions of the review of src/main/resources/config/initial-platform-default.json. REVIEW_WORKSHEET.md is generated from the file and this record by docs/configuration/tools/review_worksheet.py; edit this file, never the worksheet. A section or an item that is not listed has not been reviewed. 'Keep' confirms the item as it is and does not validate it: without a calibration dataset or reference the configuration stays unvalidated (specv3 section 42).",
+  "reviewedBy": "Cintia",
+  "date": "2026-11-02",
+  "evidence": null,
+  "fileSha256": "44455863f724f4ddd5688c8b3ce5fd27dddfc936fe643dc8552f7946b84ab05c",
+  "decisions": {
+    "questions": { "*": "Keep" },
+    "signals": { "*": "Keep" },
+    "coverage": { "*": "Keep" },
+    "patterns": { "*": "Keep" }
+  },
+  "notes": {
+    "patterns": "Decision given for the 16 patterns, meaning what each detects and when. The deductions of their penalties, the caps and the stacking were not mentioned and are shown as not yet reviewed."
+  }
+}

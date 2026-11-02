@@ -5,6 +5,9 @@ import com.company.leadershipintelligence.domain.enums.ConfigurationStatus;
 import com.company.leadershipintelligence.service.ConfigurationService;
 import com.company.leadershipintelligence.service.command.Approval;
 import com.company.leadershipintelligence.service.command.Caller;
+import com.company.leadershipintelligence.service.configuration.ConfigurationReviewService;
+import com.company.leadershipintelligence.service.configuration.FixtureSpec;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.company.leadershipintelligence.service.command.ConfigurationTarget;
 import com.company.leadershipintelligence.service.query.ConfigurationVersionView;
 import com.company.leadershipintelligence.service.query.ValidationResult;
@@ -58,13 +61,18 @@ public class InitialConfigurationLoader implements ApplicationRunner {
     private final ResourceLoader resources;
     private final InitialConfigurationProperties properties;
     private final Environment environment;
+    private final ConfigurationReviewService review;
+    private final ObjectMapper json;
 
     public InitialConfigurationLoader(ConfigurationService configurations, ResourceLoader resources,
-                                      InitialConfigurationProperties properties, Environment environment) {
+                                      InitialConfigurationProperties properties, Environment environment,
+                                      ConfigurationReviewService review, ObjectMapper json) {
         this.configurations = configurations;
         this.resources = resources;
         this.properties = properties;
         this.environment = environment;
+        this.review = review;
+        this.json = json;
     }
 
     @Override
@@ -80,8 +88,43 @@ public class InitialConfigurationLoader implements ApplicationRunner {
         load();
     }
 
-    /** Reads the file and brings the platform configuration in line with it. Fails with a clear message if the file is unusable. */
+    /**
+     * Reads the file and brings the platform configuration in line with it. Fails with a clear message if the file is unusable. When
+     * the platform default has no fixtures yet and a file of starter fixtures sits beside the configuration (the same name with
+     * {@code .fixtures.json}), they are put in place (decision D56).
+     */
     public Result load() {
+        Result result = loadDocument();
+        addStarterFixtures();
+        return result;
+    }
+
+    private void addStarterFixtures() {
+        String location = properties.location();
+        if (!location.endsWith(".json")) {
+            return;
+        }
+        Resource resource = resources.getResource(location.substring(0, location.length() - ".json".length()) + ".fixtures.json");
+        if (!resource.exists()) {
+            return;
+        }
+        List<ConfigurationVersionView> history = configurations.history(Caller.platform(ACTOR), ConfigurationTarget.platform());
+        if (history.isEmpty()) {
+            return;
+        }
+        try (var in = resource.getInputStream()) {
+            List<FixtureSpec> fixtures = json.readValue(in, new com.fasterxml.jackson.core.type.TypeReference<List<FixtureSpec>>() {
+            });
+            int added = review.addStarterFixtures(history.get(0).configurationId(), ACTOR, fixtures);
+            if (added > 0) {
+                LOG.info("added {} starter fixtures to the platform configuration", added);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("the starter fixtures of " + location + " could not be read: " + e.getMessage(), e);
+        }
+    }
+
+    private Result loadDocument() {
         String payload = read();
         Caller platform = Caller.platform(ACTOR);
         ConfigurationTarget target = ConfigurationTarget.platform();

@@ -67,10 +67,16 @@ Requested after the first release run, in six phases (`docs/implementation/QUEST
 
 Principles that held: the questionnaire is configuration, not code (publishing runs the same validator and lifecycle as any configuration); nothing links an answer to a person (a test asserts the columns of the answers table); a respondent reaches only the respondent endpoints, and the role is kept out of the tenant `Role` enum like the platform administrator; free text is collected and never scored; an open run cannot be changed by republishing its questionnaire.
 
+## Managing the scoring configuration (decisions D52 to D58)
+
+Requested after the questionnaire release (`docs/implementation/CONFIGURATION_MANAGEMENT_PROPOSAL.md`). The platform default, tenant overrides and organization overrides can now be changed while the application runs: a draft is edited as JSON, checked (every problem listed), previewed against fixtures and recent assessments, submitted, and approved by a second person; active versions never change and a rollback is a copy made a new draft. Version 1 uses a JSON editor; structured forms are left for later. The configuration remains **unvalidated**: approving states a calibration reference or leaves the version marked unvalidated, and no empirical data was supplied. Open review items (penalty amounts and stacking, overall weights and bands, advice texts) are listed in `docs/configuration/REVIEW_WORKSHEET.md`.
+
 ## Defects found by the later test layers (and fixed)
 
 | Found by | Defect |
 |---|---|
+| Configuration browser scan | A button's accessible name did not contain its visible text ("Copy as draft"); fixed |
+| Configuration browser journey | The second-person refusal is a 403 whose generic wording hid the reason; the approval step now shows the server's message |
 | Playwright sign-out test | Removing the user raised an event whose handler removed the user again: an endless loop |
 | Real-data e2e run | Boolean evidence flags were rejected by the response schema and the page reported "Cannot reach the service"; unexpected responses now have their own message |
 | axe | Chart surfaces were focusable inside `aria-hidden` containers; low-contrast faint text; link names that did not contain their visible text |

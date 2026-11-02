@@ -111,6 +111,44 @@ public class EffectiveConfigurationService {
     }
 
     /**
+     * The configuration as it would be if {@code candidate} (the JSON of a layer) were the active version of the layer {@code layerId}
+     * (decisions D55, D56), or as it is now when {@code candidate} is empty. The other layers are their current active versions.
+     * {@code tenant} may be null, which means the platform default alone (the platform administrator belongs to no tenant). Never
+     * cached and never stored: it exists only to preview a draft and to evaluate fixtures against it. A layer the assessment does not
+     * use (another organization's override) is not applied, so the candidate has no effect on it.
+     */
+    @Transactional(readOnly = true, noRollbackFor = ScoringException.class)
+    public ScoringConfigurationSnapshot resolveWithCandidate(TenantId tenant, OrganizationId organization, String templateId, java.util.UUID layerId,
+                                                             Optional<String> candidate) {
+        Instant now = clock.instant();
+        List<ScoringConfigurationEntity> slots = new ArrayList<>();
+        configurations.findPlatformDefault().ifPresent(slots::add);
+        if (tenant != null) {
+            if (templateId != null) {
+                configurations.findForTenant(tenant.value(), ConfigurationScope.TEMPLATE, templateId).ifPresent(slots::add);
+            }
+            if (organization != null) {
+                configurations.findForTenant(tenant.value(), ConfigurationScope.ORGANIZATION, organization.value()).ifPresent(slots::add);
+            }
+            configurations.findForTenant(tenant.value(), ConfigurationScope.TENANT, null).ifPresent(slots::add);
+        }
+        List<JsonNode> documents = new ArrayList<>();
+        for (ScoringConfigurationEntity slot : slots) {
+            if (candidate.isPresent() && slot.getId().equals(layerId)) {
+                documents.add(parser.read(candidate.get()));
+                continue;
+            }
+            versions.findAllOf(slot.getId()).stream()
+                    .filter(v -> v.getStatus() == ConfigurationStatus.ACTIVE && !v.getEffectiveFrom().isAfter(now)).findFirst()
+                    .ifPresent(v -> documents.add(parser.read(v.getPayload())));
+        }
+        if (documents.isEmpty()) {
+            throw new ScoringException(ScoringErrorCode.CONFIGURATION_VERSION_NOT_FOUND, "no active scoring configuration applies", Map.of());
+        }
+        return parser.parse(merger.merge(documents), new ConfigurationVersion("preview"));
+    }
+
+    /**
      * The configuration of one specific ACTIVE or ARCHIVED version (decision D21), merged over the current active
      * platform default unless it is the platform default itself. Never cached. The tenant may select its own
      * versions or platform versions.

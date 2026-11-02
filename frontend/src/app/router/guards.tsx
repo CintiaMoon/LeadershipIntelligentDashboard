@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/app/providers/auth-context';
 import { LoadingState } from '@/components/ui/StateViews';
 import { EmptyState } from '@/components/ui/StateViews';
-import { canManageAssessments, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
+import { canManageAssessments, canReadConfiguration, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
 
 /** Anonymous visitors are sent to the login page and brought back afterwards. */
 export function RequireAuth({ children }: { children: ReactNode }) {
@@ -45,6 +45,15 @@ export function RequireManager({ children }: { children: ReactNode }) {
   const { principal } = useAuth();
   if (!canManageAssessments(principal)) {
     return <EmptyState title="Only for owners and administrators" description="Building questionnaires, managing people and running assessments is limited to owners and administrators. Ask one of them if you need this." />;
+  }
+  return <>{children}</>;
+}
+
+/** Reading and managing the scoring configuration: the platform administrator, owners, administrators and analysts (decision D52). */
+export function RequireConfigurationReader({ children }: { children: ReactNode }) {
+  const { principal } = useAuth();
+  if (!canReadConfiguration(principal)) {
+    return <EmptyState title="Not available for your role" description="The scoring configuration is visible to the platform administrator, owners, administrators and analysts. Ask one of them if you need it." />;
   }
   return <>{children}</>;
 }

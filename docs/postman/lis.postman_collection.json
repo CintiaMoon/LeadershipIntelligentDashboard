@@ -113,6 +113,22 @@
     {
       "key": "stamp",
       "value": ""
+    },
+    {
+      "key": "cfgVersionId",
+      "value": ""
+    },
+    {
+      "key": "cfgLayerId",
+      "value": ""
+    },
+    {
+      "key": "cfgFixtureId",
+      "value": ""
+    },
+    {
+      "key": "platformDraftId",
+      "value": ""
     }
   ],
   "item": [
@@ -3501,6 +3517,1423 @@
                 "exec": [
                   "pm.test('201', () => pm.response.to.have.status(201));",
                   "pm.test('a draft with notes about what could not be carried over', () => { const d = pm.response.json(); pm.expect(d.state).to.eql('DRAFT'); pm.expect(d.notes).to.be.an('array'); pm.expect(d.document.questions.length).to.be.above(0); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Configuration management",
+      "description": "Drafting, validating, previewing, submitting and approving scoring configuration, with a second person and a fixtures gate. Runs in the scratch organization org-assess (personas assess-admin and assess-owner) with an empty override, so no score of any other test changes; the platform default is drafted and reviewed but not approved. Run it after folder 6 (it uses the variable stamp).",
+      "item": [
+        {
+          "name": "The layers an administrator may manage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "Owners and administrators manage them, analysts may read. The platform default is under /api/v1/platform/configuration.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const names = pm.response.json().map((l) => l.name);",
+                  "pm.test('the tenant override and the organization overrides of the token', () => { pm.expect(names).to.include('Tenant override'); pm.expect(names).to.include('Organization override org-assess'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a draft of an organization layer (an empty override)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "An empty organization override changes no score, so this collection can be run without affecting the data other tests read. Saves cfgVersionId and cfgLayerId.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scope\": \"ORGANIZATION\",\n  \"organizationId\": \"org-assess\",\n  \"document\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json();",
+                  "pm.test('a draft with no review yet', () => { pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.review).to.eql(undefined); pm.expect(d.unvalidated).to.eql(true); });",
+                  "pm.collectionVariables.set('cfgVersionId', d.id);",
+                  "pm.collectionVariables.set('cfgLayerId', d.layerId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A draft for an organization the token does not carry -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scope\": \"ORGANIZATION\",\n  \"organizationId\": \"org-1\",\n  \"document\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A draft of the platform default through the tenant path -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scope\": \"PLATFORM_DEFAULT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save a document with problems",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questions\": 5,\n  \"surprise\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate it: every problem is listed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "validate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('not valid, several problems', () => { pm.expect(d.valid).to.eql(false); pm.expect(d.problems.length).to.be.above(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save an empty override again",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate it: nothing is wrong",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "validate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('valid', () => pm.expect(pm.response.json().valid).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add a fixture that the layer cannot meet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Fixtures are representative test cases of a layer. Approval is refused while one fails.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers/{{cfgLayerId}}/fixtures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers",
+                "{{cfgLayerId}}",
+                "fixtures"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman impossible fixture {{stamp}}\",\n  \"answers\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 4\n    },\n    {\n      \"questionId\": \"Q02\",\n      \"answer\": \"OFTEN\"\n    },\n    {\n      \"questionId\": \"Q03\",\n      \"answer\": true\n    },\n    {\n      \"questionId\": \"Q04\",\n      \"answer\": \"fine\"\n    },\n    {\n      \"questionId\": \"Q05\",\n      \"answer\": 60\n    }\n  ],\n  \"expectations\": {\n    \"status\": \"VALID\",\n    \"overall\": {\n      \"min\": 99,\n      \"max\": 100\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('cfgFixtureId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The same fixture name again -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers/{{cfgLayerId}}/fixtures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers",
+                "{{cfgLayerId}}",
+                "fixtures"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman impossible fixture {{stamp}}\",\n  \"answers\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 4\n    },\n    {\n      \"questionId\": \"Q02\",\n      \"answer\": \"OFTEN\"\n    },\n    {\n      \"questionId\": \"Q03\",\n      \"answer\": true\n    },\n    {\n      \"questionId\": \"Q04\",\n      \"answer\": \"fine\"\n    },\n    {\n      \"questionId\": \"Q05\",\n      \"answer\": 60\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));",
+                  "pm.test('code FIXTURE_INVALID', () => pm.expect(pm.response.json().code).to.eql('FIXTURE_INVALID'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "Scores the fixtures and the tenant's recent assessments in memory, before and after. Nothing is stored; the read is audited.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "preview"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const text = pm.response.text();",
+                  "const d = pm.response.json();",
+                  "pm.test('the fixture was scored and failed', () => { pm.expect(d.summary.fixtures).to.be.above(0); pm.expect(d.fixtures.some((f) => f.passed === false)).to.eql(true); });",
+                  "pm.test('numbers and ids, never an answer', () => { pm.expect(text).to.not.include('only one key person'); pm.expect(text).to.not.include('OFTEN'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit for approval",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('submitted by the administrator, no problem', () => { pm.expect(d.submittedBy).to.eql('assess-admin-user'); pm.expect(d.validationProblems).to.eql([]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The person who submitted it cannot approve it -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Mine.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));",
+                  "pm.test('code CONFIGURATION_APPROVAL_REFUSED', () => pm.expect(pm.response.json().code).to.eql('CONFIGURATION_APPROVAL_REFUSED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approval needs a note -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-owner"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \" \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A failing fixture blocks the approval -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-owner"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Reviewed.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('code CONFIGURATION_FIXTURES_FAILED', () => pm.expect(pm.response.json().code).to.eql('CONFIGURATION_FIXTURES_FAILED'));",
+                  "pm.test('names the fixture', () => pm.expect(pm.response.json().details.fixture01).to.include('the overall score is'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete the fixture",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers/{{cfgLayerId}}/fixtures/{{cfgFixtureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers",
+                "{{cfgLayerId}}",
+                "fixtures",
+                "{{cfgFixtureId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A different person approves it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-owner"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Approval is by someone who did not create, edit or submit the version, with a note, and activates it.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Reviewed the empty override.\",\n  \"calibrationReference\": \"Postman run\",\n  \"knownLimitations\": \"Nothing is calibrated.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('active with the approval record', () => { pm.expect(d.status).to.eql('ACTIVE'); pm.expect(d.review.approvedBy).to.eql('assess-owner-user'); pm.expect(d.review.calibrationReference).to.eql('Postman run'); pm.expect(d.unvalidated).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The versions of the layer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions?scope=ORGANIZATION&organizationId=org-assess",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions?scope=ORGANIZATION&organizationId=org-assess"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('listed without their documents', () => { const v = pm.response.json(); pm.expect(v.length).to.be.above(0); pm.expect(v[0].payload).to.eql(undefined); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An analyst may read the layers -> 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "analyst"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('its own organizations only', () => pm.expect(pm.response.json().map((l) => l.name)).to.not.include('Organization override org-assess'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An organization layer outside the analyst token looks missing -> 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "analyst"
+              }
+            ],
+            "description": "The analyst persona belongs to org-1 and org-2 of the demo tenant, not to org-assess.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An analyst cannot submit -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "analyst"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Another tenant sees nothing -> 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "other-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));",
+                  "pm.test('code CONFIGURATION_VERSION_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('CONFIGURATION_VERSION_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A viewer cannot reach configuration -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "viewer"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A respondent cannot reach configuration -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "respondent-1"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Copy the version as a new draft (how a change is rolled back)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/copy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "copy"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('a new draft', () => { const d = pm.response.json(); pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.id).to.not.eql(pm.collectionVariables.get('cfgVersionId')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The platform default: its layer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/layers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "layers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('one layer', () => { const l = pm.response.json(); pm.expect(l.length).to.eql(1); pm.expect(l[0].name).to.eql('Platform default'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A tenant role cannot reach the platform path -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/layers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "layers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The platform administrator drafts a copy of the active platform default",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "The platform default applies to every tenant. This collection drafts and reviews a copy and does not approve it.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('platformDraftId', pm.response.json().id);",
+                  "pm.test('a draft', () => pm.expect(pm.response.json().status).to.eql('DRAFT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('no problem', () => pm.expect(pm.response.json().validationProblems).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The same administrator cannot approve it -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Mine.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));",
+                  "pm.test('code CONFIGURATION_APPROVAL_REFUSED', () => pm.expect(pm.response.json().code).to.eql('CONFIGURATION_APPROVAL_REFUSED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A second platform administrator rejects it with a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin-2"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Postman: left as a draft on purpose.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('back to draft with the reason', () => { pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.review.rejectionComment).to.include('left as a draft'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A tenant cannot read the platform version -> 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{platformDraftId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
                 ]
               }
             }
