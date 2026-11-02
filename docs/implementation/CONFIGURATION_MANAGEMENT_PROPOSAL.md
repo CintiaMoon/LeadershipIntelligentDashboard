@@ -93,4 +93,14 @@ Status: **APPROVED on 2026-11-02 with the choices in section 6. C1 has started; 
 - **Second-person refusal**: the server answers 403, whose generic wording would hide the reason, so the approval step shows the server's message.
 - **Found on the way**: a layer with no version cannot hold fixtures (they hang off the layer), so fixtures are added after the first draft; the accessibility scan caught a button whose accessible name lacked its visible text.
 - **Tests**: 23 unit tests and 6 browser tests (see `docs/release/TEST_RESULTS.md`).
-- **Not done**: structured forms; starter fixtures are added only when the platform default is first loaded, so a database created before V10 has none until they are added by hand.
+- **Not done**: structured forms (added in section 9); starter fixtures are added only when the platform default is first loaded, so a database created before V10 has none until they are added by hand.
+
+## 9. Forms for the numbers and wording (2026-11-02)
+
+You chose forms for **numbers and wording**, shown as a **Form** tab beside the **JSON** tab of the same document.
+
+- **Covered**: overall weights, tolerance and both sets of score bands; required coverage per dimension; group-answer settings; each penalty's enabled switch, strategy numbers (including severity multipliers), largest deduction, cap on the total, stacking policy and priority; advice titles, texts and priorities; names, descriptions and explanations of dimensions, patterns, penalties, signals and questions.
+- **Not covered (JSON only)**: questions and their normalization, signals, dimension mappings, pattern conditions, imbalance rules, and which pattern or target a penalty has.
+- **Early checks** (advisory; the server still decides): weights add up to 1 within the tolerance, bands cover 0 to 100 without a gap, shares are between 0 and 1.
+- **Overrides**: a layer that does not carry a section shows that it uses the layer below; adding the section is done in JSON.
+- **Found on the way**: the lifecycle cannot discard a draft (only ACTIVE and PAUSED versions can be archived), so the Archive button is shown only on a paused version; drafts that are not wanted stay as drafts.

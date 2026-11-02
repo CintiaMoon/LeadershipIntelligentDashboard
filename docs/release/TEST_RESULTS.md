@@ -8,9 +8,9 @@ Every figure below comes from a command run during the release phase on a develo
 |---|---|---|
 | Backend unit and integration | `mvn -B verify` | **686 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
 | Frontend static analysis | `npm run lint`, `npm run typecheck` | clean (0 problems) |
-| Frontend unit and component | `npm test` | **414 tests in 50 files, all pass** (coverage figures below are from the earlier run) |
+| Frontend unit and component | `npm test` | **429 tests in 53 files, all pass** (coverage figures below are from the earlier run) |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |
-| End to end (real stack, real browser) | `npm run e2e` | **73 tests, all pass**, run twice in a row from an empty database |
+| End to end (real stack, real browser) | `npm run e2e` | **75 tests, all pass**, run twice in a row from an empty database |
 | API contract | `newman run docs/postman/lis.postman_collection.json` | **109 requests executed (81 in the collection; the rest are token calls), 126 assertions, 0 failures**, run twice in a row |
 
 Answers from several people (decision D45) were added after the first release run: 53 backend tests, 37 frontend unit tests, 4 end-to-end tests and 3 Postman requests (the collection now has 37 requests; newman reports 42 executed requests because it also counts the token calls of the authentication script). The earlier figures were 460, 171, 45 and 40 executed requests.
@@ -30,7 +30,9 @@ Notable groups: domain unit tests for every pipeline stage (normalization strate
 
 Engine performance baseline (`EnginePerformanceBaselineTest`): 0.77 ms per run for 55 questions, 4.4 ms for 1005 questions (linear). V3 section 35.1 defines no absolute latency target.
 
-## Frontend unit and component tests (414)
+## Frontend unit and component tests (429)
+
+Added with the configuration forms: the path helpers (3), the advisory checks for weights, bands and shares (3) and the forms themselves (9: weights and their sum, typing a number, bands with a gap, coverage and group answers, a penalty's amounts, multipliers, stacking and switch with the parts it does not edit left untouched, advice and display texts, an inherited section, read only, unreadable JSON).
 
 Added with the configuration screens (phase C3, decisions D52 to D58): the document comparison (13), the layers page, the layer page, the JSON editor, the problems list, the preview and its fixture results, the approval step including the refusal for the author and the fixtures that block approval, and read-only use by an analyst (10), plus the navigation entry (role-aware). 23 tests in all.
 
@@ -44,7 +46,9 @@ The new groups: response summaries and their validation, the combination panel, 
 
 Groups: presentation helpers and error mapping; the API client against a mock server (headers, query building, error bodies, 401 handling); token decoding and the role helpers; route guards and the layout; response validation; the trace parser; condition wording; every dashboard section including loading, empty, error, retry, redaction and filtering states; the waterfall; the explanation, dimension, pattern, penalty and comparison pages including role differences and the form validation.
 
-## End to end (73 tests, real stack)
+## End to end (75 tests, real stack)
+
+Added with the forms: `configuration` has 2 more tests (dark and light): the platform administrator edits the weights in the form, is told at once that they do not add up, sees the comparison follow, scans every form section with axe, finds the same document in the JSON view, and checks a phone width. The test found that the page offered "Archive" on a draft, which the lifecycle refuses; the button is now offered only on a paused version.
 
 Added with the configuration screens: `configuration` (6 tests, an organization override in `org-assess` so the seeded series never change): an administrator drafts in the JSON editor, is stopped by invalid JSON, checks, previews and submits; the author is refused approval and says why; the owner (a second browser context) is blocked by a failing fixture, removes it and approves; an analyst reads and changes nothing; axe in both themes and no horizontal scrolling at 390 px; the platform administrator sees the platform layer. The accessibility scan found one real fault (a button whose accessible name did not contain its visible text), fixed before release.
 

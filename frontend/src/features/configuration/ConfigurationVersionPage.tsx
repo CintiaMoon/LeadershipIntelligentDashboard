@@ -24,6 +24,7 @@ import type { ConfigVersion } from '@/types/api';
 import { formatDateTime } from '@/utils/presentation';
 import { ApprovalPanel, detailsOf } from './ApprovalPanel';
 import { ChangesPanel } from './ChangesPanel';
+import { ConfigForms } from './forms/ConfigForms';
 import { jsonProblem } from './diff';
 import { JsonEditor } from './JsonEditor';
 import { editable, layerName, layerPath, pretty, STATUS_LABEL, statusTone, versionPath } from './labels';
@@ -58,6 +59,7 @@ function VersionBody({ version }: { version: ConfigVersion }) {
   const isDraft = editable(version);
   const saved = pretty(version.payload);
   const [text, setText] = useState(saved);
+  const [view, setView] = useState<'form' | 'json'>('form');
   const dirty = isDraft && text !== saved;
   const invalid = jsonProblem(text) !== null || text.trim() === '';
 
@@ -100,7 +102,7 @@ function VersionBody({ version }: { version: ConfigVersion }) {
                   Resume
                 </Button>
               )}
-              {(version.status === 'PAUSED' || version.status === 'DRAFT') && (
+              {version.status === 'PAUSED' && (
                 <Button disabled={busy} onClick={() => archive.mutate(id)}>
                   Archive
                 </Button>
@@ -121,10 +123,22 @@ function VersionBody({ version }: { version: ConfigVersion }) {
       <Card aria-label="Document">
         <CardHeader
           title="Configuration document"
-          description={isDraft ? 'Edit the JSON, save it, then check it, preview it and submit it for approval.' : 'This version can no longer be edited. Copy it as a new draft to change it.'}
+          description={isDraft ? 'Edit with the forms or as JSON (the same document), save it, then check it, preview it and submit it for approval.' : 'This version can no longer be edited. Copy it as a new draft to change it.'}
         />
         <div className="space-y-3 p-5">
-          <JsonEditor id="config-document" label="Document (JSON)" value={text} onChange={setText} readOnly={!isDraft || !canChange} />
+          <div role="group" aria-label="View of the document" className="flex gap-2">
+            <Button variant={view === 'form' ? 'primary' : 'secondary'} aria-pressed={view === 'form'} onClick={() => setView('form')}>
+              Form
+            </Button>
+            <Button variant={view === 'json' ? 'primary' : 'secondary'} aria-pressed={view === 'json'} onClick={() => setView('json')}>
+              JSON
+            </Button>
+          </div>
+          {view === 'form' ? (
+            <ConfigForms text={text} onChange={setText} readOnly={!isDraft || !canChange} />
+          ) : (
+            <JsonEditor id="config-document" label="Document (JSON)" value={text} onChange={setText} readOnly={!isDraft || !canChange} />
+          )}
           {isDraft && canChange && (
             <>
               {dirty && <p className="text-xs text-ink-soft">You have unsaved changes. Save before checking, previewing or submitting: those work on the saved draft.</p>}

@@ -73,6 +73,8 @@ describe('ConfigurationLayerPage', () => {
 });
 
 describe('ConfigurationVersionPage', () => {
+  const openJson = async () => userEvent.click(await screen.findByRole('button', { name: 'JSON' }));
+
   const base = () =>
     server.use(
       http.get(`${ORIGIN}/configuration/layers`, () => HttpResponse.json([layer])),
@@ -90,6 +92,7 @@ describe('ConfigurationVersionPage', () => {
       }),
     );
     renderRoutes(routes, { route: '/configuration/versions/v-2' });
+    await openJson();
     const editor = await screen.findByLabelText('Document (JSON)');
     expect(screen.getByRole('button', { name: 'Save draft' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Check' })).toBeEnabled();
@@ -107,6 +110,7 @@ describe('ConfigurationVersionPage', () => {
     base();
     server.use(http.get(`${ORIGIN}/configuration/versions/v-2`, () => HttpResponse.json(version())));
     renderRoutes(routes, { route: '/configuration/versions/v-2' });
+    await openJson();
     const editor = await screen.findByLabelText('Document (JSON)');
     await userEvent.clear(editor);
     await userEvent.click(editor);
@@ -188,6 +192,7 @@ describe('ConfigurationVersionPage', () => {
     base();
     server.use(http.get(`${ORIGIN}/configuration/versions/v-2`, () => HttpResponse.json(version({ status: 'VALIDATING' }))));
     renderRoutes(routes, { route: '/configuration/versions/v-2', auth: { principal: { subject: 'a', tenantId: 't', organizations: ['org-1'], roles: ['ANALYST'] } } });
+    await openJson();
     await screen.findByLabelText('Document (JSON)');
     expect(screen.queryByRole('heading', { name: 'Approve or send back' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Document (JSON)')).toHaveAttribute('readonly');
