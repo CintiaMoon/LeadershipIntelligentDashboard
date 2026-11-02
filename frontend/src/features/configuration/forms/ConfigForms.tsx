@@ -1,20 +1,26 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { isRecord, setIn, type Path } from './path';
+import { QuestionsSection } from './QuestionsSection';
+import { ImbalanceSection, PatternsSection, SignalsSection } from './RulesSections';
 import { CoverageSection, OverallSection, PenaltiesSection, RecommendationsSection, TextsSection, type SectionProps } from './sections';
 
 const SECTIONS: { id: string; label: string; Component: (p: SectionProps) => React.JSX.Element }[] = [
   { id: 'overall', label: 'Overall score', Component: OverallSection },
   { id: 'coverage', label: 'Coverage and group answers', Component: CoverageSection },
+  { id: 'questions', label: 'Questions', Component: QuestionsSection },
+  { id: 'signals', label: 'Signals', Component: SignalsSection },
+  { id: 'patterns', label: 'Patterns', Component: PatternsSection },
+  { id: 'imbalances', label: 'Imbalance', Component: ImbalanceSection },
   { id: 'penalties', label: 'Penalties', Component: PenaltiesSection },
   { id: 'recommendations', label: 'Advice', Component: RecommendationsSection },
   { id: 'texts', label: 'Display texts', Component: TextsSection },
 ];
 
 /**
- * Forms for the numbers and the wording of a configuration (decision D58, second step). They edit the same document as the JSON
- * view: each change produces new JSON text for the page to hold. Questions, signals, pattern conditions and imbalance rules have
- * no form yet and are edited as JSON.
+ * Forms for a configuration (decision D58, second and third steps). They edit the same document as the JSON
+ * view: each change produces new JSON text for the page to hold. Adding or removing a pattern or an imbalance rule, changing
+ * a question's kind and renaming an id are still done as JSON.
  */
 export function ConfigForms({ text, onChange, readOnly }: { text: string; onChange: (text: string) => void; readOnly: boolean }) {
   const [section, setSection] = useState(SECTIONS[0]!.id);
@@ -27,7 +33,8 @@ export function ConfigForms({ text, onChange, readOnly }: { text: string; onChan
   if (!isRecord(doc)) {
     return <p role="alert" className="text-sm text-risk-critical">The JSON view holds text that is not a valid document, so the forms cannot show it. Fix it there first.</p>;
   }
-  const set = (path: Path, value: unknown) => onChange(JSON.stringify(setIn(doc, path, value), null, 2));
+  const update = (change: (d: Record<string, unknown>) => Record<string, unknown>) => onChange(JSON.stringify(change(doc), null, 2));
+  const set = (path: Path, value: unknown) => update((d) => setIn(d, path, value));
   const current = SECTIONS.find((s) => s.id === section) ?? SECTIONS[0]!;
   return (
     <div className="space-y-5">
@@ -38,7 +45,7 @@ export function ConfigForms({ text, onChange, readOnly }: { text: string; onChan
           </Button>
         ))}
       </div>
-      <current.Component doc={doc} set={set} disabled={readOnly} />
+      <current.Component doc={doc} set={set} update={update} disabled={readOnly} />
     </div>
   );
 }

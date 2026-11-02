@@ -227,12 +227,49 @@ test.describe('forms', () => {
       await page.getByText(/^Dimensions \(/).click();
       await expectNoViolations(page, 'the texts form');
 
+      // questions, signals, patterns and imbalance rules
+      await page.getByRole('button', { name: 'Questions', exact: true }).click();
+      await expect(page.getByRole('group', { name: /^Q01 / })).toBeVisible();
+      await expectNoViolations(page, 'the questions form');
+      await page.getByRole('button', { name: 'Signals', exact: true }).click();
+      await expect(page.getByRole('group', { name: /^Questions behind / }).first()).toBeVisible();
+      await expectNoViolations(page, 'the signals form');
+      await page.getByRole('button', { name: 'Imbalance', exact: true }).click();
+      await expectNoViolations(page, 'the imbalance form');
+      await page.getByRole('button', { name: 'Patterns', exact: true }).click();
+      await page.locator('details').first().locator('summary').click();
+      await expect(page.getByLabel(/^Severity \(/).first()).toBeVisible();
+      await expectNoViolations(page, 'the patterns form with a condition open');
+
+      // what the forms write is accepted by the server: change a pattern, save, check
+      await page.getByLabel(/^Least confidence \(/).first().fill('0.8');
+      await page.getByRole('button', { name: 'Save draft' }).click();
+      await expect(page.getByText(/unsaved changes/)).toHaveCount(0);
+      // the server agrees with the early warning about the weights, and finds nothing else in what the forms wrote
+      await page.getByRole('button', { name: 'Check' }).click();
+      const problems = page.getByRole('alert').filter({ hasText: 'The document has a problem' });
+      await expect(problems).toContainText('overall weights sum to 1.15');
+      await expect(problems.getByRole('listitem')).toHaveCount(1);
+      await page.getByRole('button', { name: 'Overall score', exact: true }).click();
+      await page.getByLabel('Team health', { exact: true }).fill('0.25');
+      await page.getByRole('button', { name: 'Save draft' }).click();
+      await expect(page.getByText(/unsaved changes/)).toHaveCount(0);
+      await page.getByRole('button', { name: 'Check' }).click();
+      await expect(page.getByRole('status').filter({ hasText: 'No problems found' })).toBeVisible();
+
       // the same document is in the JSON view
       await page.getByRole('button', { name: 'JSON', exact: true }).click();
-      await expect(page.getByLabel('Document (JSON)')).toHaveValue(/"TEAM_HEALTH": 0\.4/);
+      await expect(page.getByLabel('Document (JSON)')).toHaveValue(/"TEAM_HEALTH": 0\.25/);
+      await expect(page.getByLabel('Document (JSON)')).toHaveValue(/"minimumConfidence": 0\.8/);
 
       // a phone
       await page.getByRole('button', { name: 'Form', exact: true }).click();
+      for (const section of ['Questions', 'Patterns', 'Penalties']) {
+        await page.getByRole('button', { name: section, exact: true }).click();
+        await page.setViewportSize({ width: 390, height: 844 });
+        const wide = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(wide, `the ${section} form scrolls horizontally on a phone`).toBeLessThanOrEqual(1);
+      }
       await page.getByRole('button', { name: 'Penalties', exact: true }).click();
       await page.setViewportSize({ width: 390, height: 844 });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

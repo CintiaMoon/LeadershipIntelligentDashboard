@@ -8,7 +8,7 @@ Every figure below comes from a command run during the release phase on a develo
 |---|---|---|
 | Backend unit and integration | `mvn -B verify` | **686 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
 | Frontend static analysis | `npm run lint`, `npm run typecheck` | clean (0 problems) |
-| Frontend unit and component | `npm test` | **429 tests in 53 files, all pass** (coverage figures below are from the earlier run) |
+| Frontend unit and component | `npm test` | **453 tests in 55 files, all pass** (coverage figures below are from the earlier run) |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |
 | End to end (real stack, real browser) | `npm run e2e` | **75 tests, all pass**, run twice in a row from an empty database |
 | API contract | `newman run docs/postman/lis.postman_collection.json` | **109 requests executed (81 in the collection; the rest are token calls), 126 assertions, 0 failures**, run twice in a row |
@@ -30,7 +30,9 @@ Notable groups: domain unit tests for every pipeline stage (normalization strate
 
 Engine performance baseline (`EnginePerformanceBaselineTest`): 0.77 ms per run for 55 questions, 4.4 ms for 1005 questions (linear). V3 section 35.1 defines no absolute latency target.
 
-## Frontend unit and component tests (429)
+## Frontend unit and component tests (453)
+
+Added with the forms for questions, signals, patterns and imbalance rules: reference and condition logic (10), path removal (1) and the forms (13): scale, choice and yes/no questions, weights and dimension mappings, adding and removing choices, adding a question and a taken id, guarded removal of a question and a signal, group-answer method, signal sources and reliability, pattern severity, evidence, switches and advice, the condition tree (changing an operator, groups, a list of values), imbalance rules, and the real default configuration left identical by an empty edit. These tests allow 30 seconds each because they type into large forms under the load of a whole run.
 
 Added with the configuration forms: the path helpers (3), the advisory checks for weights, bands and shares (3) and the forms themselves (9: weights and their sum, typing a number, bands with a gap, coverage and group answers, a penalty's amounts, multipliers, stacking and switch with the parts it does not edit left untouched, advice and display texts, an inherited section, read only, unreadable JSON).
 
@@ -48,7 +50,7 @@ Groups: presentation helpers and error mapping; the API client against a mock se
 
 ## End to end (75 tests, real stack)
 
-Added with the forms: `configuration` has 2 more tests (dark and light): the platform administrator edits the weights in the form, is told at once that they do not add up, sees the comparison follow, scans every form section with axe, finds the same document in the JSON view, and checks a phone width. The test found that the page offered "Archive" on a draft, which the lifecycle refuses; the button is now offered only on a paused version.
+Added with the forms: `configuration` has 2 more tests (dark and light): the platform administrator edits the weights in the form, is told at once that they do not add up, sees the comparison follow, scans every form section with axe, finds the same document in the JSON view, and checks a phone width. In the second round the same journey scans the questions, signals, patterns and imbalance forms, and has the server check a draft the forms wrote: it reports only the weight problem the test made on purpose, and no problem once that is fixed. The first round found that the page offered "Archive" on a draft, which the lifecycle refuses; the button is now offered only on a paused version.
 
 Added with the configuration screens: `configuration` (6 tests, an organization override in `org-assess` so the seeded series never change): an administrator drafts in the JSON editor, is stopped by invalid JSON, checks, previews and submits; the author is refused approval and says why; the owner (a second browser context) is blocked by a failing fixture, removes it and approves; an analyst reads and changes nothing; axe in both themes and no horizontal scrolling at 390 px; the platform administrator sees the platform layer. The accessibility scan found one real fault (a button whose accessible name did not contain its visible text), fixed before release.
 

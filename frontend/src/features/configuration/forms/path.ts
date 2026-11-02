@@ -21,3 +21,13 @@ export function setIn<T>(doc: T, path: Path, value: unknown): T {
 }
 
 export const isRecord = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/** A copy of the document without the key at the path (or the item of an array); a path that does not exist changes nothing. */
+export function unsetIn<T>(doc: T, path: Path): T {
+  if (path.length === 0 || getIn(doc, path.slice(0, -1)) === undefined) return doc;
+  const parent = getIn(doc, path.slice(0, -1));
+  const last = path[path.length - 1] as string | number;
+  if (parent === null || typeof parent !== 'object') return doc;
+  const copy = Array.isArray(parent) ? (parent as unknown[]).filter((_, i) => i !== last) : Object.fromEntries(Object.entries(parent).filter(([k]) => k !== String(last)));
+  return setIn(doc, path.slice(0, -1), copy);
+}

@@ -7,6 +7,8 @@ import { getIn, isRecord, type Path } from './path';
 export interface SectionProps {
   doc: Record<string, unknown>;
   set: (path: Path, value: unknown) => void;
+  /** Several changes at once, such as removing a question together with what refers to it. */
+  update: (change: (doc: Record<string, unknown>) => Record<string, unknown>) => void;
   disabled: boolean;
 }
 

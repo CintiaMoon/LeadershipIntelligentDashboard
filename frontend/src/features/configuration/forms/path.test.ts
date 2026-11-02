@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getIn, setIn } from './path';
+import { getIn, setIn, unsetIn } from './path';
 
 describe('path helpers', () => {
   const doc = { overall: { weights: { A: 0.5 } }, list: [{ id: 'x', n: 1 }, { id: 'y', n: 2 }] };
@@ -23,5 +23,13 @@ describe('path helpers', () => {
     expect(Object.keys(setIn(doc.overall.weights, ['A'], 1))).toEqual(['A']);
     expect(setIn({}, ['a', 'b'], 1)).toEqual({ a: { b: 1 } });
     expect(setIn({}, ['a', 0], 1)).toEqual({ a: [1] });
+  });
+
+  it('removes a key or an array item and leaves the rest alone', () => {
+    expect(unsetIn({ a: 1, b: 2 }, ['a'])).toEqual({ b: 2 });
+    expect(unsetIn(doc, ['list', 0]).list).toEqual([{ id: 'y', n: 2 }]);
+    expect(unsetIn(doc, ['overall', 'weights', 'A']).overall.weights).toEqual({});
+    expect(unsetIn(doc, ['nothing', 'here'])).toBe(doc);
+    expect(doc.list).toHaveLength(2);
   });
 });
