@@ -29,6 +29,11 @@ export const queryKeys = {
   assessmentRuns: (params: { organizationId?: string; status?: string }) => ['lis', 'assessment-runs', params] as const,
   assessmentRunsAll: ['lis', 'assessment-runs'] as const,
   assessmentRun: (id: string) => ['lis', 'assessment-run', id] as const,
+  configurationAll: ['lis', 'configuration'] as const,
+  configLayers: (platform: boolean) => ['lis', 'configuration', platform, 'layers'] as const,
+  configVersions: (platform: boolean, scope: string, organizationId: string) => ['lis', 'configuration', platform, 'versions', scope, organizationId] as const,
+  configVersion: (platform: boolean, id: string) => ['lis', 'configuration', platform, 'version', id] as const,
+  configFixtures: (platform: boolean, layerId: string) => ['lis', 'configuration', platform, 'fixtures', layerId] as const,
   myRuns: ['lis', 'respond', 'runs'] as const,
   myRun: (id: string) => ['lis', 'respond', 'run', id] as const,
 };

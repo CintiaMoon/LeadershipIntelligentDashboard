@@ -4,10 +4,11 @@ import { AppLayout } from '@/app/layouts/AppLayout';
 import { CallbackPage } from '@/features/auth/CallbackPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { NotFoundPage } from '@/features/errors/NotFoundPage';
-import { HomeRedirect, RequireAuth, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
+import { HomeRedirect, RequireAuth, RequireConfigurationReader, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
 
 /** Wraps a page so that only owners and administrators see it; the backend refuses everyone else as well. */
 const manager = (Page: ComponentType) => function ManagerPage() { return (<RequireManager><Page /></RequireManager>); };
+const reader = (Page: ComponentType) => function ReaderPage() { return (<RequireConfigurationReader><Page /></RequireConfigurationReader>); };
 const respondent = (Page: ComponentType) => function RespondentPage() { return (<RequireRespondent><Page /></RequireRespondent>); };
 
 export const routes: RouteObject[] = [
@@ -51,6 +52,23 @@ export const routes: RouteObject[] = [
       { path: 'assessment-runs', lazy: async () => ({ Component: manager((await import('@/features/runs/RunListPage')).RunListPage) }) },
       { path: 'assessment-runs/new', lazy: async () => ({ Component: manager((await import('@/features/runs/StartRunPage')).StartRunPage) }) },
       { path: 'assessment-runs/:runId', lazy: async () => ({ Component: manager((await import('@/features/runs/RunDetailPage')).RunDetailPage) }) },
+      // scoring configuration: layers, versions, the JSON editor, review and approval (decisions D52 to D58)
+      { path: 'configuration', lazy: async () => ({ Component: reader((await import('@/features/configuration/ConfigurationPage')).ConfigurationPage) }) },
+      ...(['platform', 'tenant'] as const).map((kind) => ({
+        path: `configuration/layers/${kind}`,
+        lazy: async () => {
+          const { ConfigurationLayerPage } = await import('@/features/configuration/ConfigurationLayerPage');
+          return { Component: reader(() => <ConfigurationLayerPage kind={kind} />) };
+        },
+      })),
+      {
+        path: 'configuration/layers/organization/:organizationId',
+        lazy: async () => {
+          const { ConfigurationLayerPage } = await import('@/features/configuration/ConfigurationLayerPage');
+          return { Component: reader(() => <ConfigurationLayerPage kind="organization" />) };
+        },
+      },
+      { path: 'configuration/versions/:versionId', lazy: async () => ({ Component: reader((await import('@/features/configuration/ConfigurationVersionPage')).ConfigurationVersionPage) }) },
       // the respondent flow
       { path: 'respond', lazy: async () => ({ Component: respondent((await import('@/features/respond/MyRunsPage')).MyRunsPage) }) },
       { path: 'respond/:runId', lazy: async () => ({ Component: respondent((await import('@/features/respond/RespondPage')).RespondPage) }) },

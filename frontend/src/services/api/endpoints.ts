@@ -33,6 +33,14 @@ import type {
   RespondentRun,
   RespondentRunDetail,
   SaveDraftRequest,
+  ConfigApproveRequest,
+  ConfigFixture,
+  ConfigFixtureSpec,
+  ConfigLayer,
+  ConfigPreview,
+  ConfigReview,
+  ConfigValidation,
+  ConfigVersion,
 } from '@/types/api';
 import { apiFetch, type Query } from './client';
 
@@ -119,3 +127,37 @@ export const api = {
   recalculate: (assessmentId: string, request?: RecalculateRequest) =>
     apiFetch<ScoringResult>(`/assessments/${enc(assessmentId)}/score/recalculate`, { method: 'POST', body: request }),
 };
+
+/**
+ * The configuration management endpoints (decisions D52 to D58). The platform administrator reaches the platform default under
+ * /platform/configuration; owners, administrators and analysts reach their tenant under /configuration. The paths are the same
+ * after the base, so one set of functions serves both and the caller says which it is.
+ */
+export function configurationApi(platform: boolean) {
+  const base = platform ? '/platform/configuration' : '/configuration';
+  const version = (id: string) => `${base}/versions/${enc(id)}`;
+  return {
+    layers: (signal?: AbortSignal) => apiFetch<ConfigLayer[]>(`${base}/layers`, { signal }),
+    versions: (scope?: string, organizationId?: string, signal?: AbortSignal) =>
+      apiFetch<ConfigVersion[]>(`${base}/versions`, { query: { scope, organizationId }, signal }),
+    version: (id: string, signal?: AbortSignal) => apiFetch<ConfigVersion>(version(id), { signal }),
+    createDraft: (request: { scope?: string; organizationId?: string; document?: unknown }) =>
+      apiFetch<ConfigVersion>(`${base}/versions`, { method: 'POST', body: request }),
+    updateDraft: (id: string, document: unknown) => apiFetch<ConfigVersion>(version(id), { method: 'PUT', body: document }),
+    copy: (id: string) => apiFetch<ConfigVersion>(`${version(id)}/copy`, { method: 'POST' }),
+    validate: (id: string) => apiFetch<ConfigValidation>(`${version(id)}/validate`, { method: 'POST' }),
+    preview: (id: string) => apiFetch<ConfigPreview>(`${version(id)}/preview`, { method: 'POST' }),
+    submit: (id: string) => apiFetch<ConfigReview>(`${version(id)}/submit`, { method: 'POST' }),
+    approve: (id: string, request: ConfigApproveRequest) => apiFetch<ConfigVersion>(`${version(id)}/approve`, { method: 'POST', body: request }),
+    reject: (id: string, comment: string) => apiFetch<ConfigVersion>(`${version(id)}/reject`, { method: 'POST', body: { comment } }),
+    pause: (id: string) => apiFetch<ConfigVersion>(`${version(id)}/pause`, { method: 'POST' }),
+    resume: (id: string) => apiFetch<ConfigVersion>(`${version(id)}/resume`, { method: 'POST' }),
+    archive: (id: string) => apiFetch<ConfigVersion>(`${version(id)}/archive`, { method: 'POST' }),
+    fixtures: (layerId: string, signal?: AbortSignal) => apiFetch<ConfigFixture[]>(`${base}/layers/${enc(layerId)}/fixtures`, { signal }),
+    addFixture: (layerId: string, spec: ConfigFixtureSpec) => apiFetch<ConfigFixture>(`${base}/layers/${enc(layerId)}/fixtures`, { method: 'POST', body: spec }),
+    replaceFixture: (layerId: string, id: string, spec: ConfigFixtureSpec) =>
+      apiFetch<ConfigFixture>(`${base}/layers/${enc(layerId)}/fixtures/${enc(id)}`, { method: 'PUT', body: spec }),
+    deleteFixture: (layerId: string, id: string) => apiFetch<void>(`${base}/layers/${enc(layerId)}/fixtures/${enc(id)}`, { method: 'DELETE' }),
+  };
+}
+

@@ -71,7 +71,7 @@ Status: **APPROVED on 2026-11-02 with the choices in section 6. C1 has started; 
 | 2. Second-person approval (D53) | **On** | `lis.configuration.approval.require-second-person` defaults to `true`; the platform default needs two platform administrators. Stricter than proposed: the approver must differ from the creator, from everyone who edited the version and from whoever submitted it |
 | 3. Preview against real assessments (D55) | **Preview** | Owners and administrators may preview against their tenant's recent assessments, in memory and audited. Read as "yes to previewing against recent assessments"; `lis.configuration.preview.use-recent-assessments` (default `true`) switches it to fixtures only |
 | 4. Fixtures (D56) | My recommendation | Approval is **refused** while any fixture of the slot fails |
-| 5. Editor (D58) | **Wait for structured forms** | No JSON editor will ship. The API works on the whole configuration document, so structured forms can be built on it; the Configuration screens (C3) are planned with structured forms, and the comparison, preview, fixtures and approval screens do not depend on how a draft is edited |
+| 5. Editor (D58) | **Wait for structured forms**, then **changed on 2026-11-02 to a JSON editor for version 1** | The first Configuration screens (C3) edit the whole configuration document as JSON, with validation (every problem with its path), a comparison with the active version, the preview, the fixtures and the approval step. Structured forms for each section stay a later improvement; the API works on the whole document, so they can be built on it without a backend change |
 
 ## 7. C2 as built (2026-11-02)
 

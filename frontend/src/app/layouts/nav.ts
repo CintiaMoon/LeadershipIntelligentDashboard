@@ -1,6 +1,6 @@
-import { canManageAssessments, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
+import { canManageAssessments, canReadConfiguration, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
 
-export type NavIcon = 'dashboard' | 'compare' | 'tenants' | 'questionnaires' | 'runs' | 'people' | 'answer';
+export type NavIcon = 'dashboard' | 'compare' | 'tenants' | 'questionnaires' | 'runs' | 'people' | 'answer' | 'configuration';
 
 export interface NavItem {
   to: string;
@@ -15,7 +15,10 @@ export interface NavItem {
  */
 export function navItems(principal: Principal | null): NavItem[] {
   if (isPlatformAdmin(principal)) {
-    return [{ to: '/platform/tenants', label: 'Tenants', icon: 'tenants' }];
+    return [
+      { to: '/platform/tenants', label: 'Tenants', icon: 'tenants' },
+      { to: '/configuration', label: 'Configuration', icon: 'configuration' },
+    ];
   }
   if (isRespondent(principal)) {
     return [{ to: '/respond', label: 'My assessments', icon: 'answer' }];
@@ -31,5 +34,6 @@ export function navItems(principal: Principal | null): NavItem[] {
       { to: '/people', label: 'People', icon: 'people' },
     );
   }
+  if (canReadConfiguration(principal)) items.push({ to: '/configuration', label: 'Configuration', icon: 'configuration' });
   return items;
 }

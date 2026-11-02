@@ -56,6 +56,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/configuration/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One version with its document and its review record */
+        get: operations["version"];
+        /** Replace the document of a draft (the whole configuration document) */
+        put: operations["updateDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/layers/{layerId}/fixtures/{fixtureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a fixture */
+        put: operations["replaceFixture"];
+        post?: never;
+        /** Delete a fixture */
+        delete: operations["deleteFixture"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/people/{personId}": {
         parameters: {
             query?: never;
@@ -68,6 +104,42 @@ export interface paths {
         put: operations["updatePerson"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One version with its document and its review record */
+        get: operations["version_1"];
+        /** Replace the document of a draft (the whole configuration document) */
+        put: operations["updateDraft_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/layers/{layerId}/fixtures/{fixtureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a fixture */
+        put: operations["replaceFixture_1"];
+        post?: never;
+        /** Delete a fixture */
+        delete: operations["deleteFixture_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -247,6 +319,195 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/configuration/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The versions of one layer, newest first (without their documents) */
+        get: operations["versions"];
+        put?: never;
+        /** A new draft of a layer: the given document, or a copy of the active version */
+        post: operations["createDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Every problem of a version, without changing it */
+        post: operations["validate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a draft for approval: it is validated (every problem is returned) and previewed, then waits for another person */
+        post: operations["submit_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Use a paused version again */
+        post: operations["resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a version awaiting approval back to draft with the reason */
+        post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Score the fixtures, and the tenant's recent assessments when allowed, before and after, in memory only (the read is audited) */
+        post: operations["preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop using an active version for new scoring runs */
+        post: operations["pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A new draft with the content of any version of the layer (how a change is rolled back) */
+        post: operations["copy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire a version; it stays available to explain history */
+        post: operations["archive_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/versions/{versionId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve and activate a version awaiting approval; refused for anyone who worked on it, and while a fixture fails */
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/configuration/layers/{layerId}/fixtures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The fixtures of a layer */
+        get: operations["fixtures"];
+        put?: never;
+        /** Add a fixture to a layer */
+        post: operations["addFixture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/people": {
         parameters: {
             query?: never;
@@ -259,6 +520,195 @@ export interface paths {
         put?: never;
         /** Add a person to a team */
         post: operations["createPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The versions of one layer, newest first (without their documents) */
+        get: operations["versions_1"];
+        put?: never;
+        /** A new draft of a layer: the given document, or a copy of the active version */
+        post: operations["createDraft_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Every problem of a version, without changing it */
+        post: operations["validate_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a draft for approval: it is validated (every problem is returned) and previewed, then waits for another person */
+        post: operations["submit_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Use a paused version again */
+        post: operations["resume_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a version awaiting approval back to draft with the reason */
+        post: operations["reject_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Score the fixtures, and the tenant's recent assessments when allowed, before and after, in memory only (the read is audited) */
+        post: operations["preview_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop using an active version for new scoring runs */
+        post: operations["pause_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A new draft with the content of any version of the layer (how a change is rolled back) */
+        post: operations["copy_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire a version; it stays available to explain history */
+        post: operations["archive_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/versions/{versionId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve and activate a version awaiting approval; refused for anyone who worked on it, and while a fixture fails */
+        post: operations["approve_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/layers/{layerId}/fixtures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The fixtures of a layer */
+        get: operations["fixtures_1"];
+        put?: never;
+        /** Add a fixture to a layer */
+        post: operations["addFixture_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -555,6 +1005,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/configuration/layers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The layers the caller may manage, each with its active version and the one being worked on */
+        get: operations["layers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{organizationId}/trends": {
         parameters: {
             query?: never;
@@ -581,6 +1048,23 @@ export interface paths {
         };
         /** Organization dashboard: latest result per template, recent runs and assessment counts */
         get: operations["dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/configuration/layers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The layers the caller may manage, each with its active version and the one being worked on */
+        get: operations["layers_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -773,6 +1257,131 @@ export interface components {
             /** Format: uuid */
             configurationVersionId?: string;
         };
+        ConfigurationOutcome: {
+            status?: string;
+            score?: number;
+            band?: string;
+            dimensions?: {
+                [key: string]: number;
+            };
+            patterns?: string[];
+            penalties?: {
+                [key: string]: number;
+            };
+            error?: string;
+        };
+        ConfigurationVersionDetail: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            layerId?: string;
+            /** @enum {string} */
+            scope?: "PLATFORM_DEFAULT" | "TEMPLATE" | "ORGANIZATION" | "TENANT";
+            scopeId?: string;
+            /** Format: int32 */
+            version?: number;
+            /** @enum {string} */
+            status?: "DRAFT" | "VALIDATING" | "ACTIVE" | "PAUSED" | "ARCHIVED";
+            configHash?: string;
+            createdBy?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            approvedBy?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            /** Format: date-time */
+            effectiveFrom?: string;
+            unvalidated?: boolean;
+            review?: components["schemas"]["ReviewView"];
+            payload?: string;
+        };
+        Distribution: {
+            /** Format: int32 */
+            scored?: number;
+            minimum?: number;
+            median?: number;
+            maximum?: number;
+            bands?: {
+                [key: string]: number;
+            };
+        };
+        FixtureResultView: {
+            /** Format: uuid */
+            fixtureId?: string;
+            name?: string;
+            passed?: boolean;
+            failures?: string[];
+            outcome?: components["schemas"]["ConfigurationOutcome"];
+        };
+        PreviewSummary: {
+            /** Format: int32 */
+            fixtures?: number;
+            /** Format: int32 */
+            fixturesPassed?: number;
+            /** Format: int32 */
+            assessments?: number;
+            assessmentsUsed?: boolean;
+            before?: components["schemas"]["Distribution"];
+            after?: components["schemas"]["Distribution"];
+            /** Format: int32 */
+            patternsAppearing?: number;
+            /** Format: int32 */
+            patternsDisappearing?: number;
+            /** Format: int32 */
+            scoresChanged?: number;
+        };
+        ReviewView: {
+            /** Format: uuid */
+            versionId?: string;
+            submittedBy?: string;
+            /** Format: date-time */
+            submittedAt?: string;
+            validationProblems?: string[];
+            preview?: components["schemas"]["PreviewSummary"];
+            fixtures?: components["schemas"]["FixtureResultView"][];
+            approvedBy?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            approvalNote?: string;
+            calibrationReference?: string;
+            knownLimitations?: string;
+            rejectedBy?: string;
+            /** Format: date-time */
+            rejectedAt?: string;
+            rejectionComment?: string;
+        };
+        Answer: {
+            questionId?: string;
+            answer?: unknown;
+        };
+        Expectations: {
+            status?: string;
+            overall?: components["schemas"]["Range"];
+            dimensions?: {
+                [key: string]: components["schemas"]["Range"];
+            };
+            patternsMatched?: string[];
+            patternsNotMatched?: string[];
+        };
+        FixtureSpec: {
+            name?: string;
+            answers?: components["schemas"]["Answer"][];
+            expectations?: components["schemas"]["Expectations"];
+        };
+        Range: {
+            min?: number;
+            max?: number;
+        };
+        FixtureView: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            answers?: unknown;
+            expectations?: unknown;
+            createdBy?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         UpdatePerson: {
             teamId: string;
             name: string;
@@ -860,6 +1469,40 @@ export interface components {
             name?: string;
             /** Format: date-time */
             createdAt?: string;
+        };
+        CreateDraft: {
+            scope?: string;
+            organizationId?: string;
+            document?: components["schemas"]["JsonNode"];
+        };
+        ValidationResult: {
+            valid?: boolean;
+            problems?: string[];
+        };
+        Reject: {
+            comment: string;
+        };
+        PreviewItem: {
+            kind?: string;
+            name?: string;
+            organizationId?: string;
+            before?: components["schemas"]["ConfigurationOutcome"];
+            after?: components["schemas"]["ConfigurationOutcome"];
+            changes?: string[];
+        };
+        PreviewResult: {
+            /** Format: uuid */
+            versionId?: string;
+            summary?: components["schemas"]["PreviewSummary"];
+            items?: components["schemas"]["PreviewItem"][];
+            fixtures?: components["schemas"]["FixtureResultView"][];
+        };
+        Approve: {
+            note: string;
+            /** Format: date-time */
+            effectiveFrom?: string;
+            calibrationReference?: string;
+            knownLimitations?: string;
         };
         CreatePerson: {
             teamId: string;
@@ -1145,6 +1788,27 @@ export interface components {
         TenantListResponse: {
             items?: components["schemas"]["TenantResponse"][];
         };
+        ConfigurationLayer: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            scope?: "PLATFORM_DEFAULT" | "TEMPLATE" | "ORGANIZATION" | "TENANT";
+            scopeId?: string;
+            name?: string;
+            active?: components["schemas"]["ConfigurationVersionSummary"];
+            open?: components["schemas"]["ConfigurationVersionSummary"];
+        };
+        ConfigurationVersionSummary: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            version?: number;
+            /** @enum {string} */
+            status?: "DRAFT" | "VALIDATING" | "ACTIVE" | "PAUSED" | "ARCHIVED";
+            /** Format: date-time */
+            effectiveFrom?: string;
+            unvalidated?: boolean;
+        };
         DimensionPoint: {
             dimension?: string;
             rawScore?: number;
@@ -1328,6 +1992,102 @@ export interface operations {
             };
         };
     };
+    version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    updateDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JsonNode"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    replaceFixture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+                fixtureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FixtureSpec"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FixtureView"];
+                };
+            };
+        };
+    };
+    deleteFixture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+                fixtureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     updatePerson: {
         parameters: {
             query?: never;
@@ -1351,6 +2111,102 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["PersonView"];
                 };
+            };
+        };
+    };
+    version_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    updateDraft_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JsonNode"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    replaceFixture_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+                fixtureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FixtureSpec"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FixtureView"];
+                };
+            };
+        };
+    };
+    deleteFixture_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+                fixtureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1669,6 +2525,307 @@ export interface operations {
             };
         };
     };
+    versions: {
+        parameters: {
+            query?: {
+                scope?: string;
+                organizationId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"][];
+                };
+            };
+        };
+    };
+    createDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDraft"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    validate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ValidationResult"];
+                };
+            };
+        };
+    };
+    submit_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReviewView"];
+                };
+            };
+        };
+    };
+    resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reject"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PreviewResult"];
+                };
+            };
+        };
+    };
+    pause: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    copy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    archive_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Approve"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    fixtures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FixtureView"][];
+                };
+            };
+        };
+    };
+    addFixture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FixtureSpec"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FixtureView"];
+                };
+            };
+        };
+    };
     people: {
         parameters: {
             query?: {
@@ -1711,6 +2868,307 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PersonView"];
+                };
+            };
+        };
+    };
+    versions_1: {
+        parameters: {
+            query?: {
+                scope?: string;
+                organizationId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"][];
+                };
+            };
+        };
+    };
+    createDraft_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDraft"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    validate_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ValidationResult"];
+                };
+            };
+        };
+    };
+    submit_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReviewView"];
+                };
+            };
+        };
+    };
+    resume_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    reject_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reject"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    preview_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PreviewResult"];
+                };
+            };
+        };
+    };
+    pause_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    copy_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    archive_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    approve_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Approve"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationVersionDetail"];
+                };
+            };
+        };
+    };
+    fixtures_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FixtureView"][];
+                };
+            };
+        };
+    };
+    addFixture_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                layerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FixtureSpec"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FixtureView"];
                 };
             };
         };
@@ -2125,6 +3583,26 @@ export interface operations {
             };
         };
     };
+    layers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationLayer"][];
+                };
+            };
+        };
+    };
     trends: {
         parameters: {
             query?: {
@@ -2170,6 +3648,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DashboardResponse"];
+                };
+            };
+        };
+    };
+    layers_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationLayer"][];
                 };
             };
         };

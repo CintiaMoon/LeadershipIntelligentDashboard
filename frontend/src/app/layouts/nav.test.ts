@@ -8,30 +8,32 @@ const labels = (p: Principal | null) => navItems(p).map((i) => i.label);
 describe('navItems', () => {
   it('gives owners and administrators the dashboard, the comparison and everything that manages assessments', () => {
     for (const role of ['OWNER', 'ADMIN'] as const) {
-      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare', 'Questionnaires', 'Assessment runs', 'People']);
+      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare', 'Questionnaires', 'Assessment runs', 'People', 'Configuration']);
     }
   });
 
-  it('gives every other tenant role only the dashboard and the comparison', () => {
-    for (const role of ['ENGINEERING_LEADER', 'ANALYST', 'VIEWER'] as const) {
+  it('gives analysts the configuration to read, and the other roles only the dashboard and the comparison', () => {
+    expect(labels(tenant('ANALYST'))).toEqual(['Dashboard', 'Compare', 'Configuration']);
+    for (const role of ['ENGINEERING_LEADER', 'VIEWER'] as const) {
       expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare']);
     }
   });
 
-  it('gives the platform administrator the tenants and nothing tenant-scoped', () => {
-    expect(labels({ subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true })).toEqual(['Tenants']);
+  it('gives the platform administrator the tenants and the platform configuration, nothing tenant-scoped', () => {
+    expect(labels({ subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true })).toEqual(['Tenants', 'Configuration']);
   });
 
   it('gives a respondent their own assessments and nothing else', () => {
     expect(labels({ subject: 'r', tenantId: 't', organizations: [], roles: [], respondent: true })).toEqual(['My assessments']);
   });
 
-  it('points every entry at a route that exists and never repeats one', () => {
-    const all = [tenant('ADMIN'), { subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true }, { subject: 'r', tenantId: 't', organizations: [], roles: [], respondent: true }].flatMap(
-      (p) => navItems(p).map((i) => i.to),
-    );
-    expect(all.every((to) => to.startsWith('/'))).toBe(true);
-    expect(new Set(all).size).toBe(all.length);
+  it('points every entry at a route that exists and never repeats one for a role', () => {
+    const roles = [tenant('ADMIN'), { subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true }, { subject: 'r', tenantId: 't', organizations: [], roles: [], respondent: true }];
+    for (const p of roles) {
+      const to = navItems(p).map((i) => i.to);
+      expect(to.every((t) => t.startsWith('/'))).toBe(true);
+      expect(new Set(to).size).toBe(to.length);
+    }
   });
 
   it('shows nothing for nobody', () => {

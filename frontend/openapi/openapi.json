@@ -179,6 +179,161 @@
         }
       }
     },
+    "/api/v1/platform/configuration/versions/{versionId}": {
+      "get": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "One version with its document and its review record",
+        "operationId": "version",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Replace the document of a draft (the whole configuration document)",
+        "operationId": "updateDraft",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/layers/{layerId}/fixtures/{fixtureId}": {
+      "put": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Replace a fixture",
+        "operationId": "replaceFixture",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fixtureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixtureSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Delete a fixture",
+        "operationId": "deleteFixture",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fixtureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/people/{personId}": {
       "put": {
         "tags": [
@@ -217,6 +372,161 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "One version with its document and its review record",
+        "operationId": "version_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Replace the document of a draft (the whole configuration document)",
+        "operationId": "updateDraft_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/layers/{layerId}/fixtures/{fixtureId}": {
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Replace a fixture",
+        "operationId": "replaceFixture_1",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fixtureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixtureSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Delete a fixture",
+        "operationId": "deleteFixture_1",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fixtureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         }
       }
@@ -646,6 +956,460 @@
         }
       }
     },
+    "/api/v1/platform/configuration/versions": {
+      "get": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "The versions of one layer, newest first (without their documents)",
+        "operationId": "versions",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "A new draft of a layer: the given document, or a copy of the active version",
+        "operationId": "createDraft",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/validate": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Every problem of a version, without changing it",
+        "operationId": "validate",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/submit": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Submit a draft for approval: it is validated (every problem is returned) and previewed, then waits for another person",
+        "operationId": "submit_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/resume": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Use a paused version again",
+        "operationId": "resume",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/reject": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Send a version awaiting approval back to draft with the reason",
+        "operationId": "reject",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/preview": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Score the fixtures, and the tenant's recent assessments when allowed, before and after, in memory only (the read is audited)",
+        "operationId": "preview",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/pause": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Stop using an active version for new scoring runs",
+        "operationId": "pause",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/copy": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "A new draft with the content of any version of the layer (how a change is rolled back)",
+        "operationId": "copy",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/archive": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Retire a version; it stays available to explain history",
+        "operationId": "archive_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/versions/{versionId}/approve": {
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Approve and activate a version awaiting approval; refused for anyone who worked on it, and while a fixture fails",
+        "operationId": "approve",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Approve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/configuration/layers/{layerId}/fixtures": {
+      "get": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "The fixtures of a layer",
+        "operationId": "fixtures",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "Add a fixture to a layer",
+        "operationId": "addFixture",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixtureSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/people": {
       "get": {
         "tags": [
@@ -702,6 +1466,460 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/PersonView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "The versions of one layer, newest first (without their documents)",
+        "operationId": "versions_1",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "A new draft of a layer: the given document, or a copy of the active version",
+        "operationId": "createDraft_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/validate": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Every problem of a version, without changing it",
+        "operationId": "validate_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/submit": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Submit a draft for approval: it is validated (every problem is returned) and previewed, then waits for another person",
+        "operationId": "submit_2",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/resume": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Use a paused version again",
+        "operationId": "resume_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/reject": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Send a version awaiting approval back to draft with the reason",
+        "operationId": "reject_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/preview": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Score the fixtures, and the tenant's recent assessments when allowed, before and after, in memory only (the read is audited)",
+        "operationId": "preview_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/pause": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Stop using an active version for new scoring runs",
+        "operationId": "pause_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/copy": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "A new draft with the content of any version of the layer (how a change is rolled back)",
+        "operationId": "copy_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/archive": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Retire a version; it stays available to explain history",
+        "operationId": "archive_2",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/versions/{versionId}/approve": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Approve and activate a version awaiting approval; refused for anyone who worked on it, and while a fixture fails",
+        "operationId": "approve_1",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Approve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationVersionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/layers/{layerId}/fixtures": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "The fixtures of a layer",
+        "operationId": "fixtures_1",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Add a fixture to a layer",
+        "operationId": "addFixture_1",
+        "parameters": [
+          {
+            "name": "layerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixtureSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureView"
                 }
               }
             }
@@ -1345,6 +2563,30 @@
         }
       }
     },
+    "/api/v1/platform/configuration/layers": {
+      "get": {
+        "tags": [
+          "Platform configuration"
+        ],
+        "summary": "The layers the caller may manage, each with its active version and the one being worked on",
+        "operationId": "layers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigurationLayer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations/{organizationId}/trends": {
       "get": {
         "tags": [
@@ -1433,6 +2675,30 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/layers": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "The layers the caller may manage, each with its active version and the one being worked on",
+        "operationId": "layers_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigurationLayer"
+                  }
                 }
               }
             }
@@ -1976,6 +3242,341 @@
           }
         }
       },
+      "ConfigurationOutcome": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "band": {
+            "type": "string"
+          },
+          "dimensions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "penalties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "ConfigurationVersionDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "layerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "PLATFORM_DEFAULT",
+              "TEMPLATE",
+              "ORGANIZATION",
+              "TENANT"
+            ]
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "VALIDATING",
+              "ACTIVE",
+              "PAUSED",
+              "ARCHIVED"
+            ]
+          },
+          "configHash": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approvedBy": {
+            "type": "string"
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unvalidated": {
+            "type": "boolean"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewView"
+          },
+          "payload": {
+            "type": "string"
+          }
+        }
+      },
+      "Distribution": {
+        "type": "object",
+        "properties": {
+          "scored": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minimum": {
+            "type": "number"
+          },
+          "median": {
+            "type": "number"
+          },
+          "maximum": {
+            "type": "number"
+          },
+          "bands": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "FixtureResultView": {
+        "type": "object",
+        "properties": {
+          "fixtureId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/ConfigurationOutcome"
+          }
+        }
+      },
+      "PreviewSummary": {
+        "type": "object",
+        "properties": {
+          "fixtures": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fixturesPassed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "assessments": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "assessmentsUsed": {
+            "type": "boolean"
+          },
+          "before": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "after": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "patternsAppearing": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "patternsDisappearing": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoresChanged": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ReviewView": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submittedBy": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validationProblems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preview": {
+            "$ref": "#/components/schemas/PreviewSummary"
+          },
+          "fixtures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixtureResultView"
+            }
+          },
+          "approvedBy": {
+            "type": "string"
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approvalNote": {
+            "type": "string"
+          },
+          "calibrationReference": {
+            "type": "string"
+          },
+          "knownLimitations": {
+            "type": "string"
+          },
+          "rejectedBy": {
+            "type": "string"
+          },
+          "rejectedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rejectionComment": {
+            "type": "string"
+          }
+        }
+      },
+      "Answer": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string"
+          },
+          "answer": {}
+        }
+      },
+      "Expectations": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/Range"
+          },
+          "dimensions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Range"
+            }
+          },
+          "patternsMatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "patternsNotMatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "FixtureSpec": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Answer"
+            }
+          },
+          "expectations": {
+            "$ref": "#/components/schemas/Expectations"
+          }
+        }
+      },
+      "Range": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          }
+        }
+      },
+      "FixtureView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "answers": {},
+          "expectations": {},
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "UpdatePerson": {
         "type": "object",
         "properties": {
@@ -2254,6 +3855,128 @@
             "format": "date-time"
           }
         }
+      },
+      "CreateDraft": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 0
+          },
+          "organizationId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "document": {
+            "$ref": "#/components/schemas/JsonNode"
+          }
+        }
+      },
+      "ValidationResult": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Reject": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "comment"
+        ]
+      },
+      "PreviewItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "before": {
+            "$ref": "#/components/schemas/ConfigurationOutcome"
+          },
+          "after": {
+            "$ref": "#/components/schemas/ConfigurationOutcome"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PreviewResult": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PreviewSummary"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewItem"
+            }
+          },
+          "fixtures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixtureResultView"
+            }
+          }
+        }
+      },
+      "Approve": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 0
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "calibrationReference": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
+          },
+          "knownLimitations": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "note"
+        ]
       },
       "CreatePerson": {
         "type": "object",
@@ -3090,6 +4813,66 @@
             "items": {
               "$ref": "#/components/schemas/TenantResponse"
             }
+          }
+        }
+      },
+      "ConfigurationLayer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "PLATFORM_DEFAULT",
+              "TEMPLATE",
+              "ORGANIZATION",
+              "TENANT"
+            ]
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "$ref": "#/components/schemas/ConfigurationVersionSummary"
+          },
+          "open": {
+            "$ref": "#/components/schemas/ConfigurationVersionSummary"
+          }
+        }
+      },
+      "ConfigurationVersionSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "VALIDATING",
+              "ACTIVE",
+              "PAUSED",
+              "ARCHIVED"
+            ]
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unvalidated": {
+            "type": "boolean"
           }
         }
       },

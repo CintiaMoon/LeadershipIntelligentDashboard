@@ -66,3 +66,8 @@ export const isPlatformAdmin = (p: Principal | null) => p?.platformAdmin === tru
 export const canManageAssessments = (p: Principal | null) => hasAny(p, ['OWNER', 'ADMIN']);
 /** Answering questionnaires. */
 export const isRespondent = (p: Principal | null) => p?.respondent === true;
+/** Reading the scoring configuration and how it came to be (decisions D52, D58): the platform administrator, owners, administrators and analysts. */
+export const canReadConfiguration = (p: Principal | null) => isPlatformAdmin(p) || hasAny(p, ['OWNER', 'ADMIN', 'ANALYST']);
+/** Changing it: the platform administrator for the platform default, owners and administrators for their tenant. The backend decides. */
+export const canChangeConfiguration = (p: Principal | null) => isPlatformAdmin(p) || hasAny(p, ['OWNER', 'ADMIN']);
+
