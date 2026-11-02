@@ -68,8 +68,7 @@ describe('ConfigurationLayerPage', () => {
     expect(within(table).getByText('Awaiting approval')).toBeInTheDocument();
     expect(within(table).getByText('Active')).toBeInTheDocument();
     expect(await screen.findByText('Best answers')).toBeInTheDocument();
-    // a draft or a version waiting is already open, so no second one is offered
-    expect(screen.queryByRole('button', { name: 'New draft' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New draft' })).toBeInTheDocument();
   });
 });
 
@@ -168,6 +167,21 @@ describe('ConfigurationVersionPage', () => {
     await userEvent.type(screen.getByLabelText('Note'), 'Checked the weights');
     await userEvent.click(screen.getByRole('button', { name: 'Approve and activate' }));
     expect(await screen.findByText('overall 82 is above 60')).toBeInTheDocument();
+  });
+
+  it('says why the author cannot approve their own version', async () => {
+    base();
+    server.use(
+      http.get(`${ORIGIN}/configuration/versions/v-2`, () => HttpResponse.json(version({ status: 'VALIDATING' }))),
+      http.post(`${ORIGIN}/configuration/versions/v-2/approve`, () =>
+        HttpResponse.json({ code: 'CONFIGURATION_APPROVAL_REFUSED', message: 'a version must be approved by someone who did not create, edit or submit it' }, { status: 403 }),
+      ),
+    );
+    renderRoutes(routes, { route: '/configuration/versions/v-2' });
+    await screen.findByRole('heading', { name: 'Approve or send back' });
+    await userEvent.type(screen.getByLabelText('Note'), 'ok');
+    await userEvent.click(screen.getByRole('button', { name: 'Approve and activate' }));
+    expect(await screen.findByText(/Not allowed: .*did not create, edit or submit it/)).toBeInTheDocument();
   });
 
   it('shows no approval controls to an analyst', async () => {

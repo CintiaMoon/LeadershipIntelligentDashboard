@@ -7,10 +7,15 @@ import { useApproveConfigVersion, useRejectConfigVersion } from '@/services/quer
 
 /** Every line the server gave for a refusal, in order (the fixtures that failed, the problems found). */
 export function detailsOf(error: unknown): string[] {
-  if (!(error instanceof ApiError) || !error.details) return [];
-  return Object.entries(error.details)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, text]) => text);
+  if (!(error instanceof ApiError)) return [];
+  // the second-person rule is refused as 403, whose generic wording would hide the one thing the person needs to know
+  const reason = error.code === 'CONFIGURATION_APPROVAL_REFUSED' && error.message ? [`Not allowed: ${error.message}.`] : [];
+  return [
+    ...reason,
+    ...Object.entries(error.details ?? {})
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, text]) => text),
+  ];
 }
 
 /**

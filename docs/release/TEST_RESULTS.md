@@ -6,11 +6,11 @@ Every figure below comes from a command run during the release phase on a develo
 
 | Layer | Command | Result |
 |---|---|---|
-| Backend unit and integration | `mvn -B verify` | **640 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
+| Backend unit and integration | `mvn -B verify` | **686 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
 | Frontend static analysis | `npm run lint`, `npm run typecheck` | clean (0 problems) |
-| Frontend unit and component | `npm test` | **391 tests in 48 files, all pass** (statements 92.2 %, branches 82.2 %, functions 88.4 %, lines 94.1 %) |
+| Frontend unit and component | `npm test` | **414 tests in 50 files, all pass** (coverage figures below are from the earlier run) |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |
-| End to end (real stack, real browser) | `npm run e2e` | **67 tests, all pass** |
+| End to end (real stack, real browser) | `npm run e2e` | **73 tests, all pass**, run twice in a row from an empty database |
 | API contract | `newman run docs/postman/lis.postman_collection.json` | **109 requests executed (81 in the collection; the rest are token calls), 126 assertions, 0 failures**, run twice in a row |
 
 Answers from several people (decision D45) were added after the first release run: 53 backend tests, 37 frontend unit tests, 4 end-to-end tests and 3 Postman requests (the collection now has 37 requests; newman reports 42 executed requests because it also counts the token calls of the authentication script). The earlier figures were 460, 171, 45 and 40 executed requests.
@@ -30,7 +30,9 @@ Notable groups: domain unit tests for every pipeline stage (normalization strate
 
 Engine performance baseline (`EnginePerformanceBaselineTest`): 0.77 ms per run for 55 questions, 4.4 ms for 1005 questions (linear). V3 section 35.1 defines no absolute latency target.
 
-## Frontend unit and component tests (391)
+## Frontend unit and component tests (414)
+
+Added with the configuration screens (phase C3, decisions D52 to D58): the document comparison (13), the layers page, the layer page, the JSON editor, the problems list, the preview and its fixture results, the approval step including the refusal for the author and the fixtures that block approval, and read-only use by an analyst (10), plus the navigation entry (role-aware). 23 tests in all.
 
 Added with the restyle and the new screens: tests of the theme store (default, switch, persistence, storage refused), the layout (brand, sidebar, role-based navigation, theme toggle), the design tokens (both themes complete, every text and background pair at 4.5:1, chart colours as custom properties, no colour literal or stock palette class in any component), the builder model, the questionnaire library, the new-questionnaire page, the builder (adding, changing, moving and removing questions and options, rules, save, publish with and without unsaved changes, a refused publish listing every problem, read-only and archived states), the condition editor (comparisons, groups, conversion between them, depth limit, read only), people, the three run pages (list, start, detail with the confirmation before closing), my assessments, the answer form for every question kind (drafts, required questions, submitted and closed states, server refusals), the route guards and the respondent principal. Statements 92.2 %, branches 82.2 %, functions 88.4 %, lines 94.1 %; the figures of earlier runs were not produced under identical conditions, so compare the covered code, not the percentages.
 
@@ -42,7 +44,9 @@ The new groups: response summaries and their validation, the combination panel, 
 
 Groups: presentation helpers and error mapping; the API client against a mock server (headers, query building, error bodies, 401 handling); token decoding and the role helpers; route guards and the layout; response validation; the trace parser; condition wording; every dashboard section including loading, empty, error, retry, redaction and filtering states; the waterfall; the explanation, dimension, pattern, penalty and comparison pages including role differences and the form validation.
 
-## End to end (67 tests, real stack)
+## End to end (73 tests, real stack)
+
+Added with the configuration screens: `configuration` (6 tests, an organization override in `org-assess` so the seeded series never change): an administrator drafts in the JSON editor, is stopped by invalid JSON, checks, previews and submits; the author is refused approval and says why; the owner (a second browser context) is blocked by a failing fixture, removes it and approves; an analyst reads and changes nothing; axe in both themes and no horizontal scrolling at 390 px; the platform administrator sees the platform layer. The accessibility scan found one real fault (a button whose accessible name did not contain its visible text), fixed before release.
 
 Added with questionnaires, runs and respondents: `assessments` (8 tests, `org-assess` as a scratch organization of its own) and 3 accessibility tests (the sign-in page and every signed-in screen in both themes, and the theme switch from the keyboard). The journey: an administrator builds a questionnaire in the browser, is told what is missing, adds a rule and publishes; builds a team and its five people once; starts a run and sees nobody has started; a respondent signs in, sees only their own assessments, is blocked by a required question, saves a draft, reloads and continues, and submits; the four other respondents answer; the administrator closes the run, the organization result is scored (Team Health 25, the rule's pattern matched) and the explanation opens. Further checks: the participant list holds only name, address, team and status; a respondent token gets 403 on every manager endpoint; a person not on the roster gets 404. Axe (WCAG 2.2 AA) scans the library, the new-questionnaire page, people, the run list, starting a run, an open and a closed run, the builder (read only, and as a draft with every kind of question and a rule), my assessments and the answer form with a missing answer, in the dark and the light theme, with no horizontal scrolling at 390 px. The suite found the builder overflow (fixed) and showed that a test must not write into the seeded organizations.
 

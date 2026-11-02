@@ -134,7 +134,19 @@ Requested after the first release run: the configuration is provided as a JSON d
 | An initial version with everything needed: questions, signals, dimensions, patterns, penalties, imbalance, weights and bands, answer-combination rules, recommendation and presentation text | `src/main/resources/config/initial-platform-default.json`, documented in `docs/configuration/INITIAL_CONFIGURATION.md` | `InitialConfigurationTest` (14) | DONE (content unvalidated, limitation 2) |
 | Follows the specification's catalog, invents no identifiers and does not exceed suggested maxima; enables only what the questionnaire can measure | catalog identifiers of specv3 13.3 and 15.5, 16 of the 48 catalog patterns enabled | `InitialConfigurationTest` | DONE |
 | A broken file never leaves the application running without rules; an active version is never edited | startup fails with the reason; changes are new versions (`SYNC`) | `InitialConfigurationLoaderIntegrationTest` | DONE |
-| Tenants, template and organization overrides, runtime changes | not provided | | NOT DONE (limitations 1 and 4) |
+| Tenant and organization overrides and the platform default can be changed while the application runs | see the next section | | DONE (template layers stay with the questionnaire builder) |
+
+## Managing the scoring configuration (decisions D52 to D58, phase C)
+
+| Requirement | Implementation | Tests | Status |
+|---|---|---|---|
+| A change is a new version that is drafted, checked, previewed, approved by a second person and then active; active versions never change | `ConfigurationReviewService`, `/api/v1/configuration/**`, `/api/v1/platform/configuration/**`, V10 | `ConfigurationManagementIntegrationTest`, `ConfigurationApiIntegrationTest` | DONE |
+| Every problem of a document is reported with its path, not only the first | `ConfigurationDocumentParser.diagnose` | `ConfigurationDiagnoseTest` | DONE |
+| Approval is refused for the creator, an editor and the submitter, and while a fixture fails | `ConfigurationReviewService.approve`, fixtures per layer | `ConfigurationManagementIntegrationTest`, `ConfigurationPages.test`, `configuration.spec` | DONE |
+| A preview shows what a draft does to fixtures and recent assessments, in memory and audited, with no answers | `ConfigurationPreviewService`, `PreviewPanel` | `ConfigurationManagementSettingsIntegrationTest`, `ConfigurationPages.test`, `configuration.spec` | DONE |
+| Platform administrator manages the platform default; owners and administrators their tenant and organizations; analysts read | `TenantConfigurationController`, `PlatformConfigurationController`, `canReadConfiguration`, `canChangeConfiguration` | `ConfigurationApiIntegrationTest`, `nav.test`, `configuration.spec` | DONE |
+| Editing in the product with a JSON editor, with a comparison against the active version | `features/configuration/` | `diff.test`, `ConfigurationPages.test`, `configuration.spec` (axe in both themes, 390 px) | DONE (structured forms later) |
+| Calibration: a version without a stated reference is marked unvalidated | `ReviewPanel`, `unvalidated` flag | `ConfigurationPages.test` | DONE (no empirical calibration exists) |
 
 ## Platform administration: create and list tenants (decision D46)
 

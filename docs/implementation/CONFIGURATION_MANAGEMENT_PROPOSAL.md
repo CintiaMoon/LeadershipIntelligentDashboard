@@ -1,6 +1,6 @@
 # Proposal D52 to D58: calibrating and managing scoring configuration
 
-Status: **APPROVED on 2026-11-02 with the choices in section 6. C1 has started; C2 (backend) is done; C3 (screens with structured forms) is next.** `specv3.md` sections 23.5, 23.6, 30.6 and 42 already require a lifecycle, approval metadata, representative fixtures, a score-distribution preview and calibration artifacts before a configuration becomes active. Today the platform default changes only by editing a file and restarting (`lis.configuration.initial.mode=SYNC`), with a fixed approver, no endpoint, no screen, no preview and no fixtures. Under the precedence rule (specv3 > architect.md > frontend-spec.md > CLAUDE.md) a rule such as "a second person approves" is new business behaviour and needs your approval first.
+Status: **APPROVED on 2026-11-02 with the choices in section 6. C1 has started; C2 (backend) and C3 (screens with a JSON editor) are done; C4 (release documents) is in progress.** `specv3.md` sections 23.5, 23.6, 30.6 and 42 already require a lifecycle, approval metadata, representative fixtures, a score-distribution preview and calibration artifacts before a configuration becomes active. Today the platform default changes only by editing a file and restarting (`lis.configuration.initial.mode=SYNC`), with a fixed approver, no endpoint, no screen, no preview and no fixtures. Under the precedence rule (specv3 > architect.md > frontend-spec.md > CLAUDE.md) a rule such as "a second person approves" is new business behaviour and needs your approval first.
 
 ## 1. What exists and what is missing
 
@@ -84,3 +84,13 @@ Status: **APPROVED on 2026-11-02 with the choices in section 6. C1 has started; 
 - **Tests**: 46 new backend tests (686 in all): the all-problems diagnosis (9), starter fixtures and the evaluator (5), the workflow, gates, preview and isolation against PostgreSQL (19), the two switchable settings (2), the API with the role matrix (9), the loader's starter fixtures (2). The Postman collection has a folder for it (143 requests executed in all, 179 assertions, no failures, run twice).
 - **Development identities added**: `platform-admin-2` and `assess-owner` (so a second person exists for the platform default and for the scratch organization).
 
+
+## 8. C3 as built (2026-11-02)
+
+- **Screens** (`frontend/src/features/configuration/`): `/configuration` (one card per layer), `/configuration/layers/{platform|tenant|organization/:id}` (versions, copy as draft, fixtures) and `/configuration/versions/:id` (JSON editor, save, check, preview, submit, changes against the active version, review record, approval or send back, pause, resume, archive, copy).
+- **D58 as changed**: a plain JSON editor that checks the text as you type; the server finds the configuration problems and the page lists them. Structured forms remain a later improvement.
+- **Roles**: the platform administrator, owners, administrators and analysts see the Configuration entry; analysts get read-only pages.
+- **Second-person refusal**: the server answers 403, whose generic wording would hide the reason, so the approval step shows the server's message.
+- **Found on the way**: a layer with no version cannot hold fixtures (they hang off the layer), so fixtures are added after the first draft; the accessibility scan caught a button whose accessible name lacked its visible text.
+- **Tests**: 23 unit tests and 6 browser tests (see `docs/release/TEST_RESULTS.md`).
+- **Not done**: structured forms; starter fixtures are added only when the platform default is first loaded, so a database created before V10 has none until they are added by hand.

@@ -26,7 +26,6 @@ export function ConfigurationLayerPage({ kind }: { kind: 'platform' | 'tenant' |
   const copy = useCopyConfigVersion();
   const layer = (layers.data ?? []).find((l) => l.scope === scope && (scope !== 'ORGANIZATION' || l.scopeId === organizationId));
   const name = layerName(scope, organizationId || undefined);
-  const hasOpen = (versions.data ?? []).some((v) => v.status === 'DRAFT' || v.status === 'VALIDATING');
 
   return (
     <div className="space-y-6">
@@ -34,7 +33,7 @@ export function ConfigurationLayerPage({ kind }: { kind: 'platform' | 'tenant' |
         title={name}
         subtitle="Every version of this layer. A copy of an older version, made a new draft, is how to go back."
         actions={
-          canChange && !hasOpen ? (
+          canChange ? (
             <Button
               variant="primary"
               disabled={create.isPending}
@@ -99,10 +98,10 @@ export function ConfigurationLayerPage({ kind }: { kind: 'platform' | 'tenant' |
                             <Badge tone={v.unvalidated ? 'medium' : 'ok'}>{v.unvalidated ? 'Unvalidated' : 'Stated'}</Badge>
                           </td>
                           <td className="px-5 py-2">
-                            {canChange && !hasOpen && (
+                            {canChange && (
                               <Button
                                 variant="ghost"
-                                aria-label={`Copy version ${v.version} as a new draft`}
+                                aria-label={`Copy as draft, version ${v.version}`}
                                 disabled={copy.isPending}
                                 onClick={() => copy.mutate(v.id as string, { onSuccess: (d) => navigate(versionPath(d.id)) })}
                               >
