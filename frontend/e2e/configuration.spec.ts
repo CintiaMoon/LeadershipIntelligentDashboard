@@ -22,6 +22,9 @@ async function asOwner(browser: Browser) {
 }
 
 async function expectNoViolations(page: Page, what: string) {
+  // a button still easing into its hover colour right after a click is not what a reader sees
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(300);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   const summary = results.violations.map((v) => `${v.id} (${v.impact}): ${v.help} -> ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
   expect(summary, `${what} has accessibility violations`).toEqual([]);
@@ -77,6 +80,7 @@ test.describe('configuration management', () => {
     await expect(page.getByRole('heading', { level: 1, name: /^Version \d+$/ })).toBeVisible();
 
     // text that is not JSON cannot be saved, and the editor says so as you type
+    await page.getByRole('button', { name: 'JSON', exact: true }).click();
     const editor = page.getByLabel('Document (JSON)');
     const original = await editor.inputValue();
     await editor.fill('{ "questions": ');
@@ -130,6 +134,7 @@ test.describe('configuration management', () => {
       await expect(owner.page.getByRole('region', { name: 'Review record' })).toContainText('Assessments owner'.length ? 'assess-owner-user' : '');
       await expect(owner.page.getByRole('region', { name: 'Review record' })).toContainText('E2E: no real data');
       await expect(owner.page.getByRole('button', { name: 'Save draft' })).toHaveCount(0);
+      await owner.page.getByRole('button', { name: 'JSON', exact: true }).click();
       await expect(owner.page.getByLabel('Document (JSON)')).toHaveAttribute('readonly', '');
     } finally {
       await owner.context.close();
@@ -188,4 +193,53 @@ test.describe('platform default', () => {
     await expect(page.getByLabel('Fixtures')).toBeVisible();
     await expectNoViolations(page, 'the platform layer');
   });
+});
+
+test.describe('forms', () => {
+  for (const theme of ['dark', 'light'] as const) {
+    test(`the platform administrator edits the numbers and wording with forms (${theme})`, async ({ page }) => {
+      test.setTimeout(120_000);
+      if (theme === 'light') await page.addInitScript(() => window.localStorage.setItem('lis.theme', 'light'));
+      await page.goto('/login');
+      await page.getByRole('button', { name: /^Platform administrator/ }).click();
+      await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
+      await page.goto('/configuration/layers/platform');
+      await page.getByRole('button', { name: 'New draft', exact: true }).click();
+      await expect(page.getByRole('heading', { level: 1, name: /^Version \d+$/ })).toBeVisible();
+
+      // the overall score: weights that do not add up are called out at once, and the comparison follows the form
+      await expect(page.getByRole('button', { name: 'Overall score', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      const weight = page.getByLabel('Team health', { exact: true });
+      await weight.fill('0.4');
+      await expect(page.getByRole('alert').filter({ hasText: /add up to 1.15/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Save draft' })).toBeEnabled();
+      await expect(page.getByText(/Compared with active version/)).toBeVisible();
+      await expectNoViolations(page, 'the overall form');
+
+      await page.getByRole('button', { name: 'Coverage and group answers' }).click();
+      await expectNoViolations(page, 'the coverage form');
+      await page.getByRole('button', { name: 'Penalties', exact: true }).click();
+      await expect(page.getByRole('group', { name: /^TH-P01/ })).toBeVisible();
+      await expectNoViolations(page, 'the penalties form');
+      await page.getByRole('button', { name: 'Advice' }).click();
+      await expectNoViolations(page, 'the advice form');
+      await page.getByRole('button', { name: 'Display texts' }).click();
+      await page.getByText(/^Dimensions \(/).click();
+      await expectNoViolations(page, 'the texts form');
+
+      // the same document is in the JSON view
+      await page.getByRole('button', { name: 'JSON', exact: true }).click();
+      await expect(page.getByLabel('Document (JSON)')).toHaveValue(/"TEAM_HEALTH": 0\.4/);
+
+      // a phone
+      await page.getByRole('button', { name: 'Form', exact: true }).click();
+      await page.getByRole('button', { name: 'Penalties', exact: true }).click();
+      await page.setViewportSize({ width: 390, height: 844 });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, 'the penalties form scrolls horizontally on a phone').toBeLessThanOrEqual(1);
+
+      // nothing is approved: the draft stays a draft (the lifecycle has no way to discard one), so the platform default is unchanged
+      await expect(page.getByText('Draft', { exact: true }).first()).toBeVisible();
+    });
+  }
 });
