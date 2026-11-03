@@ -80,7 +80,7 @@ describe('AppLayout navigation by role', () => {
 
   it('lets an administrator reach the questionnaires, the runs and the people', () => {
     renderRoutes(routes, { route: '/dashboard', auth: { principal: asTenant('ADMIN') } });
-    for (const label of ['Dashboard', 'Compare', 'Questionnaires', 'Assessment runs', 'People']) {
+    for (const label of ['Dashboard', 'Compare', 'Reports', 'Questionnaires', 'Assessment runs', 'People']) {
       expect(within(nav()).getByRole('link', { name: label })).toBeInTheDocument();
     }
     expect(within(nav()).getByRole('link', { name: 'Questionnaires' })).toHaveAttribute('href', '/questionnaires');
@@ -89,7 +89,7 @@ describe('AppLayout navigation by role', () => {
 
   it('shows a viewer only what a viewer can use', () => {
     renderRoutes(routes, { route: '/dashboard', auth: { principal: asTenant('VIEWER') } });
-    expect(within(nav()).getAllByRole('link').map((l) => l.textContent)).toEqual(['Dashboard', 'Compare']);
+    expect(within(nav()).getAllByRole('link').map((l) => l.textContent)).toEqual(['Dashboard', 'Compare', 'Reports']);
   });
 
   it('shows a respondent their assessments, with no organization to choose and no dashboard', () => {
@@ -111,6 +111,7 @@ describe('AppLayout for the platform administrator', () => {
     expect(nav).toHaveTextContent('Tenants');
     expect(nav).not.toHaveTextContent('Dashboard');
     expect(nav).not.toHaveTextContent('Compare');
+    expect(nav).not.toHaveTextContent('Reports');
     expect(screen.queryByLabelText('Organization')).not.toBeInTheDocument();
     expect(screen.getByText('Platform administrator')).toBeInTheDocument();
   });

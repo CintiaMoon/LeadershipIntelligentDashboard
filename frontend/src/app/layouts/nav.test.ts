@@ -8,14 +8,14 @@ const labels = (p: Principal | null) => navItems(p).map((i) => i.label);
 describe('navItems', () => {
   it('gives owners and administrators the dashboard, the comparison and everything that manages assessments', () => {
     for (const role of ['OWNER', 'ADMIN'] as const) {
-      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare', 'Questionnaires', 'Assessment runs', 'People', 'Configuration']);
+      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare', 'Reports', 'Questionnaires', 'Assessment runs', 'People', 'Configuration']);
     }
   });
 
   it('gives analysts the configuration to read, and the other roles only the dashboard and the comparison', () => {
-    expect(labels(tenant('ANALYST'))).toEqual(['Dashboard', 'Compare', 'Configuration']);
+    expect(labels(tenant('ANALYST'))).toEqual(['Dashboard', 'Compare', 'Reports', 'Configuration']);
     for (const role of ['ENGINEERING_LEADER', 'VIEWER'] as const) {
-      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare']);
+      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare', 'Reports']);
     }
   });
 
@@ -37,6 +37,6 @@ describe('navItems', () => {
   });
 
   it('shows nothing for nobody', () => {
-    expect(labels(null)).toEqual(['Dashboard', 'Compare']);
+    expect(labels(null)).toEqual(['Dashboard', 'Compare', 'Reports']);
   });
 });

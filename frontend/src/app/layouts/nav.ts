@@ -1,6 +1,6 @@
 import { canManageAssessments, canReadConfiguration, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
 
-export type NavIcon = 'dashboard' | 'compare' | 'tenants' | 'questionnaires' | 'runs' | 'people' | 'answer' | 'configuration';
+export type NavIcon = 'dashboard' | 'compare' | 'tenants' | 'questionnaires' | 'runs' | 'people' | 'answer' | 'configuration' | 'reports';
 
 export interface NavItem {
   to: string;
@@ -26,6 +26,7 @@ export function navItems(principal: Principal | null): NavItem[] {
   const items: NavItem[] = [
     { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
     { to: '/compare', label: 'Compare', icon: 'compare' },
+    { to: '/reports', label: 'Reports', icon: 'reports' },
   ];
   if (canManageAssessments(principal)) {
     items.push(

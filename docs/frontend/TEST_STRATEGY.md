@@ -32,7 +32,7 @@ API integration with a mock server isolated from production code; loading states
 13. Request recalculation and see the new run.
 14. Previous results remain accessible.
 
-Scenario 11 (reports) stays BLOCKED until F13 is specified. Scenario 10 depends on the history endpoints (D26, D27). Scenario 1 uses the D19 roles.
+Scenario 11 (reports) is covered by `e2e/reports.spec.ts` and `ReportsPage.test.tsx` (F13 is specified by D59 to D64). Scenario 10 depends on the history endpoints (D26, D27). Scenario 1 uses the D19 roles.
 
 ## 5. Critical invariants as tests (FE §22.5)
 

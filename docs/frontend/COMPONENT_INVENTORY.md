@@ -25,7 +25,7 @@ Components are driven by typed contracts and contain no scoring rules (FE §17.1
 | `LISHistoryChart` | trends | `/trends` | LIS over time, config version, events | history | F5 |
 | `DimensionTrendChart` | trends | `/trends` | selectable dimensions, raw and adjusted | history | F5 |
 | `PatternTrendChart` | trends | `/trends` | new, persistent, resolved, recurring | history | F5 |
-| Reports pages | reports | `/reports` | five report types, PDF/CSV | reports | F13 |
+| Reports pages | reports | `/reports` | four report types, PDF/CSV | reports | D59 to D64 |
 | Assessment pages | assessments | `/assessments/**` | list, status, results, scoring action | assessments | G1 |
 | `RecalculateAction` | assessments | assessment results | confirmation dialog, new run notice | recalculate | needs permission (G3) |
 | Settings pages | settings | `/settings` | no content defined | none | no spec |

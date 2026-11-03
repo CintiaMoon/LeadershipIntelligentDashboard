@@ -19,6 +19,7 @@ export const queryKeys = {
   answers: (id: string) => ['lis', 'run', id, 'answers'] as const,
   catalog: (id: string) => ['lis', 'run', id, 'catalog'] as const,
   tenants: ['lis', 'platform', 'tenants'] as const,
+  report: (type: string, base: string, run: string) => ['lis', 'report', type, base, run] as const,
   compare: (base: string, run: string) => ['lis', 'compare', base, run] as const,
   questionnaires: ['lis', 'questionnaires'] as const,
   questionnaire: (id: string, version?: number) => ['lis', 'questionnaire', id, version ?? 'current'] as const,

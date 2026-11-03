@@ -53,3 +53,25 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
+
+export interface Download {
+  blob: Blob;
+  filename: string;
+}
+
+/** A file the backend generates (a report as CSV or PDF): the bytes with the name the server gave them. */
+export async function apiDownload(path: string, query: Query, accept: string, signal?: AbortSignal): Promise<Download> {
+  const headers: Record<string, string> = { Accept: accept };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const response = await fetch(`${BASE}/api/v1${path}${queryString(query)}`, { headers, signal });
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    const error = ApiError.fromBody(response.status, body as never, response.headers.get('X-Correlation-Id'));
+    if (response.status === 401) onUnauthorized();
+    throw error;
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? 'report';
+  return { blob: await response.blob(), filename };
+}
