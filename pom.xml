@@ -124,11 +124,11 @@
     <pluginManagement>
       <plugins>
         <!-- Vulnerability scan of the shipped dependencies. Not part of "mvn verify" (it downloads the NVD database and needs
-             an API key); CI runs it: mvn org.owasp:dependency-check-maven:12.1.0:check -DnvdApiKey=... -->
+             an API key); CI runs it: mvn org.owasp:dependency-check-maven:12.2.2:check -DnvdApiKey=... -->
         <plugin>
           <groupId>org.owasp</groupId>
           <artifactId>dependency-check-maven</artifactId>
-          <version>12.1.0</version>
+          <version>12.2.2</version>
           <configuration>
             <failBuildOnCVSS>7</failBuildOnCVSS>
             <skipTestScope>true</skipTestScope>
