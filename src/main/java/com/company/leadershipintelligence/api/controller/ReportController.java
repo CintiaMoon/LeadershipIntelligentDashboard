@@ -1,6 +1,7 @@
 package com.company.leadershipintelligence.api.controller;
 
 import com.company.leadershipintelligence.api.report.CsvRenderer;
+import com.company.leadershipintelligence.api.report.PdfRenderer;
 import com.company.leadershipintelligence.api.report.ReportBuilder;
 import com.company.leadershipintelligence.api.report.ReportDocument;
 import com.company.leadershipintelligence.api.report.ReportType;
@@ -35,7 +36,7 @@ import java.util.UUID;
 @Tag(name = "Reports")
 public class ReportController {
 
-    private static final Set<String> FORMATS = Set.of("json", "csv");
+    private static final Set<String> FORMATS = Set.of("json", "csv", "pdf");
 
     private final ReportBuilder builder;
     private final ReportService reports;
@@ -45,7 +46,7 @@ public class ReportController {
         this.reports = reports;
     }
 
-    @Operation(summary = "A report of a stored run as json or csv (a comparison reads baseRunId and runId)")
+    @Operation(summary = "A report of a stored run as json, csv or pdf (a comparison reads baseRunId and runId)")
     @GetMapping("/{type}")
     public ResponseEntity<?> report(@AuthenticationPrincipal Jwt jwt, @PathVariable String type, @RequestParam(required = false) String runId,
                                     @RequestParam(required = false) String baseRunId, @RequestParam(required = false) String format) {
@@ -53,11 +54,8 @@ public class ReportController {
         ReportType reportType = ReportType.parse(type).orElseThrow(() -> new ApiRequestException(
                 "type must be one of LEADERSHIP_INTELLIGENCE, DIMENSION_ANALYSIS, PATTERN_PENALTY, HISTORICAL_COMPARISON"));
         String kind = format == null ? "json" : format.toLowerCase(java.util.Locale.ROOT);
-        if (kind.equals("pdf")) {
-            throw new ApiRequestException("format pdf is not available yet");
-        }
         if (!FORMATS.contains(kind)) {
-            throw new ApiRequestException("format must be json or csv");
+            throw new ApiRequestException("format must be json, csv or pdf");
         }
         if (runId == null) {
             throw new ApiRequestException("runId is required");
@@ -75,14 +73,15 @@ public class ReportController {
         boolean redact = !user.hasAnyRole(Role.OWNER, Role.ADMIN, Role.ANALYST);
         ReportDocument document = builder.build(reportType, user, redact, run, base);
         reports.audit(user.tenantId(), user.actor(), run, reportType.name(), kind, document.redacted());
-        if (kind.equals("csv")) {
-            return ResponseEntity.ok()
-                    .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                            .filename(reportType.name().toLowerCase(java.util.Locale.ROOT).replace('_', '-') + "-" + run + ".csv").build().toString())
-                    .body(CsvRenderer.render(document));
+        if (kind.equals("json")) {
+            return ResponseEntity.ok(document);
         }
-        return ResponseEntity.ok(document);
+        boolean csv = kind.equals("csv");
+        return ResponseEntity.ok()
+                .contentType(csv ? new MediaType("text", "csv", StandardCharsets.UTF_8) : MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(reportType.name().toLowerCase(java.util.Locale.ROOT).replace('_', '-') + "-" + run + "." + kind).build().toString())
+                .body(csv ? CsvRenderer.render(document) : PdfRenderer.render(document));
     }
 
     private static UUID uuid(String value, String name) {

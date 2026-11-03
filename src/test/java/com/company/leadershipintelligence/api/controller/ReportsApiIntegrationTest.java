@@ -84,6 +84,17 @@ class ReportsApiIntegrationTest extends PostgresIntegrationTest {
         return json.readTree(report(tenant, role, type, "runId=" + runId, 200).getResponse().getContentAsString());
     }
 
+    private static String pdfText(byte[] bytes) throws Exception {
+        com.lowagie.text.pdf.PdfReader reader = new com.lowagie.text.pdf.PdfReader(bytes);
+        var extractor = new com.lowagie.text.pdf.parser.PdfTextExtractor(reader);
+        StringBuilder text = new StringBuilder();
+        for (int page = 1; page <= reader.getNumberOfPages(); page++) {
+            text.append(extractor.getTextFromPage(page)).append(' ');
+        }
+        reader.close();
+        return text.toString();
+    }
+
     private static JsonNode section(JsonNode report, String id) {
         for (JsonNode s : report.get("sections")) {
             if (s.get("id").asText().equals(id)) {
@@ -169,11 +180,29 @@ class ReportsApiIntegrationTest extends PostgresIntegrationTest {
     void noReportInAnyFormatContainsAnAnswerText() throws Exception {
         String run = calculate("rep-a", BODY);
         for (String type : TYPES) {
-            for (String format : List.of("json", "csv")) {
-                String body = report("rep-a", "ADMIN", type, "runId=" + run + "&format=" + format, 200).getResponse().getContentAsString(StandardCharsets.UTF_8);
+            for (String format : List.of("json", "csv", "pdf")) {
+                byte[] raw = report("rep-a", "ADMIN", type, "runId=" + run + "&format=" + format, 200).getResponse().getContentAsByteArray();
+                String body = format.equals("pdf") ? pdfText(raw) : new String(raw, StandardCharsets.UTF_8);
                 assertThat(body).as(type + " " + format).doesNotContain(FREE_TEXT);
             }
         }
+    }
+
+    @Test
+    void pdfIsADownloadWhoseTextIsTheTextOfTheJsonReport() throws Exception {
+        String run = calculate("rep-a", BODY);
+        MvcResult pdf = report("rep-a", "ADMIN", "LEADERSHIP_INTELLIGENCE", "runId=" + run + "&format=pdf", 200);
+        assertThat(pdf.getResponse().getContentType()).isEqualTo("application/pdf");
+        assertThat(pdf.getResponse().getHeader("Content-Disposition")).contains("attachment", ".pdf", run);
+        byte[] bytes = pdf.getResponse().getContentAsByteArray();
+        assertThat(new String(bytes, 0, 5, StandardCharsets.ISO_8859_1)).isEqualTo("%PDF-");
+        String text = pdfText(bytes);
+        JsonNode report = jsonReport("rep-a", "ADMIN", "LEADERSHIP_INTELLIGENCE", run);
+        assertThat(text).contains(report.get("title").asText());
+        for (JsonNode row : section(report, "summary").get("rows")) {
+            assertThat(text).contains(row.get(0).asText());
+        }
+        assertThat(text).contains("Review team capacity").doesNotContain(FREE_TEXT);
     }
 
     @Test
@@ -198,6 +227,7 @@ class ReportsApiIntegrationTest extends PostgresIntegrationTest {
         for (String type : TYPES) {
             report("rep-b", "ADMIN", type, "runId=" + run, 404);
             report("rep-b", "ADMIN", type, "runId=" + run + "&format=csv", 404);
+            report("rep-b", "ADMIN", type, "runId=" + run + "&format=pdf", 404);
         }
         String other = calculate("rep-a", BODY);
         report("rep-b", "ADMIN", "HISTORICAL_COMPARISON", "baseRunId=" + run + "&runId=" + other, 404);
@@ -240,9 +270,10 @@ class ReportsApiIntegrationTest extends PostgresIntegrationTest {
         String run = calculate("rep-a", BODY);
         report("rep-a", "ANALYST", "PATTERN_PENALTY", "runId=" + run, 200);
         report("rep-a", "ANALYST", "PATTERN_PENALTY", "runId=" + run + "&format=csv", 200);
-        report("rep-a", "ANALYST", "PATTERN_PENALTY", "runId=" + run + "&format=pdf", 400);
+        report("rep-a", "ANALYST", "PATTERN_PENALTY", "runId=" + run + "&format=pdf", 200);
+        report("rep-a", "ANALYST", "PATTERN_PENALTY", "runId=" + run + "&format=xml", 400);
         assertThat(jdbc.queryForList("select detail->>'type' || '/' || (detail->>'format') from scoring_access_audit where action = 'REPORT_GENERATED' order by id",
-                String.class)).containsExactly("PATTERN_PENALTY/json", "PATTERN_PENALTY/csv");
+                String.class)).containsExactly("PATTERN_PENALTY/json", "PATTERN_PENALTY/csv", "PATTERN_PENALTY/pdf");
         String stored = String.join(" ", jdbc.queryForList("select coalesce(detail::text,'') from scoring_access_audit", String.class));
         assertThat(stored).doesNotContain(FREE_TEXT);
     }
