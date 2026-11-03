@@ -26,6 +26,12 @@
 
   <dependencies>
     <dependency>
+      <!-- PDF reports (decision D62); pinned to an exact version, built-in fonts only -->
+      <groupId>com.github.librepdf</groupId>
+      <artifactId>openpdf</artifactId>
+      <version>2.4.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
