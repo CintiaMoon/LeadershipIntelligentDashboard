@@ -105,4 +105,4 @@ Tenants are created by the platform administrator in the product (see above) or 
 - **Metrics**: twelve metrics as named in specv3 section 34; tags are low-cardinality (no tenant, organization, assessment or run).
 - **Upgrading**: ship new configuration as a new version and recalculate with an explicit version if history needs to be reproduced; engine and algorithm versions are recorded with each run and drive comparability.
 - **Rollback**: application images can be rolled back; migrations are forward-only, so take a database backup before upgrading.
-- **Secrets**: only database credentials and (optionally) NVD or registry keys are secrets. The web UI contains none.
+- **Secrets**: only database credentials and (optionally) NVD or registry keys are secrets. CI needs one repository secret, `NVD_API_KEY`, for the dependency scan. The web UI contains none.

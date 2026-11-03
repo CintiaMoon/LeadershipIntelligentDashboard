@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Findings of the OWASP dependency-check that were reviewed and judged not to apply to this application.
+  Add an entry only with a reason and a review date; an empty file means nothing is suppressed.
+  Format: https://jeremylong.github.io/DependencyCheck/general/suppression.html
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+</suppressions>

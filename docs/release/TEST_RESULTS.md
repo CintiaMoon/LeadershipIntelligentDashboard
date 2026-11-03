@@ -95,10 +95,14 @@ Invariants checked on real responses (`e2e/invariants.ts`): normalized values, d
 
 These are regression budgets on a fast local network; they say nothing about a production deployment. The initial bundle was 957 kB before splitting; the dashboard route, the chart code and a stable framework chunk are now split, so the login page no longer downloads charts.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on `main`: the backend tests with JaCoCo coverage (**94.3 % of instructions, 80.9 % of branches**, 715 tests; report only), the frontend `npm run verify` and `npm audit`, the OWASP dependency scan (needs `NVD_API_KEY`), and the Playwright browser tests against the whole Docker stack (two workers and one retry in CI for the timing budgets). The scan also runs weekly.
+
 ## Dependency and security checks
 
 - `npm audit`: 0 vulnerabilities. One advisory (minimatch denial of service, 13 moderate findings through the lint and OpenAPI tooling, development only) was resolved by pinning `minimatch` to a patched version with an npm override; lint, tests, build and API type generation were re-run afterwards.
-- Backend dependencies: **not scanned.** The OWASP dependency-check run was attempted and stopped after the NVD download stalled without an API key; there is no result to report (see `KNOWN_LIMITATIONS.md`, item 11).
+- Backend dependencies: **not scanned yet.** The OWASP dependency-check now runs in CI (it needs the `NVD_API_KEY` secret); there is no result to report until its first run (see `KNOWN_LIMITATIONS.md`, item 11). `npm audit --audit-level=high` also runs in CI: 0 vulnerabilities.
 - Static security review, with a test for each item: tokens only in tab session storage and never in local storage or cookies; no scoring data or raw answers in client storage; a Content Security Policy without `unsafe-inline` scripts and with `connect-src` limited to the app and the identity provider; no stack traces, framework names or SQL in error bodies; tenant taken only from the token; answers and explanation reads audited without content; issuer and audience of access tokens validated when configured.
 
 ## Manual accessibility checklist

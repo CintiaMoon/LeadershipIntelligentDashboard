@@ -120,10 +120,53 @@
   </dependencies>
 
   <build>
+    <pluginManagement>
+      <plugins>
+        <!-- Vulnerability scan of the shipped dependencies. Not part of "mvn verify" (it downloads the NVD database and needs
+             an API key); CI runs it: mvn org.owasp:dependency-check-maven:12.1.0:check -DnvdApiKey=... -->
+        <plugin>
+          <groupId>org.owasp</groupId>
+          <artifactId>dependency-check-maven</artifactId>
+          <version>12.1.0</version>
+          <configuration>
+            <failBuildOnCVSS>7</failBuildOnCVSS>
+            <skipTestScope>true</skipTestScope>
+            <suppressionFiles>
+              <suppressionFile>${project.basedir}/config/dependency-check-suppressions.xml</suppressionFile>
+            </suppressionFiles>
+            <formats>
+              <format>HTML</format>
+              <format>JSON</format>
+            </formats>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <!-- Code coverage of the backend tests: report only, in target/site/jacoco (no threshold yet) -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.13</version>
+        <executions>
+          <execution>
+            <id>agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
