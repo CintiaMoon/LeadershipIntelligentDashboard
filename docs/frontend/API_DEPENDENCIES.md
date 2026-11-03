@@ -25,8 +25,8 @@ FE itself states these endpoints are proposals to be aligned with the backend sp
 | 13 | GET | `/scoring-runs/{id}/contributions` | Contribution table | DERIVABLE | inside `/dimensions` (V3 §28.6); no separate endpoint; D15 |
 | 14 | GET | `/scoring-runs` | Trends | EXISTS | D37; run summaries with `previousScore`, `change`, `comparable`, `notComparableReasons` (replaces the proposed `/scoring-runs/history`) |
 | 15 | GET | `/scoring-runs/compare` | Comparison | EXISTS | D37; delta only when comparable |
-| 16 | GET | `/reports` | Reports list | MISSING | F13 |
-| 17 | POST | `/reports` | Generate report | MISSING | F13; PDF/CSV |
+| 16 | GET | `/reports/{type}?runId=&format=json` | Reports page | EXISTS | D59 to D64; the list endpoint is not built, reports are not stored |
+| 17 | GET | `/reports/{type}?runId=&format=pdf\|csv` | Download | EXISTS | D62; a file download, not JSON |
 
 Additional dependencies not listed in FE §16:
 

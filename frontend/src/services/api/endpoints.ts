@@ -42,7 +42,8 @@ import type {
   ConfigValidation,
   ConfigVersion,
 } from '@/types/api';
-import { apiFetch, type Query } from './client';
+import { parseReport, type Report } from '@/types/report';
+import { apiDownload, apiFetch, type Download, type Query } from './client';
 
 const enc = encodeURIComponent;
 
@@ -68,7 +69,18 @@ export interface TrendParams {
 }
 
 // One function per backend endpoint (docs/implementation/API_CONTRACT.md). No scoring logic lives here.
+export interface ReportParams {
+  type: string;
+  runId: string;
+  baseRunId?: string;
+}
+
 export const api = {
+  /** A report of a stored run (decisions D59 to D64); the comparison also names its earlier run. */
+  report: async (p: ReportParams, signal?: AbortSignal): Promise<Report> =>
+    parseReport(await apiFetch<unknown>(`/reports/${enc(p.type)}`, { query: { runId: p.runId, baseRunId: p.baseRunId, format: 'json' }, signal })),
+  downloadReport: (p: ReportParams, format: 'csv' | 'pdf', signal?: AbortSignal): Promise<Download> =>
+    apiDownload(`/reports/${enc(p.type)}`, { runId: p.runId, baseRunId: p.baseRunId, format }, format === 'pdf' ? 'application/pdf' : 'text/csv', signal),
   dashboard: (organizationId: string, signal?: AbortSignal) => apiFetch<Dashboard>(`/organizations/${enc(organizationId)}/dashboard`, { signal }),
   trends: (organizationId: string, params: TrendParams = {}, signal?: AbortSignal) =>
     apiFetch<Trends>(`/organizations/${enc(organizationId)}/trends`, { query: params as Query, signal }),

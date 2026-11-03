@@ -37,7 +37,7 @@ Conflict: `.claude/agents/frontend-engineer.md` and `ui-engineer.md` assume Next
 | Penalty explorer | `/penalties`, `/penalties/:penaltyApplicationId` | penalties | derivable (F9) |
 | Imbalances | `.../:scoringRunId/imbalances` | imbalances | partial (F12) |
 | Trends | `/trends` | history, compare, comparability, pattern lifecycle | PLANNED (D26, D27) |
-| Reports | `/reports` | reports endpoints | BLOCKED (F13) |
+| Reports | `/reports` | `/reports/{type}` | BUILT (D59 to D64) |
 | Assessments | `/assessments`, `/:id`, `/:id/results` | assessment API | PLANNED (D13, D26 step 2) |
 | Settings | in navigation (FE §4) | configuration management | no spec (G2) |
 

@@ -8,9 +8,9 @@ Every figure below comes from a command run during the release phase on a develo
 |---|---|---|
 | Backend unit and integration | `mvn -B verify` | **715 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
 | Frontend static analysis | `npm run lint`, `npm run typecheck` | clean (0 problems) |
-| Frontend unit and component | `npm test` | **453 tests in 55 files, all pass** (coverage figures below are from the earlier run) |
+| Frontend unit and component | `npm test` | **465 tests in 56 files, all pass** (coverage figures below are from the earlier run) |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |
-| End to end (real stack, real browser) | `npm run e2e` | **75 tests, all pass**, run twice in a row from an empty database |
+| End to end (real stack, real browser) | `npm run e2e` | **81 tests, all pass**, from an empty database |
 | API contract | `newman run docs/postman/lis.postman_collection.json` | **152 requests executed (the collection plus its token calls), 197 assertions, 0 failures** (last run after the reports section was added) |
 
 Answers from several people (decision D45) were added after the first release run: 53 backend tests, 37 frontend unit tests, 4 end-to-end tests and 3 Postman requests (the collection now has 37 requests; newman reports 42 executed requests because it also counts the token calls of the authentication script). The earlier figures were 460, 171, 45 and 40 executed requests.
@@ -34,7 +34,9 @@ Notable groups: domain unit tests for every pipeline stage (normalization strate
 
 Engine performance baseline (`EnginePerformanceBaselineTest`): 0.77 ms per run for 55 questions, 4.4 ms for 1005 questions (linear). V3 section 35.1 defines no absolute latency target.
 
-## Frontend unit and component tests (453)
+## Frontend unit and component tests (465)
+
+Added with the Reports screen (decisions D59 to D64, phase D4): 12 page tests (`ReportsPage.test.tsx`: the empty state; a report drawn section by section with the notice; a section with no rows says why and draws no table; the withheld-values note; a retryable error; a response that is not a report is refused; the form needs an assessment; the choice goes into the address; the comparison needs two different assessments and asks the backend for both; the PDF and the CSV are saved under the name the server gave; a failed file says so and can be retried) and the navigation entry (the Reports link for the roles that read runs, not for the platform administrator or a respondent).
 
 Added with the forms for questions, signals, patterns and imbalance rules: reference and condition logic (10), path removal (1) and the forms (13): scale, choice and yes/no questions, weights and dimension mappings, adding and removing choices, adding a question and a taken id, guarded removal of a question and a signal, group-answer method, signal sources and reliability, pattern severity, evidence, switches and advice, the condition tree (changing an operator, groups, a list of values), imbalance rules, and the real default configuration left identical by an empty edit. These tests allow 30 seconds each because they type into large forms under the load of a whole run.
 
@@ -52,7 +54,9 @@ The new groups: response summaries and their validation, the combination panel, 
 
 Groups: presentation helpers and error mapping; the API client against a mock server (headers, query building, error bodies, 401 handling); token decoding and the role helpers; route guards and the layout; response validation; the trace parser; condition wording; every dashboard section including loading, empty, error, retry, redaction and filtering states; the waterfall; the explanation, dimension, pattern, penalty and comparison pages including role differences and the form validation.
 
-## End to end (75 tests, real stack)
+## End to end (81 tests, real stack)
+
+Added with the Reports screen: `reports.spec` (6): an administrator reads the Leadership Intelligence report and downloads the PDF (starts with `%PDF-`) and the CSV (byte-order mark, the same score); every report type is readable and the comparison asks for two assessments; a viewer reads the report with the values withheld and the note saying so; another tenant has no assessments to report on; no automated WCAG 2.2 AA violation and no horizontal overflow at 390 px, in the dark and the light theme (the axe scan found that a wide table's scrollable region could not be reached by keyboard; it is now a focusable, labelled region).
 
 Added with the forms: `configuration` has 2 more tests (dark and light): the platform administrator edits the weights in the form, is told at once that they do not add up, sees the comparison follow, scans every form section with axe, finds the same document in the JSON view, and checks a phone width. In the second round the same journey scans the questions, signals, patterns and imbalance forms, and has the server check a draft the forms wrote: it reports only the weight problem the test made on purpose, and no problem once that is fixed. The first round found that the page offered "Archive" on a draft, which the lifecycle refuses; the button is now offered only on a paused version.
 

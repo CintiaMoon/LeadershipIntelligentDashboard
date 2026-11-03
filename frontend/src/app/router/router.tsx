@@ -29,6 +29,7 @@ export const routes: RouteObject[] = [
       { path: 'runs/:runId/dimensions/:dimension', lazy: async () => ({ Component: (await import('@/features/dimensions/DimensionDetailPage')).DimensionDetailPage }) },
       { path: 'runs/:runId/patterns/:patternId', lazy: async () => ({ Component: (await import('@/features/patterns/PatternDetailPage')).PatternDetailPage }) },
       { path: 'runs/:runId/penalties/:penaltyId', lazy: async () => ({ Component: (await import('@/features/penalties/PenaltyDetailPage')).PenaltyDetailPage }) },
+      { path: 'reports', lazy: async () => ({ Component: (await import('@/features/reports/ReportsPage')).ReportsPage }) },
       { path: 'compare', lazy: async () => ({ Component: (await import('@/features/compare/ComparePage')).ComparePage }) },
       {
         path: 'platform/tenants',

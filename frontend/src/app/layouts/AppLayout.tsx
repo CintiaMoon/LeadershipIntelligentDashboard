@@ -24,6 +24,7 @@ const iconPaths: Record<NavIcon, string> = {
   runs: 'M8 5v14l11-7L8 5Z',
   configuration: 'M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6m-8 7v-6',
   people: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 4.5a3 3 0 0 1 0 6m2.5 9.5v-1a4.5 4.5 0 0 0-3-4.2',
+  reports: 'M5 20V10m5 10V4m5 16v-7m5 7H3',
   answer: 'M5 4h14v16H5V4Zm3 5h8M8 13h8M8 17h5',
 };
 

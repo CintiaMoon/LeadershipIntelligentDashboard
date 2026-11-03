@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type AssessmentListParams, type RunListParams, type TrendParams } from '@/services/api/endpoints';
+import { api, type AssessmentListParams, type ReportParams, type RunListParams, type TrendParams } from '@/services/api/endpoints';
 import type {
   CalculateRequest,
   CreatePersonRequest,
@@ -54,6 +54,15 @@ export const useComparison = (baseRunId: string | undefined, runId: string | und
     queryKey: queryKeys.compare(baseRunId ?? '', runId ?? ''),
     queryFn: ({ signal }) => api.compare(baseRunId as string, runId as string, signal),
     enabled: !!baseRunId && !!runId,
+    staleTime: RUN_STALE_MS,
+  });
+
+/** A report is a pure function of stored runs, so it is cached like them. */
+export const useReport = (params: ReportParams | undefined) =>
+  useQuery({
+    queryKey: queryKeys.report(params?.type ?? '', params?.baseRunId ?? '', params?.runId ?? ''),
+    queryFn: ({ signal }) => api.report(params as ReportParams, signal),
+    enabled: !!params,
     staleTime: RUN_STALE_MS,
   });
 
