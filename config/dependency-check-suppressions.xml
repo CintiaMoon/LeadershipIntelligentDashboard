@@ -3,6 +3,60 @@
   Findings of the OWASP dependency-check that were reviewed and judged not to apply to this application.
   Add an entry only with a reason and a review date; an empty file means nothing is suppressed.
   Format: https://jeremylong.github.io/DependencyCheck/general/suppression.html
+
+  Two kinds of entry:
+  - false positives (no expiry): the scanner matched a library to a different product by name;
+  - unfixed vulnerabilities in features this application does not use (with an `until` date): the fix is not on
+    Maven Central yet. The suppression EXPIRES on that date so the finding comes back and is looked at again.
+    Review on 2026-12-15: upgrade Spring Boot (Spring Framework 6.2.20 or later, Spring Security 6.5.12 or later)
+    and delete these entries.
 -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+  <!-- False positive: CVE-2026-42154 is in the Prometheus SERVER (remote read endpoint). Micrometer's
+       registry only formats metrics for scraping; it contains no such endpoint. -->
+  <suppress>
+    <notes>Matched by name to the Prometheus server; the Micrometer registry is a different product.</notes>
+    <packageUrl regex="true">^pkg:maven/io\.micrometer/micrometer-registry-prometheus@.*$</packageUrl>
+    <cve>CVE-2026-42154</cve>
+  </suppress>
+
+  <!-- False positive: CVE-2025-7962 is in Eclipse Angus MAIL. angus-activation is the activation framework and
+       contains no mail code. -->
+  <suppress>
+    <notes>Matched by name to Angus Mail; angus-activation is a separate library with no mail code.</notes>
+    <packageUrl regex="true">^pkg:maven/org\.eclipse\.angus/angus-activation@.*$</packageUrl>
+    <cve>CVE-2025-7962</cve>
+  </suppress>
+
+  <!-- Spring Framework 6.2.19: fixed in 6.2.20, which is not published yet. None of the affected features is used:
+       no WebFlux, RSocket, XSLT views, functional endpoints, server-sent events, WebSocket handlers, Aalto XML,
+       custom data binders, or SpEL evaluated from user input (checked 2026-11-04: no use in src/main). -->
+  <suppress until="2026-12-15Z">
+    <notes>Fix is in Spring Framework 6.2.20 (not yet released). Affected features are not used by this application.</notes>
+    <packageUrl regex="true">^pkg:maven/org\.springframework/spring-(core|web)@6\.2\.19$</packageUrl>
+    <cve>CVE-2026-47884</cve>
+    <cve>CVE-2026-47885</cve>
+    <cve>CVE-2026-47886</cve>
+    <cve>CVE-2026-47888</cve>
+    <cve>CVE-2026-47889</cve>
+    <cve>CVE-2026-47890</cve>
+    <cve>CVE-2026-47891</cve>
+    <cve>CVE-2026-47892</cve>
+    <cve>CVE-2026-47893</cve>
+    <cve>CVE-2026-59282</cve>
+    <cve>CVE-2026-59283</cve>
+    <cve>CVE-2026-59313</cve>
+  </suppress>
+
+  <!-- Spring Security 6.5.11: fixed in 6.5.12, which is not published yet. The affected features (embedded LDAP
+       server, WebAuthn with a distributed session store, DPoP proof validation) are not used. -->
+  <suppress until="2026-12-15Z">
+    <notes>Fix is in Spring Security 6.5.12 (not yet released). Affected features are not used by this application.</notes>
+    <packageUrl regex="true">^pkg:maven/org\.springframework\.security/spring-security-(core|web|oauth2-resource-server)@6\.5\.11$</packageUrl>
+    <cve>CVE-2026-47841</cve>
+    <cve>CVE-2026-41707</cve>
+    <cve>CVE-2026-59270</cve>
+  </suppress>
+
 </suppressions>
