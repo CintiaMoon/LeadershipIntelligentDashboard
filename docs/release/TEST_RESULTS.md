@@ -11,7 +11,7 @@ Every figure below comes from a command run during the release phase on a develo
 | Frontend unit and component | `npm test` | **465 tests in 56 files, all pass** (coverage figures below are from the earlier run) |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |
 | End to end (real stack, real browser) | `npm run e2e` | **81 tests, all pass**, from an empty database |
-| API contract | `newman run docs/postman/lis.postman_collection.json` | **152 requests executed (the collection plus its token calls), 197 assertions, 0 failures** (last run after the reports section was added) |
+| API contract | `newman run docs/postman/lis.postman_collection.json` | **179 requests executed (the collection plus its token calls), 244 assertions, 0 failures** (last run 2026-11-04 after every endpoint of the API was added: the roster rename and person update, the full configuration lifecycle for tenants and the platform default) |
 
 Answers from several people (decision D45) were added after the first release run: 53 backend tests, 37 frontend unit tests, 4 end-to-end tests and 3 Postman requests (the collection now has 37 requests; newman reports 42 executed requests because it also counts the token calls of the authentication script). The earlier figures were 460, 171, 45 and 40 executed requests.
 | Frontend dependencies | `npm audit` | **0 vulnerabilities** (production and development) |

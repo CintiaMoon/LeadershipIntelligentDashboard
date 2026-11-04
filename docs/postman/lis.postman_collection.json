@@ -129,6 +129,30 @@
     {
       "key": "platformDraftId",
       "value": ""
+    },
+    {
+      "key": "personId",
+      "value": ""
+    },
+    {
+      "key": "cfgCopyId",
+      "value": ""
+    },
+    {
+      "key": "platformLayerId",
+      "value": ""
+    },
+    {
+      "key": "platformCopyId",
+      "value": ""
+    },
+    {
+      "key": "platformFixtureId",
+      "value": ""
+    },
+    {
+      "key": "platformDraftDocument",
+      "value": ""
     }
   ],
   "item": [
@@ -2320,6 +2344,98 @@
           ]
         },
         {
+          "name": "List the teams of an organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "Only the teams of organizations the token carries.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/teams?organizationId=org-assess",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "teams"
+              ],
+              "query": [
+                {
+                  "key": "organizationId",
+                  "value": "org-assess"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('the team created above is listed, with its organization', () => { const t = pm.response.json().find((x) => x.id === pm.collectionVariables.get('teamId')); pm.expect(t).to.not.eql(undefined); pm.expect(t.organizationId).to.eql('org-assess'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rename the team",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "A team keeps its id and organization; only the name changes.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/teams/{{teamId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "teams",
+                "{{teamId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman team {{stamp}} (renamed)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('renamed', () => pm.expect(pm.response.json().name).to.include('renamed'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Create a team in an organization the token does not carry -> 403",
           "request": {
             "method": "POST",
@@ -3521,6 +3637,108 @@
               }
             }
           ]
+        },
+        {
+          "name": "Add a person to the roster",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Added after the run was closed, so the finished run keeps its five participants. Saves personId.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "people"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teamId\": \"{{teamId}}\",\n  \"name\": \"Postman person {{stamp}}\",\n  \"email\": \"postman.{{stamp}}@demo.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const p = pm.response.json();",
+                  "pm.test('active, on the team', () => { pm.expect(p.active).to.eql(true); pm.expect(p.teamId).to.eql(pm.collectionVariables.get('teamId')); });",
+                  "pm.collectionVariables.set('personId', p.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change the person (name and active flag)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "A person is never deleted: they are made inactive and are no longer asked in new runs.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/people/{{personId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "people",
+                "{{personId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teamId\": \"{{teamId}}\",\n  \"name\": \"Postman person {{stamp}} (left)\",\n  \"email\": \"postman.{{stamp}}@demo.test\",\n  \"active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.test('renamed and no longer active', () => { pm.expect(p.name).to.include('left'); pm.expect(p.active).to.eql(false); });"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -3995,6 +4213,98 @@
                 "exec": [
                   "pm.test('422', () => pm.response.to.have.status(422));",
                   "pm.test('code FIXTURE_INVALID', () => pm.expect(pm.response.json().code).to.eql('FIXTURE_INVALID'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The fixtures of the layer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers/{{cfgLayerId}}/fixtures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers",
+                "{{cfgLayerId}}",
+                "fixtures"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('the fixture added above is listed', () => pm.expect(pm.response.json().some((x) => x.id === pm.collectionVariables.get('cfgFixtureId'))).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replace the fixture (same name, same expectations)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Keeps the name, so the approval below is still blocked until the fixture is deleted.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/layers/{{cfgLayerId}}/fixtures/{{cfgFixtureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "layers",
+                "{{cfgLayerId}}",
+                "fixtures",
+                "{{cfgFixtureId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman impossible fixture {{stamp}}\",\n  \"answers\": [\n    {\"questionId\": \"Q01\", \"answer\": 4},\n    {\"questionId\": \"Q02\", \"answer\": \"OFTEN\"},\n    {\"questionId\": \"Q03\", \"answer\": true},\n    {\"questionId\": \"Q04\", \"answer\": \"fine\"},\n    {\"questionId\": \"Q05\", \"answer\": 60}\n  ],\n  \"expectations\": {\n    \"status\": \"VALID\",\n    \"overall\": {\"min\": 99, \"max\": 100}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('same fixture, still impossible', () => { const d = pm.response.json(); pm.expect(d.id).to.eql(pm.collectionVariables.get('cfgFixtureId')); pm.expect(d.expectations.overall.min).to.eql(99); });"
                 ]
               }
             }
@@ -4622,7 +4932,345 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('201', () => pm.response.to.have.status(201));",
-                  "pm.test('a new draft', () => { const d = pm.response.json(); pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.id).to.not.eql(pm.collectionVariables.get('cfgVersionId')); });"
+                  "pm.test('a new draft', () => { const d = pm.response.json(); pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.id).to.not.eql(pm.collectionVariables.get('cfgVersionId')); });",
+                  "pm.collectionVariables.set('cfgCopyId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit the copy for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "Saves nothing new; submits the copy made by the previous request.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgCopyId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgCopyId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('submitted by the administrator, no problem', () => { const d = pm.response.json(); pm.expect(d.submittedBy).to.eql('assess-admin-user'); pm.expect(d.validationProblems).to.eql([]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A second person rejects it with a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-owner"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgCopyId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgCopyId}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Postman: sent back on purpose.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('back to draft with the reason', () => { pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.review.rejectionComment).to.include('Postman'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A rejection needs a comment -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-owner"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "An empty comment is refused, whatever the state of the version.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgCopyId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgCopyId}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 or 409', () => pm.expect([400, 409]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A draft cannot be paused -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgCopyId}}/pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgCopyId}}",
+                "pause"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('code INVALID_CONFIGURATION_VERSION', () => pm.expect(pm.response.json().code).to.eql('INVALID_CONFIGURATION_VERSION'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pause the active version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "A paused version is not used for new scoring runs and can be resumed.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "pause"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('paused: no longer used for new runs', () => pm.expect(pm.response.json().status).to.eql('PAUSED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resume it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "resume"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('active again', () => pm.expect(pm.response.json().status).to.eql('ACTIVE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Archive it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "An archived version is never used again; an earlier run still explains itself with it. Roll back by copying it to a new draft.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/archive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "archive"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('archived: final', () => pm.expect(pm.response.json().status).to.eql('ARCHIVED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An archived version cannot be resumed -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/configuration/versions/{{cfgVersionId}}/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "configuration",
+                "versions",
+                "{{cfgVersionId}}",
+                "resume"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
                 ]
               }
             }
@@ -4660,7 +5308,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
-                  "pm.test('one layer', () => { const l = pm.response.json(); pm.expect(l.length).to.eql(1); pm.expect(l[0].name).to.eql('Platform default'); });"
+                  "pm.test('one layer', () => { const l = pm.response.json(); pm.expect(l.length).to.eql(1); pm.expect(l[0].name).to.eql('Platform default'); });",
+                  "pm.collectionVariables.set('platformLayerId', pm.response.json()[0].id);"
                 ]
               }
             }
@@ -4897,6 +5546,562 @@
                   "pm.test('200', () => pm.response.to.have.status(200));",
                   "const d = pm.response.json();",
                   "pm.test('back to draft with the reason', () => { pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.review.rejectionComment).to.include('left as a draft'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The platform default: its versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('listed without their documents', () => { const v = pm.response.json(); pm.expect(v.length).to.be.above(0); pm.expect(v[0].payload).to.eql(undefined); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the draft with its document",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('a draft that carries its document', () => { pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.payload).to.be.a('string'); });",
+                  "pm.collectionVariables.set('platformDraftDocument', d.payload);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save the draft (unchanged)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Writes back the document read above, so nothing changes.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{platformDraftDocument}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('still a draft', () => pm.expect(pm.response.json().status).to.eql('DRAFT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate the draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}",
+                "validate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('a copy of the active default is valid', () => pm.expect(pm.response.json().valid).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preview the draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}",
+                "preview"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('a summary and no answers', () => { const d = pm.response.json(); pm.expect(d.summary).to.be.an('object'); pm.expect(pm.response.text()).to.not.include('OFTEN'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Copy the draft as another draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformDraftId}}/copy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformDraftId}}",
+                "copy"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.test('a new draft', () => { const d = pm.response.json(); pm.expect(d.status).to.eql('DRAFT'); pm.expect(d.id).to.not.eql(pm.collectionVariables.get('platformDraftId')); });",
+                  "pm.collectionVariables.set('platformCopyId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The fixtures of the platform layer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/layers/{{platformLayerId}}/fixtures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "layers",
+                "{{platformLayerId}}",
+                "fixtures"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('a list', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add a fixture to the platform layer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Deleted again below: a failing fixture would block every approval of the platform default.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/layers/{{platformLayerId}}/fixtures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "layers",
+                "{{platformLayerId}}",
+                "fixtures"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman platform fixture {{stamp}}\",\n  \"answers\": [\n    {\"questionId\": \"Q01\", \"answer\": 4},\n    {\"questionId\": \"Q02\", \"answer\": \"OFTEN\"},\n    {\"questionId\": \"Q03\", \"answer\": true},\n    {\"questionId\": \"Q04\", \"answer\": \"fine\"},\n    {\"questionId\": \"Q05\", \"answer\": 60}\n  ],\n  \"expectations\": {\n    \"status\": \"VALID\",\n    \"overall\": {\"min\": 99, \"max\": 100}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('platformFixtureId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replace the platform fixture",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/layers/{{platformLayerId}}/fixtures/{{platformFixtureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "layers",
+                "{{platformLayerId}}",
+                "fixtures",
+                "{{platformFixtureId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman platform fixture {{stamp}}\",\n  \"answers\": [\n    {\"questionId\": \"Q01\", \"answer\": 4},\n    {\"questionId\": \"Q02\", \"answer\": \"OFTEN\"},\n    {\"questionId\": \"Q03\", \"answer\": true},\n    {\"questionId\": \"Q04\", \"answer\": \"fine\"},\n    {\"questionId\": \"Q05\", \"answer\": 60}\n  ],\n  \"expectations\": {\n    \"status\": \"VALID\",\n    \"overall\": {\"min\": 99, \"max\": 100}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('same fixture', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('platformFixtureId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete the platform fixture",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/layers/{{platformLayerId}}/fixtures/{{platformFixtureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "layers",
+                "{{platformLayerId}}",
+                "fixtures",
+                "{{platformFixtureId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A draft cannot be paused -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "Pause, resume and archive apply to versions that were approved. They are checked here on a draft so the real platform default is not touched.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformCopyId}}/pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformCopyId}}",
+                "pause"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A draft cannot be resumed -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformCopyId}}/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformCopyId}}",
+                "resume"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A draft cannot be archived -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "platform-admin"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/configuration/versions/{{platformCopyId}}/archive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "platform",
+                "configuration",
+                "versions",
+                "{{platformCopyId}}",
+                "archive"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
                 ]
               }
             }
