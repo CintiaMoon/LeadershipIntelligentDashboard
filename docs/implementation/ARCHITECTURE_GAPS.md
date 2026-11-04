@@ -63,6 +63,7 @@
 | D50 | APPROVED: patterns and penalties authored in the builder, generated ids, catalog ids not reused. | User |
 | D59-D64 | APPROVED (resolves F13, `REPORTS_PROPOSAL.md`): four report types rendered from the stored run and its explanation, never recalculated; generated on demand and not stored (`GET /reports/{type}`); JSON, CSV and PDF (OpenPDF); no answers or per-member data; same access as run reads, audited; deterministic. | User |
 | D51 | APPROVED: restyle of the whole application like the supplied screens (dark, sidebar); the product name is the constant "Leadership Intelligent Dashboard", changeable in one place. | User |
+| D65-D74 | APPROVED (`IDENTITY_PROPOSAL.md`): built-in accounts replace the external identity provider. Email and password (bcrypt), email verification and password reset by SMTP, server-side sessions (Spring Session JDBC, rotated at login), CSRF, rate limits in Redis, company = tenant selected in the URL `/c/{tenantId}` and sent as `X-Company-Id`, accepted only with an ACTIVE membership, roles and organizations per membership, platform administrator as a flag on the user, opaque API tokens as bearer tokens, membership management with invitations, security audit. Replaces D19, D20 and the token wording of specv3 25.1, 25.5 and 33. Delivered in phases P1 to P7. | User |
 
 ## A. Conflicts
 
