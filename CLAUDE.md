@@ -18,8 +18,8 @@ Commands (Maven 3.9, JDK 21+; integration tests need Docker):
 mvn -B verify                              build and run all tests (integration tests start PostgreSQL in Docker)
 mvn -B test -Dtest='!*IntegrationTest' -Dsurefire.failIfNoSpecifiedTests=false   unit tests only, no Docker
 mvn -B test -Dtest=ArchitectureTest        run one test class
-docker compose up -d --build               local stack: PostgreSQL, mock identity provider (:8081), app (:8080, profile dev)
-docker compose up -d postgres mock-oauth2  services only; then mvn spring-boot:run -Dspring-boot.run.profiles=dev
+docker compose up -d --build               local stack: PostgreSQL, mock identity provider (:8081), Mailpit (:8025 inbox), app (:8080, profile dev)
+docker compose up -d postgres mock-oauth2 mailpit  services only; then mvn spring-boot:run -Dspring-boot.run.profiles=dev
 npx newman run docs/postman/lis.postman_collection.json   run every endpoint against the local stack
 cd frontend && npm run dev                 web UI on :5173 (proxies /api to :8080); also npm run lint | typecheck | test | build
 cd frontend && npm run e2e                 Playwright against the compose stack (web UI on :3000); seeds org-1 and org-2 first

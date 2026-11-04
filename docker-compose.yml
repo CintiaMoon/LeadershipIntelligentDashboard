@@ -1,5 +1,5 @@
 # Local development stack.
-#   docker compose up -d postgres mock-oauth2     only the services; run the app with: mvn spring-boot:run -Dspring-boot.run.profiles=dev
+#   docker compose up -d postgres mock-oauth2 mailpit     only the services; run the app with: mvn spring-boot:run -Dspring-boot.run.profiles=dev
 #   docker compose up -d --build                  everything: app on http://localhost:8080, web UI on http://localhost:3000
 # The "dev" profile seeds two demo tenants and the ILLUSTRATIVE sample configuration. Never use it in production.
 services:
@@ -30,12 +30,22 @@ services:
     volumes:
       - ./docker/mock-oauth2/config.json:/config/config.json:ro
 
+  # Catches every email the application sends (verification and password-reset links) so nothing leaves the machine.
+  # SMTP on 1025; read the messages at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   app:
     build: .
     depends_on:
       postgres:
         condition: service_healthy
       mock-oauth2:
+        condition: service_started
+      mailpit:
         condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: dev
@@ -45,6 +55,13 @@ services:
       LIS_SECURITY_JWK_SET_URI: http://mock-oauth2:8080/default/jwks
       # tokens are issued to browsers that reach the mock provider on localhost:8081, so that is the issuer they carry
       LIS_SECURITY_ISSUER: http://localhost:8081/default
+      # outgoing email goes to Mailpit; links in the emails point at the web UI
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: "1025"
+      LIS_WEB_BASE_URL: http://localhost:3000
+      LIS_MAIL_FROM: no-reply@lis.local
+      # the local stack is plain HTTP, so the session cookie cannot be Secure here (production keeps the default, true)
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
     ports:
       - "8080:8080"
 

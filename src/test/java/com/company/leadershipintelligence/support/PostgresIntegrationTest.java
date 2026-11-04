@@ -33,6 +33,9 @@ public abstract class PostgresIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         // tests create their own configurations; the bundled initial one is covered by InitialConfigurationLoaderIntegrationTest
         registry.add("lis.configuration.initial.enabled", () -> "false");
+        // fast password hashing, and emails sent on the test thread so a test can read them at once
+        registry.add("lis.identity.password-strength", () -> "4");
+        registry.add("lis.identity.mail-async", () -> "false");
     }
 
     @Autowired

@@ -310,3 +310,24 @@ Two ways in with the same endpoints. Owners and administrators manage the **tena
 
 A version carries its **review record** once submitted: submitter, validation problems, preview summary (counts and a before/after distribution) and fixture results, then who approved it, the note, the calibration reference and the known limitations, or who rejected it and why. The record of an approved version does not change (database trigger). Every action is also in the configuration audit trail (`CREATED`, `UPDATED`, `VALIDATED`, `REJECTED`, `ACTIVATED`, `APPROVED`).
 
+
+## 18. As implemented (accounts and sessions, phase P1: decisions D65 to D68, D73, D74)
+
+Built-in accounts (`docs/implementation/IDENTITY_PROPOSAL.md`). These endpoints use a **server-side session** and CSRF protection, not a bearer token; every other endpoint still takes the bearer token until the company memberships of phase P3 move it to sessions too. A session cookie alone reaches nothing tenant-scoped (401). All paths are under `/api/v1/auth`.
+
+Cookies: `LIS_SESSION` (the session id; HttpOnly, Secure, SameSite=Lax; 30 minutes idle, 8 hours at most) and `XSRF-TOKEN` (readable by the web application). Every `POST` needs the header `X-XSRF-TOKEN` with the value of the `XSRF-TOKEN` cookie; without it the answer is 403 `CSRF_TOKEN_INVALID`. A new session and a new CSRF token are issued at every sign-in.
+
+| Method and path | Body | Answer |
+|---|---|---|
+| `GET /csrf` | | 200 `{headerName, token}` and sets `XSRF-TOKEN` |
+| `POST /register` | `{email, password, displayName}` | 202, empty. The same for a new and for a known address (a known one gets an email instead). 422 `INVALID_ACCOUNT_REQUEST` (bad email or name), 422 `WEAK_PASSWORD` |
+| `POST /verify-email` | `{token}` | 204; 400 `INVALID_TOKEN` (unknown, used, expired or retired by a newer link) |
+| `POST /resend-verification` | `{email}` | 202, always |
+| `POST /login` | `{email, password}` | 200 `{id, email, displayName, platformAdmin, companies}` and sets the session cookie; 401 `AUTHENTICATION_FAILED` with the same body for an unknown email, a wrong password, an unverified and a disabled account |
+| `POST /logout` | | 204, also without a session |
+| `GET /me` | | 200 as for login; 401 without a session or when the account is no longer ACTIVE |
+| `POST /password/forgot` | `{email}` | 202, always; an ACTIVE account is sent a reset link (valid 1 hour, once), a pending one a verification link |
+| `POST /password/reset` | `{token, newPassword}` | 204 and every session of the user is ended; 400 `INVALID_TOKEN`; 422 `WEAK_PASSWORD` (the link still works afterwards) |
+| `POST /password/change` | `{currentPassword, newPassword}` | 204 (needs a session); the user's other sessions are ended; 422 when the current password is wrong |
+
+Password rule: 12 to 128 characters, not a very common password, not the email address, not a single repeated pattern; no composition rules. Emails are normalized (trimmed, lower case). `companies` is always empty in P1 and will list only companies with an ACTIVE membership. New codes: `AUTHENTICATION_FAILED` (401), `INVALID_ACCOUNT_REQUEST` and `WEAK_PASSWORD` (422), `INVALID_TOKEN` (400), `CSRF_TOKEN_INVALID` (403).

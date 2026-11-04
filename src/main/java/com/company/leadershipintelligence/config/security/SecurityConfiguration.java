@@ -1,6 +1,7 @@
 package com.company.leadershipintelligence.config.security;
 
 import com.company.leadershipintelligence.api.exception.ApiErrorWriter;
+import com.company.leadershipintelligence.config.properties.IdentityProperties;
 import com.company.leadershipintelligence.api.security.PlatformRole;
 import com.company.leadershipintelligence.api.security.RespondentRole;
 import com.company.leadershipintelligence.api.security.Role;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,7 +30,14 @@ import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,7 +53,57 @@ public class SecurityConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(SecurityConfiguration.class);
 
+    /**
+     * Accounts and sessions (decisions D65 to D68): {@code /api/v1/auth/**} uses a server-side session, the session cookie and CSRF
+     * protection. The session is created only by the sign-in endpoint. Everything else keeps using the bearer-token chain below
+     * until the company memberships of a later phase move it to sessions too.
+     */
     @Bean
+    @Order(1)
+    SecurityFilterChain authFilterChain(HttpSecurity http, ApiErrorWriter errors, IdentityProperties identity, Clock clock,
+                                        SecurityContextRepository contexts, CookieCsrfTokenRepository csrfTokens) throws Exception {
+        // the plain handler (not the masked one) is what a single-page app can read from the cookie and send back
+        CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
+        http.securityMatcher("/api/v1/auth/**")
+                .csrf(c -> c.csrfTokenRepository(csrfTokens).csrfTokenRequestHandler(csrfHandler))
+                .securityContext(c -> c.securityContextRepository(contexts))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.NEVER))
+                // an API never redirects, so a refused request is not remembered (that would create a session for an anonymous caller)
+                .requestCache(c -> c.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
+                .addFilterBefore(new AbsoluteSessionTimeoutFilter(identity.sessionAbsolute(), clock), SecurityContextHolderFilter.class)
+                .authorizeHttpRequests(a -> a
+                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/verify-email", "/api/v1/auth/resend-verification",
+                                "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/password/change").authenticated()
+                        .anyRequest().denyAll())
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(errors::unauthenticated)
+                        .accessDeniedHandler((request, response, denied) -> {
+                            if (denied instanceof CsrfException) {
+                                errors.csrfRejected(request, response, denied);
+                            } else {
+                                errors.accessDenied(request, response, denied);
+                            }
+                        }));
+        return http.build();
+    }
+
+    /** Where the signed-in user is kept between requests: the server-side session (Spring Session JDBC). */
+    @Bean
+    SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    /** The CSRF token lives in a cookie the web application can read and sends back in a header (decision D68). */
+    @Bean
+    CookieCsrfTokenRepository csrfTokenRepository() {
+        return CookieCsrfTokenRepository.withHttpOnlyFalse();
+    }
+
+    @Bean
+    @Order(2)
     SecurityFilterChain filterChain(HttpSecurity http, ApiErrorWriter errors) throws Exception {
         String[] writers = {Role.OWNER.name(), Role.ADMIN.name(), Role.ENGINEERING_LEADER.name()};
         String[] everyone = java.util.Arrays.stream(Role.values()).map(Enum::name).toArray(String[]::new);

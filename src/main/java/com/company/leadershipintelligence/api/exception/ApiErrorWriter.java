@@ -32,6 +32,11 @@ public class ApiErrorWriter {
         write(response, 403, "ACCESS_DENIED", "The caller's role does not allow this operation.");
     }
 
+    /** A state-changing request from a session without a valid CSRF token (decision D68). */
+    public void csrfRejected(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e) throws IOException {
+        write(response, 403, "CSRF_TOKEN_INVALID", "The request was refused because its CSRF token is missing or not valid.");
+    }
+
     private void write(HttpServletResponse response, int status, String code, String message) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
