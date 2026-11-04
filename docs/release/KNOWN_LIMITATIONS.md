@@ -20,7 +20,7 @@ Ordered by how much they matter for going live. Nothing here is hidden elsewhere
 
 ## Security and operations
 
-11. **The backend dependency vulnerability scan did not complete.** The OWASP dependency-check was started (`mvn org.owasp:dependency-check-maven:12.1.0:check`); without an NVD API key the CVE database download stalled for hours (the local database stopped growing at 610 MB) and the run was stopped, so **no backend vulnerability result exists**. Run it in CI with `NVD_API_KEY` set (or use a software-composition-analysis service) before go-live. Frontend `npm audit` is clean (0 vulnerabilities).
+11. **The backend dependency scan is set up but has not produced a result yet.** CI runs the OWASP dependency-check on every pull request, on `main` and weekly (job `dependency-scan` in `.github/workflows/ci.yml`; it fails the build on a finding with CVSS 7 or more; reviewed exceptions go in `config/dependency-check-suppressions.xml`). It needs the repository secret `NVD_API_KEY` (a free key from the NVD); without it the job fails with a message saying so and the dependencies are not scanned. It could not be run on the development machine for the same reason, so no result is recorded here until the first CI run with the key. The first runs (2026-11-03/04) found vulnerable library versions; the build now uses Spring Boot 3.5.16, Tomcat 10.1.61, PostgreSQL driver 42.7.14 and Swagger UI 5.34.1. Two findings are scanner false positives, and the Spring Framework 6.2.19 and Spring Security 6.5.11 findings (fixed in 6.2.20 and 6.5.12, not yet published) are suppressed until 2026-12-15 because the affected features are not used; upgrade and delete those entries then. The frontend runs `npm audit --audit-level=high` in CI (0 vulnerabilities today).
 12. **No rate limiting or abuse protection** in the application or the sample nginx. Put a gateway or WAF in front, and add limits on `POST /calculate` if exposed beyond trusted callers.
 13. **No TLS inside the stack.** The sample images speak HTTP. Terminate TLS in front and add Strict-Transport-Security there.
 14. **No token refresh.** Sessions end when the access token expires (default 1 hour from the mock provider); the user signs in again. A refresh flow depends on the real provider's policy.
@@ -34,7 +34,7 @@ Ordered by how much they matter for going live. Nothing here is hidden elsewhere
 19. **Accessibility was verified automatically (axe, WCAG 2.2 AA tags) and by keyboard and markup review.** It was not audited with a screen reader, at 400 % zoom or in high-contrast mode.
 20. **Browser matrix.** End-to-end tests run in Chromium only.
 21. **Performance figures are from one development machine on localhost.** No load test of the API or database was run, and V3 section 35.1 defines no target.
-22. **Backend code coverage is not measured** (no JaCoCo configured); frontend unit coverage is 82 % of statements.
+22. **Coverage is reported, not gated.** JaCoCo measures the backend on every CI run (summary on the run page, report as an artifact): 94.3 % of instructions and 80.9 % of branches on 2026-11-03. Frontend unit coverage is 82 % of statements. No minimum is enforced yet; set one once the figures have been stable for a few runs.
 23. **Pinned tooling.** TypeScript is pinned to 5.9 (version 7 conflicts with `openapi-typescript` and others) and `minimatch` is overridden to a patched major to clear an advisory in development tools.
 
 ## Known design trade-offs
