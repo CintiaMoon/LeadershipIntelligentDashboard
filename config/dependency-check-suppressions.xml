@@ -34,7 +34,7 @@
        custom data binders, or SpEL evaluated from user input (checked 2026-11-04: no use in src/main). -->
   <suppress until="2026-12-15Z">
     <notes>Fix is in Spring Framework 6.2.20 (not yet released). Affected features are not used by this application.</notes>
-    <packageUrl regex="true">^pkg:maven/org\.springframework/spring-(core|web)@6\.2\.19$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.springframework/spring-[a-z0-9-]+@6\.2\.19$</packageUrl>
     <cve>CVE-2026-47884</cve>
     <cve>CVE-2026-47885</cve>
     <cve>CVE-2026-47886</cve>
@@ -53,7 +53,7 @@
        server, WebAuthn with a distributed session store, DPoP proof validation) are not used. -->
   <suppress until="2026-12-15Z">
     <notes>Fix is in Spring Security 6.5.12 (not yet released). Affected features are not used by this application.</notes>
-    <packageUrl regex="true">^pkg:maven/org\.springframework\.security/spring-security-(core|web|oauth2-resource-server)@6\.5\.11$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.springframework\.security/spring-security-[a-z0-9-]+@6\.5\.11$</packageUrl>
     <cve>CVE-2026-47841</cve>
     <cve>CVE-2026-41707</cve>
     <cve>CVE-2026-59270</cve>
