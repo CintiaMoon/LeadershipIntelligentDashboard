@@ -39,7 +39,7 @@ The `dev` profile seeds two demo tenants and the illustrative sample configurati
 
 Token contract: signed JWT with `sub`, `tenant_id` (the tenant; taken from nowhere else), `org_ids` (organizations the user may reach) and `roles` (`OWNER`, `ADMIN`, `ENGINEERING_LEADER`, `ANALYST`, `VIEWER`; see "Respondents" below for the role of people who answer questionnaires). Building questionnaires, keeping the roster and running assessments need OWNER or ADMIN. Writes need OWNER, ADMIN or ENGINEERING_LEADER; source answers need OWNER, ADMIN or ANALYST; evidence values are redacted for VIEWER; choosing an explicit configuration version needs OWNER or ADMIN.
 
-Database: create an empty database and a user that can create tables in it. Flyway applies ten migrations (`V1` to `V10`; `V10` adds the review record of a configuration version and the fixtures of a layer; `V8` adds the questionnaire library with a trigger that keeps a published version immutable; `V9` adds teams, people, assessment runs, participants, drafts and the table of submitted answers, which has no column that names a person; `V7` lets the audit hold a row without a tenant; `V6` adds the scopes of answers and runs and keeps every earlier row as an organization-level answer or run, so upgrading a populated database is safe, which was tested). Scoring history and active configuration versions are protected by triggers; back up the database like any system of record. Run migrations from one instance at a time.
+Database: create an empty database and a user that can create tables in it. Flyway applies eleven migrations (`V1` to `V11`; `V11` adds accounts, one-time tokens, the security audit and the session store; `V10` adds the review record of a configuration version and the fixtures of a layer; `V8` adds the questionnaire library with a trigger that keeps a published version immutable; `V9` adds teams, people, assessment runs, participants, drafts and the table of submitted answers, which has no column that names a person; `V7` lets the audit hold a row without a tenant; `V6` adds the scopes of answers and runs and keeps every earlier row as an organization-level answer or run, so upgrading a populated database is safe, which was tested). Scoring history and active configuration versions are protected by triggers; back up the database like any system of record. Run migrations from one instance at a time.
 
 ## Web UI configuration (build time)
 
@@ -52,6 +52,24 @@ Database: create an empty database and a user that can create tables in it. Flyw
 Runtime environment of the nginx container: `IDP_ORIGIN` is the identity provider's origin (scheme, host, port) and becomes `connect-src` in the Content Security Policy. Register `https://<ui-host>/auth/callback` as the redirect URI and `https://<ui-host>/login` as the post-logout URI.
 
 The container sends a Content Security Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and `Cross-Origin-Opener-Policy`, gzips text assets, caches fingerprinted assets for a year and never caches the application shell. Terminate TLS in front of it and add `Strict-Transport-Security` there. Adjust the proxy target in `frontend/nginx/default.conf.template` if the API is not reachable as `app:8080`.
+
+## Accounts, sessions and email (identity phase P1)
+
+The application now owns accounts and sessions beside the bearer-token path (see `docs/implementation/IDENTITY_PROPOSAL.md`; the product still signs in with the external provider until phase P3). Migration `V11` adds `app_user`, `auth_token`, `security_audit_event` (append-only) and the two tables of Spring Session.
+
+| Setting (environment variable) | Default | Meaning |
+|---|---|---|
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | unset | the SMTP server; with no host, no email is sent (a warning is logged). Add `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true` and `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true` for a server that needs them |
+| `LIS_WEB_BASE_URL` | `http://localhost:3000` | where the web application is served; the links in emails start with this |
+| `LIS_MAIL_FROM` | `no-reply@localhost` | sender address; set up SPF and DKIM for its domain or the messages will land in spam |
+| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | `true` | the session cookie is sent over HTTPS only; set `false` only for plain-HTTP local use |
+| `SPRING_SESSION_TIMEOUT` | `30m` | idle limit of a session |
+| `LIS_IDENTITY_SESSION_ABSOLUTE` | `8h` | longest life of a session |
+| `LIS_IDENTITY_PASSWORD_STRENGTH` | `12` | bcrypt cost; raise it as hardware gets faster, never lower it in production |
+| `LIS_IDENTITY_VERIFICATION_TTL`, `LIS_IDENTITY_RESET_TTL` | `24h`, `1h` | how long the emailed links work |
+| `LIS_AUDIT_HASH_KEY` | random per start | secret that keys the hash stored for an email that has no account; set it to compare across restarts |
+
+Serve the application and the web UI from the **same origin** (the bundled nginx proxies `/api`), because the session and CSRF cookies are not shared across origins. Terminate TLS in front and forward the original client address. The local compose stack adds Mailpit: every email is caught at http://localhost:8025.
 
 ## The platform administrator
 

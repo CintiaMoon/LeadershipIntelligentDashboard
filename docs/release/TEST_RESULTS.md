@@ -6,7 +6,7 @@ Every figure below comes from a command run during the release phase on a develo
 
 | Layer | Command | Result |
 |---|---|---|
-| Backend unit and integration | `mvn -B verify` | **715 tests, 0 failures, 0 errors** (integration tests use PostgreSQL 16 in Testcontainers) |
+| Backend unit and integration | `mvn -B verify` | **771 tests, 0 failures, 0 errors** (P1 identity: 56 new; a real SMTP delivery to Mailpit and a sign-in, session and sign-out against the running jar were also checked by hand) (integration tests use PostgreSQL 16 in Testcontainers) |
 | Frontend static analysis | `npm run lint`, `npm run typecheck` | clean (0 problems) |
 | Frontend unit and component | `npm test` | **465 tests in 56 files, all pass** (coverage figures below are from the earlier run) |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |

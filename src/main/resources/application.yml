@@ -21,6 +21,22 @@ spring:
   mvc:
     problemdetails:
       enabled: false
+  session:
+    # server-side sessions in PostgreSQL (decision D67); the tables come from Flyway (V11)
+    jdbc:
+      initialize-schema: never
+    timeout: 30m
+  # Outgoing email (decision D66). Set SPRING_MAIL_HOST (and _PORT, _USERNAME, _PASSWORD) to enable it; with no host,
+  # emails are not sent and a warning says so. The sender address and links are lis.identity.* below.
+server:
+  servlet:
+    session:
+      cookie:
+        name: LIS_SESSION
+        http-only: true
+        # the cookie is sent over HTTPS only; the local compose stack turns this off (SERVER_SERVLET_SESSION_COOKIE_SECURE=false)
+        secure: true
+        same-site: lax
 management:
   endpoints:
     web:
@@ -31,6 +47,16 @@ logging:
     format:
       console: ecs
 lis:
+  identity:
+    # built-in accounts (decisions D65 to D74); every value shown is the default
+    password-strength: 12
+    verification-ttl: 24h
+    reset-ttl: 1h
+    session-absolute: 8h
+    web-base-url: ${LIS_WEB_BASE_URL:http://localhost:3000}
+    mail-from: ${LIS_MAIL_FROM:no-reply@localhost}
+    mail-async: true
+    audit-hash-key: ${LIS_AUDIT_HASH_KEY:}
   engine:
     version: 3.0.0
     algorithm-version: 1.0.0
