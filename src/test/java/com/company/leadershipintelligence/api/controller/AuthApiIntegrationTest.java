@@ -487,6 +487,17 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void theCsrfCookieIsReadableByScriptButSameSiteAndSecureLikeTheSessionCookie() throws Exception {
+        Browser b = new Browser();
+        MvcResult r = b.get("/api/v1/auth/csrf");
+        Cookie cookie = r.getResponse().getCookie("XSRF-TOKEN");
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.isHttpOnly()).isFalse();
+        assertThat(cookie.getSecure()).isTrue();
+        assertThat(cookie.getAttribute("SameSite")).isEqualTo("Lax");
+    }
+
+    @Test
     void theCsrfTokenIsRenewedWhenTheUserSignsIn() throws Exception {
         activeAccount(EMAIL, PASSWORD);
         Browser b = new Browser();

@@ -11,8 +11,8 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('apiFetch', () => {
-  it('sends the bearer token and builds the query string without empty values', async () => {
-    configureApi({ getToken: () => 'tok-123', onUnauthorized: () => undefined });
+  it('sends no credential of its own (the session is a cookie) and builds the query string without empty values', async () => {
+    configureApi({ onUnauthorized: () => undefined });
     let seen: Request | undefined;
     server.use(
       http.get('http://localhost:3000/api/v1/scoring-runs', ({ request }) => {
@@ -21,12 +21,12 @@ describe('apiFetch', () => {
       }),
     );
     await api.runs({ organizationId: 'org-1', assessmentId: undefined, from: '', limit: 5 });
-    expect(seen?.headers.get('Authorization')).toBe('Bearer tok-123');
+    expect(seen?.headers.get('Authorization')).toBeNull();
     expect(new URL(seen?.url ?? '').search).toBe('?organizationId=org-1&limit=5');
   });
 
   it('posts JSON with an idempotency key when given', async () => {
-    configureApi({ getToken: () => null, onUnauthorized: () => undefined });
+    configureApi({ onUnauthorized: () => undefined });
     let key: string | null = null;
     let body: unknown;
     server.use(
@@ -42,7 +42,7 @@ describe('apiFetch', () => {
   });
 
   it('turns an error body into an ApiError with the correlation id', async () => {
-    configureApi({ getToken: () => null, onUnauthorized: () => undefined });
+    configureApi({ onUnauthorized: () => undefined });
     server.use(
       http.get('http://localhost:3000/api/v1/scoring-runs/missing', () =>
         HttpResponse.json({ code: 'SCORING_RUN_NOT_FOUND', message: 'not found', correlationId: 'c-9' }, { status: 404 }),
@@ -54,7 +54,7 @@ describe('apiFetch', () => {
   });
 
   it('falls back to the correlation header and a generic code when the body is not JSON', async () => {
-    configureApi({ getToken: () => null, onUnauthorized: () => undefined });
+    configureApi({ onUnauthorized: () => undefined });
     server.use(
       http.get('http://localhost:3000/api/v1/x', () => new HttpResponse('<html>bad gateway</html>', { status: 502, headers: { 'X-Correlation-Id': 'h-1' } })),
     );
@@ -64,14 +64,14 @@ describe('apiFetch', () => {
 
   it('signs the user out on 401', async () => {
     const onUnauthorized = vi.fn();
-    configureApi({ getToken: () => 'expired', onUnauthorized });
+    configureApi({ onUnauthorized });
     server.use(http.get('http://localhost:3000/api/v1/scoring-runs', () => HttpResponse.json({ code: 'UNAUTHENTICATED', message: 'x' }, { status: 401 })));
     await expect(api.runs()).rejects.toBeInstanceOf(ApiError);
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 
   it('encodes path segments', async () => {
-    configureApi({ getToken: () => null, onUnauthorized: () => undefined });
+    configureApi({ onUnauthorized: () => undefined });
     let path = '';
     server.use(
       http.get('http://localhost:3000/api/v1/assessments/:id', ({ request }) => {

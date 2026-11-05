@@ -17,17 +17,17 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Authenticates a request that carries an application API token (decision D70): {@code Authorization: Bearer lis_...}. The token
  * is looked up by hash on every request and gives the caller its one company, role and organizations, in the same shape a session
- * and a verified external token give, so nothing downstream changes. A token needs no company header and no CSRF token (it is not an
+ * gives, so nothing downstream changes. A token needs no company header and no CSRF token (it is not an
  * ambient credential). A token that is not valid, whatever the reason, is a plain 401; one over its call limit is a 429.
  *
- * <p>A bearer value that does not start with the token prefix is left to the external-token path.
+ * <p>A bearer value that does not start with the token prefix is not a credential of this application: the request stays anonymous
+ * and is answered 401.
  */
 public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
 
@@ -36,13 +36,11 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
     private final ApiTokenService tokens;
     private final MembershipService memberships;
     private final ApiErrorWriter errors;
-    private final Clock clock;
 
-    public ApiTokenAuthenticationFilter(ApiTokenService tokens, MembershipService memberships, ApiErrorWriter errors, Clock clock) {
+    public ApiTokenAuthenticationFilter(ApiTokenService tokens, MembershipService memberships, ApiErrorWriter errors) {
         this.memberships = memberships;
         this.tokens = tokens;
         this.errors = errors;
-        this.clock = clock;
     }
 
     /** The API token in the request, or null when the request carries none (including a bearer value of the other kind). */
@@ -79,7 +77,7 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         // a token without an organization list reaches every organization of its company, like the membership of its creator
         OrganizationReach reach = memberships.reach(c.tenantId(), c.organizationIds());
-        context.setAuthentication(CallerTokens.caller(c.subject(), null, c.tenantId(), List.of(c.role()), List.copyOf(reach.organizationIds()), reach.all(), clock));
+        context.setAuthentication(CallerFactory.of(c.subject(), null, c.tenantId(), List.of(c.role()), List.copyOf(reach.organizationIds()), reach.all()));
         SecurityContextHolder.setContext(context);
         chain.doFilter(request, response);
     }

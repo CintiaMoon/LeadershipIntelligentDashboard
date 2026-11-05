@@ -1,9 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona, runsOf } from './api';
 
 async function signIn(page: Page, persona: RegExp) {
   await page.goto('/login');
-  await page.getByRole('button', { name: persona }).click();
+  await pickPersona(page, persona);
   await page.waitForURL(/\/dashboard$/);
 }
 

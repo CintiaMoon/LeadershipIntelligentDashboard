@@ -29,8 +29,9 @@ Where a diagram and a specification disagree, the specification wins (`specs/spe
 
 ## 1. Actors and what each may reach
 
-Five tenant roles come from the `roles` claim of the token; the platform administrator and the respondent are deliberately
-not in the `Role` enum. The tenant and the organizations always come from the token, never from a request.
+Five tenant roles come from the caller's membership in the company; the platform administrator and the respondent are deliberately
+not in the `Role` enum. The company is named by the request (`X-Company-Id`) but is accepted only when the account holds an active
+membership in it, and the organizations come from that membership, never from the request body.
 
 ```mermaid
 flowchart LR
@@ -83,32 +84,29 @@ Notes:
 
 ## 2. Sign-in and landing page
 
-The web UI signs in with the OpenID Connect authorization-code flow (with PKCE). Locally the identity provider is the mock
-server in `docker-compose.yml`; the login page offers one button per sample persona. Tokens are kept in `sessionStorage`
-(cleared with the tab). The backend is a resource server: it validates the signature against the provider's key set and
-fails closed when no key set is configured.
+The web UI signs in with the application's own accounts: email and password, a server-side session in an HttpOnly cookie
+(`LIS_SESSION`) and a CSRF token that every state-changing call repeats in `X-XSRF-TOKEN`. Nothing the browser can read is a
+credential. A person with several companies picks one; its id is in the address (`/c/<company>/...`) and in `X-Company-Id`.
+Callers that are not a browser use API tokens (`Authorization: Bearer lis_...`).
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor U as User
     participant W as Web UI
-    participant I as Identity provider
     participant A as API
 
     U->>W: open any page
-    W->>W: no session, remember the page to return to
-    W->>U: show /login
-    U->>W: choose a persona
-    W->>I: authorization request (code and PKCE challenge)
-    I->>U: sign-in
-    U->>I: credentials
-    I->>W: /auth/callback with a code
-    W->>I: exchange the code for tokens
-    I-->>W: access token (tenant_id, org_ids, roles, email)
-    W->>W: build the principal, go back to the remembered page
-    W->>A: API calls with Authorization: Bearer
-    A->>A: validate signature and expiry, map roles to authorities
+    W->>A: GET /auth/me (the session cookie, if any)
+    A-->>W: 401 (no session)
+    W->>U: show /login, remember the page to return to
+    U->>W: email and password
+    W->>A: GET /auth/csrf, then POST /auth/login with X-XSRF-TOKEN
+    A->>A: check the password, rotate the session, issue a new CSRF token
+    A-->>W: the account and its companies (Set-Cookie LIS_SESSION)
+    W->>W: one company: go in; several: show the company list
+    W->>A: API calls with the cookie and X-Company-Id
+    A->>A: read the membership on every request, map roles to authorities
     A-->>W: data, or 401 / 403
 ```
 
@@ -598,5 +596,6 @@ Audit rows record who and how many, never what: no answer text and no report con
 | Metrics | `/actuator/prometheus`, `/actuator/metrics` | no | yes | no | no | no | no |
 | Health | `/actuator/health` | public | public | public | public | public | public |
 
-"Values withheld" means the redaction rule `!hasAnyRole(OWNER, ADMIN, ANALYST)`. Authority is derived from the `roles`
-claim; the tenant and the organizations (`org_ids`) come only from the token.
+"Values withheld" means the redaction rule `!hasAnyRole(OWNER, ADMIN, ANALYST)`. Authority is derived from the roles of the
+membership; the tenant and the organizations come only from that membership. Metrics are read with an API token of the ADMIN
+role, because a session always belongs to a company and a scraper does not.

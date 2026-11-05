@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.config;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.config.beans.InitialConfigurationLoader;
 import com.company.leadershipintelligence.config.beans.InitialConfigurationLoader.Result;
 import com.company.leadershipintelligence.config.properties.InitialConfigurationProperties;
@@ -24,8 +25,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -160,12 +159,7 @@ class InitialConfigurationLoaderIntegrationTest extends PostgresIntegrationTest 
     // ---------------- scoring through the HTTP API with the bundled configuration ----------------
 
     private static RequestPostProcessor admin() {
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("user-1");
-            j.claim("tenant_id", "init-a");
-            j.claim("org_ids", List.of("org-1"));
-            j.claim("roles", List.of("ADMIN"));
-        }).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        return TestCallers.caller("user-1", "init-a", List.of("org-1"), null, List.of("ADMIN"));
     }
 
     private ObjectNode request() {

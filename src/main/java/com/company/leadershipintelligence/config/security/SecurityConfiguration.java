@@ -4,16 +4,12 @@ import com.company.leadershipintelligence.api.exception.ApiErrorWriter;
 import com.company.leadershipintelligence.api.security.ApiTokenAuthenticationFilter;
 import com.company.leadershipintelligence.api.security.CompanyContextFilter;
 import com.company.leadershipintelligence.service.identity.ApiTokenService;
-import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import com.company.leadershipintelligence.service.identity.MembershipService;
 import com.company.leadershipintelligence.service.identity.SecurityAudit;
-import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import com.company.leadershipintelligence.config.properties.IdentityProperties;
 import com.company.leadershipintelligence.api.security.PlatformRole;
 import com.company.leadershipintelligence.api.security.RespondentRole;
 import com.company.leadershipintelligence.api.security.Role;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,19 +19,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.oauth2.core.OAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
-import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
-import org.springframework.security.oauth2.jwt.BadJwtException;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
@@ -45,20 +28,17 @@ import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 import java.time.Clock;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * Authentication and authorization (specv3.md Sections 25.5, 33; decision D19). The service is an OAuth2 resource
- * server: it validates tokens issued by the platform and implements no login of its own. Every endpoint needs a
- * token. Writes need OWNER, ADMIN or ENGINEERING_LEADER; reads need any of the five roles. Sessions are not used.
- * Without a configured key set the decoder rejects every token (fail closed).
+ * Authentication and authorization (specv3.md Sections 25.5, 33; decisions D19, D65 to D70). Two chains. {@code /api/v1/auth/**} is the
+ * sign-in side: a server-side session, its cookie and CSRF protection. Everything else is the API: a caller is a signed-in session
+ * with the company named by {@code X-Company-Id} and its active membership, or an application API token; nothing else is accepted, so
+ * an unknown credential is a plain 401. Writes need OWNER, ADMIN or ENGINEERING_LEADER; reads need any of the five roles.
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SecurityConfiguration.class);
 
     /**
      * Accounts and sessions (decisions D65 to D68): {@code /api/v1/auth/**} uses a server-side session, the session cookie and CSRF
@@ -105,10 +85,15 @@ public class SecurityConfiguration {
         return new HttpSessionSecurityContextRepository();
     }
 
-    /** The CSRF token lives in a cookie the web application can read and sends back in a header (decision D68). */
+    /**
+     * The CSRF token lives in a cookie the web application can read and sends back in a header (decision D68). The script-readable
+     * cookie gets the same protections as the session cookie that it guards: SameSite=Lax, and Secure whenever the session cookie is.
+     */
     @Bean
-    CookieCsrfTokenRepository csrfTokenRepository() {
-        return CookieCsrfTokenRepository.withHttpOnlyFalse();
+    CookieCsrfTokenRepository csrfTokenRepository(@Value("${server.servlet.session.cookie.secure:true}") boolean secure) {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie.secure(secure).sameSite("Lax"));
+        return repository;
     }
 
     @Bean
@@ -129,8 +114,8 @@ public class SecurityConfiguration {
                 .securityContext(c -> c.securityContextRepository(sessions))
                 .requestCache(c -> c.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
                 .addFilterBefore(new AbsoluteSessionTimeoutFilter(identity.sessionAbsolute(), clock), SecurityContextHolderFilter.class)
-                .addFilterBefore(new ApiTokenAuthenticationFilter(apiTokens, memberships, errors, clock), BearerTokenAuthenticationFilter.class)
-                .addFilterAfter(new CompanyContextFilter(memberships, errors, audit, clock), BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(new ApiTokenAuthenticationFilter(apiTokens, memberships, errors), SecurityContextHolderFilter.class)
+                .addFilterAfter(new CompanyContextFilter(memberships, errors, audit), ApiTokenAuthenticationFilter.class)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.NEVER))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
@@ -163,12 +148,6 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/**", "/v3/api-docs", "/v3/api-docs/**").hasAnyRole(everyone)
                         .anyRequest().denyAll())
-                .oauth2ResourceServer(o -> o
-                        // an application API token (lis_...) is authenticated by ApiTokenAuthenticationFilter, not decoded as a JWT
-                        .bearerTokenResolver(request -> ApiTokenAuthenticationFilter.tokenOf(request) != null ? null : new DefaultBearerTokenResolver().resolve(request))
-                        .jwt(j -> j.jwtAuthenticationConverter(rolesConverter()))
-                        .authenticationEntryPoint(errors::unauthenticated)
-                        .accessDeniedHandler(errors::accessDenied))
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(errors::unauthenticated)
                         .accessDeniedHandler((request, response, denied) -> {
@@ -184,52 +163,5 @@ public class SecurityConfiguration {
     private static boolean hasCookie(jakarta.servlet.http.HttpServletRequest request, String name) {
         jakarta.servlet.http.Cookie[] cookies = request.getCookies();
         return cookies != null && java.util.Arrays.stream(cookies).anyMatch(c -> name.equals(c.getName()));
-    }
-
-    /** Maps the {@code roles} claim to Spring authorities named ROLE_&lt;name&gt;. */
-    @Bean
-    public JwtAuthenticationConverter rolesConverter() {
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            List<String> roles = jwt.getClaimAsStringList("roles");
-            List<GrantedAuthority> authorities = new ArrayList<>();
-            if (roles != null) {
-                roles.forEach(r -> authorities.add(new SimpleGrantedAuthority("ROLE_" + r)));
-            }
-            return authorities;
-        });
-        return converter;
-    }
-
-    @Bean
-    JwtDecoder jwtDecoder(@Value("${lis.security.jwk-set-uri:}") String jwkSetUri, @Value("${lis.security.issuer:}") String issuer,
-                          @Value("${lis.security.audience:}") String audience) {
-        if (jwkSetUri == null || jwkSetUri.isBlank()) {
-            LOG.warn("lis.security.jwk-set-uri is not set: every bearer token will be rejected");
-            return token -> {
-                throw new BadJwtException("no token verification key is configured");
-            };
-        }
-        if (issuer == null || issuer.isBlank()) {
-            LOG.warn("lis.security.issuer is not set: the issuer of a token is not checked, only its signature and validity period");
-        }
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-        decoder.setJwtValidator(validator(issuer, audience));
-        return decoder;
-    }
-
-    /** Validity period always; issuer and audience when configured (a token for another service must not be accepted here). */
-    static OAuth2TokenValidator<Jwt> validator(String issuer, String audience) {
-        List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>();
-        validators.add(new JwtTimestampValidator());
-        if (issuer != null && !issuer.isBlank()) {
-            validators.add(new JwtIssuerValidator(issuer));
-        }
-        if (audience != null && !audience.isBlank()) {
-            validators.add(jwt -> jwt.getAudience() != null && jwt.getAudience().contains(audience)
-                    ? OAuth2TokenValidatorResult.success()
-                    : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "the token is not meant for this service", null)));
-        }
-        return new DelegatingOAuth2TokenValidator<>(validators);
     }
 }

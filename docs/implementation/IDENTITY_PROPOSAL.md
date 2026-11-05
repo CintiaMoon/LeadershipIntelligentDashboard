@@ -1,6 +1,6 @@
 # Proposal D65 to D74: built-in accounts, sessions and company memberships
 
-Status: **APPROVED** (all eight questions of section 8 accepted with their defaults; phases P1 to P7 each start only on your go-ahead). `specv3.md` Sections 25 and 33 and decisions D19, D20 and D46 describe a service that
+Status: **DELIVERED** (phases P1 to P7 are merged or in review; see `docs/release/SECURITY_REVIEW_IDENTITY.md`). All eight questions of section 8 were accepted with their defaults, and each phase started only on the go-ahead of the user. `specv3.md` Sections 25 and 33 and decisions D19, D20 and D46 describe a service that
 only validates tokens from an external identity provider. This proposal replaces that with accounts, passwords, server-side
 sessions and company memberships owned by the application. Under the precedence rule this is new behavior and needs approval first.
 No code is written until you approve.
@@ -171,7 +171,7 @@ Every phase is its own pull request and ends with a report; none starts before y
 | P7 | Test migration (a helper that builds an authenticated user and company for the 715 existing tests), end-to-end and Postman rework, removal of the OIDC path and mock provider, docs, deployment guide, security hardening review | 15 to 19 |
 | | **Total (plus about 3 days for this proposal)** | **91 to 113** |
 
-The old JWT path stays behind a profile until P7 so the current tests and the end-to-end suite stay green in P1 to P6.
+The old JWT path stayed behind a profile until P7 so the tests and the end-to-end suite stayed green in P1 to P6; P7 removed it.
 P6 can start once the P1 and P3 contracts are fixed and then runs in parallel with P4 and P5. Two engineers: about 10 to 12 weeks.
 
 ## 7. Risks

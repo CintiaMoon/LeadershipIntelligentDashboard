@@ -10,10 +10,10 @@ import { latestMail, linkIn } from './mail';
 // few times an hour; if the throttle answers, wait, or clear the counters of the local stack with
 // `docker compose exec redis redis-cli FLUSHALL`.
 
-const BASE = process.env.E2E_ACCOUNTS_URL ?? 'http://localhost:3001';
+const BASE = process.env.E2E_ACCOUNTS_URL ?? 'http://localhost:3000';
 const PASSWORD = 'correct horse battery';
 const PLATFORM_PASSWORD = 'a platform administrator passphrase';
-const ADMIN = 'admin@lis.local'; // the bootstrap administrator the compose stack creates (LIS_BOOTSTRAP_ADMIN_EMAIL)
+const ADMIN = 'platform-admin-3@demo.test'; // a demo platform administrator of its own (dev profile): this journey resets its password
 
 const stamp = Date.now().toString(36);
 const company = `e2e-${stamp}`;

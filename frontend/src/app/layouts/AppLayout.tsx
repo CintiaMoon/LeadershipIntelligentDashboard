@@ -108,13 +108,13 @@ function NewOrganization({ onAdd }: { onAdd: (organizationId: string) => void })
 }
 
 export function AppLayout() {
-  const { principal, signOut, mode, company, account } = useAuth();
+  const { principal, signOut, company, account } = useAuth();
   const organizationId = useSession((s) => s.organizationId);
   const setOrganization = useSession((s) => s.setOrganization);
   const extraOrganizations = useSession((s) => s.extraOrganizations);
   const addOrganization = useSession((s) => s.addOrganization);
   // a member who is not limited to a list may also name an organization that does not exist yet
-  const mayNameNew = mode === 'session' && company?.allOrganizations === true;
+  const mayNameNew = company?.allOrganizations === true;
   const organizations = useMemo(
     () => (mayNameNew ? [...new Set([...(principal?.organizations ?? []), ...extraOrganizations])] : (principal?.organizations ?? [])),
     [principal, extraOrganizations, mayNameNew],
@@ -176,7 +176,7 @@ export function AppLayout() {
               </label>
             )}
             {mayNameNew && <NewOrganization onAdd={addOrganization} />}
-            {mode === 'session' && company && (
+            {company && (
               <p className="flex items-center gap-2 text-sm">
                 <span className="font-medium" data-testid="company-name">{company.name}</span>
                 <a href="/companies" className="text-ink-soft underline-offset-2 hover:underline">
@@ -195,7 +195,7 @@ export function AppLayout() {
                 ))}
               </div>
               <ThemeToggle />
-              {mode === 'session' && account && (
+              {account && (
                 <a href="/account" className="text-sm text-ink-soft underline-offset-2 hover:underline" title="Your account">
                   {account.displayName}
                 </a>

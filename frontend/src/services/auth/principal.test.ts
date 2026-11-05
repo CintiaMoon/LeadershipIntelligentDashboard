@@ -1,20 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { fakeToken } from '@/tests/utils';
-import { canChooseConfiguration, canManageAssessments, canScore, canSeeEvidence, decodePrincipal, isOperator, isPlatformAdmin, isRespondent, type Principal } from './principal';
+import { canChooseConfiguration, canManageAssessments, canScore, canSeeEvidence, isOperator, isPlatformAdmin, isRespondent, principalFor, type Principal } from './principal';
 
 const principal = (...roles: Principal['roles']): Principal => ({ subject: 's', tenantId: 't', organizations: ['org-1'], roles });
+const account = { id: 'u', platformAdmin: false };
+const company = (roles: string[], organizationIds: string[] = ['org-1']) => ({ id: 't-1', roles, organizationIds });
 
-describe('decodePrincipal', () => {
-  it('reads tenant, organizations and known roles from the token', () => {
-    const p = decodePrincipal(fakeToken({ sub: 'u', tenant_id: 't-1', org_ids: ['org-1', 'org-2', 7], roles: ['ADMIN', 'WIZARD'] }));
-    expect(p).toEqual({ subject: 'u', tenantId: 't-1', organizations: ['org-1', 'org-2'], roles: ['ADMIN'], platformAdmin: false, respondent: false });
+describe('principalFor', () => {
+  it('takes the company, the organizations and the known roles from the membership', () => {
+    expect(principalFor(account, company(['ADMIN', 'WIZARD'], ['org-1', 'org-2']))).toEqual({
+      subject: 'u',
+      tenantId: 't-1',
+      organizations: ['org-1', 'org-2'],
+      roles: ['ADMIN'],
+      respondent: false,
+    });
   });
 
-  it('returns null without a tenant, for garbage and for nothing', () => {
-    expect(decodePrincipal(fakeToken({ sub: 'u' }))).toBeNull();
-    expect(decodePrincipal('not-a-token')).toBeNull();
-    expect(decodePrincipal(null)).toBeNull();
-    expect(decodePrincipal('')).toBeNull();
+  it('is nothing without a company, unless the account is the platform administrator', () => {
+    expect(principalFor(account, null)).toBeNull();
   });
 });
 
@@ -37,36 +40,30 @@ describe('role helpers follow decision D19', () => {
 });
 
 describe('the platform administrator (decision D46)', () => {
-  it('is recognised without a tenant and keeps no tenant role', () => {
-    const p = decodePrincipal(fakeToken({ sub: 'root', roles: ['PLATFORM_ADMIN'] }));
-    expect(p).toEqual({ subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true, respondent: false });
+  it('belongs to no company and keeps no tenant role', () => {
+    const p = principalFor({ id: 'root', platformAdmin: true }, null);
+    expect(p).toEqual({ subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true });
     expect(isPlatformAdmin(p)).toBe(true);
     expect(canScore(p)).toBe(false);
     expect(canSeeEvidence(p)).toBe(false);
     expect(isOperator(p)).toBe(false);
   });
 
-  it('is not granted by a tenant role, however it is named', () => {
+  it('does not become one through a company, however a role is named', () => {
     expect(isPlatformAdmin(principal('OWNER', 'ADMIN'))).toBe(false);
-    expect(isPlatformAdmin(decodePrincipal(fakeToken({ sub: 'u', tenant_id: 't', roles: ['ADMIN', 'platform_admin'] })))).toBe(false);
+    expect(isPlatformAdmin(principalFor(account, company(['ADMIN', 'platform_admin', 'PLATFORM_ADMIN'])))).toBe(false);
     expect(isPlatformAdmin(null)).toBe(false);
   });
 
-  it('may also carry a tenant, which changes nothing about what the role allows', () => {
-    const p = decodePrincipal(fakeToken({ sub: 'u', tenant_id: 't', roles: ['PLATFORM_ADMIN', 'VIEWER'] }));
-    expect(p?.platformAdmin).toBe(true);
-    expect(p?.roles).toEqual(['VIEWER']);
-  });
-
-  it('is not a usable token without a tenant and without the role', () => {
-    expect(decodePrincipal(fakeToken({ sub: 'u', roles: ['ADMIN'] }))).toBeNull();
+  it('is the platform administrator even when it is given a company, and then has no company', () => {
+    expect(principalFor({ id: 'u', platformAdmin: true }, company(['VIEWER']))?.tenantId).toBe('');
   });
 });
 
 describe('the respondent (decision D48)', () => {
-  it('is recognised by the role claim, keeps no tenant role and manages nothing', () => {
-    const p = decodePrincipal(fakeToken({ sub: 'r', tenant_id: 't', roles: ['RESPONDENT'], email: 'r@acme.test' }));
-    expect(p).toMatchObject({ tenantId: 't', roles: [], respondent: true, platformAdmin: false });
+  it('is recognised by the role, keeps no tenant role and manages nothing', () => {
+    const p = principalFor(account, company(['RESPONDENT'], []));
+    expect(p).toMatchObject({ tenantId: 't-1', roles: [], respondent: true });
     expect(isRespondent(p)).toBe(true);
     expect(canManageAssessments(p)).toBe(false);
     expect(canScore(p)).toBe(false);
@@ -75,7 +72,7 @@ describe('the respondent (decision D48)', () => {
 
   it('is not granted by a tenant role, and is not a platform administrator', () => {
     expect(isRespondent(principal('OWNER', 'ADMIN'))).toBe(false);
-    expect(isRespondent(decodePrincipal(fakeToken({ sub: 'u', tenant_id: 't', roles: ['ADMIN', 'respondent'] })))).toBe(false);
+    expect(isRespondent(principalFor(account, company(['ADMIN', 'respondent'])))).toBe(false);
     expect(isRespondent(null)).toBe(false);
   });
 

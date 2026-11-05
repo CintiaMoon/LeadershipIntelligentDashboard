@@ -7,11 +7,6 @@ import type { Principal } from '@/services/auth/principal';
 
 export const adminPrincipal: Principal = { subject: 'admin-user', tenantId: 'demo-tenant', organizations: ['org-1', 'org-2'], roles: ['ADMIN'] };
 
-/** A signed (but unverified) token, enough for decodePrincipal. */
-export function fakeToken(claims: Record<string, unknown>): string {
-  const encode = (value: unknown) => btoa(JSON.stringify(value)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-  return `${encode({ alg: 'none' })}.${encode(claims)}.sig`;
-}
 
 export function testQueryClient(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } });

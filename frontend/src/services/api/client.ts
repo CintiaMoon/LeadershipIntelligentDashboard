@@ -3,17 +3,15 @@ import { ApiError } from './errors';
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 
 interface ApiConfig {
-  /** The bearer token of the external identity provider, if that is how the user signs in. */
-  getToken: () => string | null;
   /** Called when an authenticated call is refused with 401: the session is over. */
   onUnauthorized: () => void;
   /** The company named in the address bar; sent as {@code X-Company-Id} (decision D69). */
   getCompany?: () => string | null;
-  /** Send the CSRF token the server issued on every state-changing call that has no bearer token (decision D68). */
+  /** Send the CSRF token the server issued on every state-changing call (decision D68). The session provider turns it on. */
   csrf?: boolean;
 }
 
-let config: ApiConfig = { getToken: () => null, onUnauthorized: () => undefined };
+let config: ApiConfig = { onUnauthorized: () => undefined };
 
 /** Wired once by the auth provider: where the credential comes from and what to do on a 401. */
 export function configureApi(options: ApiConfig): void {
@@ -79,13 +77,11 @@ export function forgetCsrfToken(): void {
 
 async function buildHeaders(method: string, accept: string, options: RequestOptions, refreshCsrf: boolean): Promise<Record<string, string>> {
   const headers: Record<string, string> = { Accept: accept, ...options.headers };
-  const token = config.getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
   if (!options.noCompany) {
     const company = config.getCompany?.();
     if (company) headers['X-Company-Id'] = company;
   }
-  if (config.csrf && !token && !SAFE.has(method)) headers[CSRF_HEADER] = await csrfToken(refreshCsrf);
+  if (config.csrf && !SAFE.has(method)) headers[CSRF_HEADER] = await csrfToken(refreshCsrf);
   return headers;
 }
 

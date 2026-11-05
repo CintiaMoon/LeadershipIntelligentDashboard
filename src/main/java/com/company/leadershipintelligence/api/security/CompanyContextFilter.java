@@ -19,13 +19,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Turns a signed-in session into the caller the rest of the system already understands (decisions D67, D69). The session names a
- * user and nothing else; this filter reads the user and the membership on every request and then builds the same {@link Jwt}-shaped
+ * user and nothing else; this filter reads the user and the membership on every request and then builds the
  * caller that a verified token used to provide, so {@link CurrentUser}, the role rules, the tenant-scoped repositories and the
  * audit work unchanged. That object is internal: it is never signed, sent or accepted from a client.
  *
@@ -46,13 +45,11 @@ public class CompanyContextFilter extends OncePerRequestFilter {
     private final MembershipService memberships;
     private final ApiErrorWriter errors;
     private final SecurityAudit audit;
-    private final Clock clock;
 
-    public CompanyContextFilter(MembershipService memberships, ApiErrorWriter errors, SecurityAudit audit, Clock clock) {
+    public CompanyContextFilter(MembershipService memberships, ApiErrorWriter errors, SecurityAudit audit) {
         this.memberships = memberships;
         this.errors = errors;
         this.audit = audit;
-        this.clock = clock;
     }
 
     @Override
@@ -78,7 +75,7 @@ public class CompanyContextFilter extends OncePerRequestFilter {
                 errors.accessDenied(request, response, new AccessDeniedException("only a platform administrator may do this"));
                 return;
             }
-            replace(CallerTokens.caller(user.id().toString(), user.email(), null, List.of(PlatformRole.PLATFORM_ADMIN), List.of(), false, clock));
+            replace(CallerFactory.of(user.id().toString(), user.email(), null, List.of(PlatformRole.PLATFORM_ADMIN), List.of(), false));
             chain.doFilter(request, response);
             return;
         }
@@ -100,7 +97,7 @@ public class CompanyContextFilter extends OncePerRequestFilter {
         }
         List<String> roles = List.copyOf(membership.roles());
         OrganizationReach reach = memberships.reach(membership.tenantId(), membership.organizationIds());
-        replace(CallerTokens.caller(user.id().toString(), user.email(), membership.tenantId(), roles, List.copyOf(reach.organizationIds()), reach.all(), clock));
+        replace(CallerFactory.of(user.id().toString(), user.email(), membership.tenantId(), roles, List.copyOf(reach.organizationIds()), reach.all()));
         chain.doFilter(request, response);
     }
 

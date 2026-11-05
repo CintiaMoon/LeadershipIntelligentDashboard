@@ -19,7 +19,7 @@ import jakarta.validation.Valid;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,123 +50,123 @@ public abstract class ConfigurationApi {
     }
 
     /** The caller, from the verified token, with the checks that belong to this path. */
-    protected abstract Manager manager(Jwt jwt);
+    protected abstract Manager manager(AuthenticatedCaller caller);
 
     /** The layer a draft belongs to: always the platform default on the platform path. */
     protected abstract ConfigurationTarget target(Manager manager, String scope, String organizationId);
 
     @Operation(summary = "The layers the caller may manage, each with its active version and the one being worked on")
     @GetMapping("/layers")
-    public List<ConfigurationLayer> layers(@AuthenticationPrincipal Jwt jwt) {
-        return review.layers(manager(jwt));
+    public List<ConfigurationLayer> layers(@AuthenticationPrincipal AuthenticatedCaller caller) {
+        return review.layers(manager(caller));
     }
 
     @Operation(summary = "The versions of one layer, newest first (without their documents)")
     @GetMapping("/versions")
-    public List<ConfigurationVersionDetail> versions(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String scope, @RequestParam(required = false) String organizationId) {
-        Manager manager = manager(jwt);
+    public List<ConfigurationVersionDetail> versions(@AuthenticationPrincipal AuthenticatedCaller caller, @RequestParam(required = false) String scope, @RequestParam(required = false) String organizationId) {
+        Manager manager = manager(caller);
         return review.versions(manager, target(manager, scope, organizationId));
     }
 
     @Operation(summary = "One version with its document and its review record")
     @GetMapping("/versions/{versionId}")
-    public ConfigurationVersionDetail version(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.get(manager(jwt), versionId);
+    public ConfigurationVersionDetail version(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.get(manager(caller), versionId);
     }
 
     @Operation(summary = "A new draft of a layer: the given document, or a copy of the active version")
     @PostMapping("/versions")
     @ResponseStatus(HttpStatus.CREATED)
-    public ConfigurationVersionDetail createDraft(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateDraft request) {
-        Manager manager = manager(jwt);
+    public ConfigurationVersionDetail createDraft(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody CreateDraft request) {
+        Manager manager = manager(caller);
         return review.createDraft(manager, target(manager, request.scope(), request.organizationId()), request.document() == null ? null : request.document().toString());
     }
 
     @Operation(summary = "Replace the document of a draft (the whole configuration document)")
     @PutMapping("/versions/{versionId}")
-    public ConfigurationVersionDetail updateDraft(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId, @RequestBody JsonNode document) {
-        return review.updateDraft(manager(jwt), versionId, document.toString());
+    public ConfigurationVersionDetail updateDraft(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId, @RequestBody JsonNode document) {
+        return review.updateDraft(manager(caller), versionId, document.toString());
     }
 
     @Operation(summary = "A new draft with the content of any version of the layer (how a change is rolled back)")
     @PostMapping("/versions/{versionId}/copy")
     @ResponseStatus(HttpStatus.CREATED)
-    public ConfigurationVersionDetail copy(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.copyAsDraft(manager(jwt), versionId);
+    public ConfigurationVersionDetail copy(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.copyAsDraft(manager(caller), versionId);
     }
 
     @Operation(summary = "Every problem of a version, without changing it")
     @PostMapping("/versions/{versionId}/validate")
-    public ValidationResult validate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.check(manager(jwt), versionId);
+    public ValidationResult validate(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.check(manager(caller), versionId);
     }
 
     @Operation(summary = "Score the fixtures, and the tenant's recent assessments when allowed, before and after, in memory only (the read is audited)")
     @PostMapping("/versions/{versionId}/preview")
-    public PreviewResult preview(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.preview(manager(jwt), versionId);
+    public PreviewResult preview(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.preview(manager(caller), versionId);
     }
 
     @Operation(summary = "Submit a draft for approval: it is validated (every problem is returned) and previewed, then waits for another person")
     @PostMapping("/versions/{versionId}/submit")
-    public ReviewView submit(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.submit(manager(jwt), versionId);
+    public ReviewView submit(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.submit(manager(caller), versionId);
     }
 
     @Operation(summary = "Approve and activate a version awaiting approval; refused for anyone who worked on it, and while a fixture fails")
     @PostMapping("/versions/{versionId}/approve")
-    public ConfigurationVersionDetail approve(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId, @Valid @RequestBody Approve request) {
-        return review.approve(manager(jwt), versionId, request.note(), request.effectiveFrom(), request.calibrationReference(), request.knownLimitations());
+    public ConfigurationVersionDetail approve(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId, @Valid @RequestBody Approve request) {
+        return review.approve(manager(caller), versionId, request.note(), request.effectiveFrom(), request.calibrationReference(), request.knownLimitations());
     }
 
     @Operation(summary = "Send a version awaiting approval back to draft with the reason")
     @PostMapping("/versions/{versionId}/reject")
-    public ConfigurationVersionDetail reject(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId, @Valid @RequestBody Reject request) {
-        return review.reject(manager(jwt), versionId, request.comment());
+    public ConfigurationVersionDetail reject(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId, @Valid @RequestBody Reject request) {
+        return review.reject(manager(caller), versionId, request.comment());
     }
 
     @Operation(summary = "Stop using an active version for new scoring runs")
     @PostMapping("/versions/{versionId}/pause")
-    public ConfigurationVersionDetail pause(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.pause(manager(jwt), versionId);
+    public ConfigurationVersionDetail pause(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.pause(manager(caller), versionId);
     }
 
     @Operation(summary = "Use a paused version again")
     @PostMapping("/versions/{versionId}/resume")
-    public ConfigurationVersionDetail resume(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.resume(manager(jwt), versionId);
+    public ConfigurationVersionDetail resume(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.resume(manager(caller), versionId);
     }
 
     @Operation(summary = "Retire a version; it stays available to explain history")
     @PostMapping("/versions/{versionId}/archive")
-    public ConfigurationVersionDetail archive(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID versionId) {
-        return review.archive(manager(jwt), versionId);
+    public ConfigurationVersionDetail archive(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID versionId) {
+        return review.archive(manager(caller), versionId);
     }
 
     @Operation(summary = "The fixtures of a layer")
     @GetMapping("/layers/{layerId}/fixtures")
-    public List<FixtureView> fixtures(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID layerId) {
-        return review.fixtures(manager(jwt), layerId);
+    public List<FixtureView> fixtures(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID layerId) {
+        return review.fixtures(manager(caller), layerId);
     }
 
     @Operation(summary = "Add a fixture to a layer")
     @PostMapping("/layers/{layerId}/fixtures")
     @ResponseStatus(HttpStatus.CREATED)
-    public FixtureView addFixture(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID layerId, @RequestBody FixtureSpec spec) {
-        return review.saveFixture(manager(jwt), layerId, null, spec);
+    public FixtureView addFixture(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID layerId, @RequestBody FixtureSpec spec) {
+        return review.saveFixture(manager(caller), layerId, null, spec);
     }
 
     @Operation(summary = "Replace a fixture")
     @PutMapping("/layers/{layerId}/fixtures/{fixtureId}")
-    public FixtureView replaceFixture(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID layerId, @PathVariable UUID fixtureId, @RequestBody FixtureSpec spec) {
-        return review.saveFixture(manager(jwt), layerId, fixtureId, spec);
+    public FixtureView replaceFixture(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID layerId, @PathVariable UUID fixtureId, @RequestBody FixtureSpec spec) {
+        return review.saveFixture(manager(caller), layerId, fixtureId, spec);
     }
 
     @Operation(summary = "Delete a fixture")
     @DeleteMapping("/layers/{layerId}/fixtures/{fixtureId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteFixture(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID layerId, @PathVariable UUID fixtureId) {
-        review.deleteFixture(manager(jwt), layerId, fixtureId);
+    public void deleteFixture(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID layerId, @PathVariable UUID fixtureId) {
+        review.deleteFixture(manager(caller), layerId, fixtureId);
     }
 
     /** A tenant-path layer from the request, never the platform default. */

@@ -1,8 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 
 async function signIn(page: Page, persona: RegExp) {
   await page.goto('/login');
-  await page.getByRole('button', { name: persona }).click();
+  await pickPersona(page, persona);
   await expect(page.getByTestId('lis-value')).toBeVisible();
 }
 
@@ -60,7 +61,7 @@ test.describe('executive dashboard', () => {
 
   test('another tenant sees none of this data', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Administrator of another tenant/ }).click();
+    await pickPersona(page, /^Administrator of another tenant/);
     await expect(page.getByText('No scored assessments yet')).toBeVisible();
     await expect(page.getByTestId('lis-value')).toHaveCount(0);
   });

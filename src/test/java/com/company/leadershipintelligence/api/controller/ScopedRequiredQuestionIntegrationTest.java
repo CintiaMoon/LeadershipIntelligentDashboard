@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.api.controller;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
 import com.company.leadershipintelligence.service.ConfigurationService;
 import com.company.leadershipintelligence.service.command.Approval;
@@ -16,8 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -55,12 +54,7 @@ class ScopedRequiredQuestionIntegrationTest extends PostgresIntegrationTest {
     }
 
     private static RequestPostProcessor admin() {
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("user-1");
-            j.claim("tenant_id", "rq-a");
-            j.claim("org_ids", List.of("org-1"));
-            j.claim("roles", List.of("ADMIN"));
-        }).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        return TestCallers.caller("user-1", "rq-a", List.of("org-1"), null, List.of("ADMIN"));
     }
 
     private void members(ArrayNode out, String team, int count) {

@@ -13,7 +13,7 @@ const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
-beforeEach(() => configureApi({ getToken: () => 'tok', onUnauthorized: () => undefined }));
+beforeEach(() => configureApi({ onUnauthorized: () => undefined }));
 
 const routes = [
   { path: '/questionnaires/:questionnaireId', element: <BuilderPage /> },

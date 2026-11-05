@@ -1,18 +1,8 @@
 {
   "info": {
     "name": "Leadership Intelligence Scoring Engine",
-    "description": "Every endpoint of the API. Start the stack with `docker compose up -d --build`, then run folder 1 top to bottom. Tokens come from the local mock identity provider (client_id = persona: owner, admin, leader, analyst, viewer, org1-viewer, other-admin, platform-admin, assess-admin, respondent-1 to respondent-6). Change the collection variable \"persona\" to act as another role.",
+    "description": "Every endpoint of the API. Start the stack with `docker compose up -d --build` (profile dev), then run the folders top to bottom. The collection signs in with the password, as a browser does: the pre-request script keeps one session in the cookie jar, sends the CSRF token in X-XSRF-TOKEN on every state-changing call and the company in X-Company-Id. The accounts are the demo accounts of the dev profile (<name>@demo.test, password demo-password-1234): owner, admin, leader, analyst, viewer, org1-viewer, other-admin, sandbox-admin, sandbox-leader, assess-admin, assess-owner, respondent1 to respondent6, platform-admin, platform-admin-2. Change the collection variable \"persona\" to act as another account, or set the header X-Persona on a request (removed before sending); the persona \"none\" sends the request with no session at all. Requests of the Platform and Accounts folders that need a different account say so in their header.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{accessToken}}",
-        "type": "string"
-      }
-    ]
   },
   "event": [
     {
@@ -20,30 +10,54 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "// Fetches (and caches) a token from the local mock identity provider for the persona in use.",
-          "// Persona: header X-Persona on the request (removed before sending), else the collection variable \"persona\".",
-          "let persona = pm.request.headers.get('X-Persona') || pm.collectionVariables.get('persona') || 'admin';",
+          "// Signs in as the persona in use (demo account <persona>@demo.test), keeps the session in the cookie jar and adds the CSRF token and the company.",
+          "// Persona: header X-Persona on the request (removed before sending), else the collection variable \"persona\". \"none\" = no session at all.",
+          "const persona = pm.request.headers.get('X-Persona') || pm.collectionVariables.get('persona') || 'admin';",
           "pm.request.headers.remove('X-Persona');",
-          "if (pm.request.auth && pm.request.auth.type === 'noauth') { return; }",
-          "const key = 'token_' + persona;",
-          "const cached = pm.collectionVariables.get(key);",
-          "const exp = Number(pm.collectionVariables.get(key + '_exp') || 0);",
-          "if (cached && Date.now() < exp) { pm.variables.set('accessToken', cached); return; }",
-          "pm.sendRequest({",
-          "  url: pm.collectionVariables.get('authUrl') + '/default/token',",
-          "  method: 'POST',",
-          "  header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
-          "  body: { mode: 'urlencoded', urlencoded: [",
-          "    { key: 'grant_type', value: 'client_credentials' },",
-          "    { key: 'client_id', value: persona },",
-          "    { key: 'client_secret', value: 'secret' } ] }",
-          "}, (err, res) => {",
-          "  if (err || res.code !== 200) { throw new Error('token request failed for persona ' + persona + ': ' + (err || res.text())); }",
-          "  const body = res.json();",
-          "  pm.collectionVariables.set(key, body.access_token);",
-          "  pm.collectionVariables.set(key + '_exp', String(Date.now() + (body.expires_in - 60) * 1000));",
-          "  pm.variables.set('accessToken', body.access_token);",
-          "});",
+          "const base = pm.collectionVariables.get('baseUrl');",
+          "const jar = pm.cookies.jar();",
+          "const company = persona.startsWith('platform-admin') || persona === 'none' ? null : (persona === 'other-admin' ? 'other-tenant' : 'demo-tenant');",
+          "const account = persona.replace(/^respondent-(\\d)$/, 'respondent$1');",
+          "",
+          "function decorate() {",
+          "  const sessionHeaders = {};",
+          "  if (company) { sessionHeaders['X-Company-Id'] = company; }",
+          "  if (pm.collectionVariables.get('csrfToken')) { sessionHeaders['X-XSRF-TOKEN'] = pm.collectionVariables.get('csrfToken'); }",
+          "  pm.variables.set('sessionHeaders', JSON.stringify(sessionHeaders));",
+          "  if (company) { pm.request.headers.upsert({ key: 'X-Company-Id', value: company }); }",
+          "  const csrf = pm.collectionVariables.get('csrfToken');",
+          "  if (persona !== 'none' && !pm.request.headers.has('X-XSRF-TOKEN') && !['GET', 'HEAD', 'OPTIONS'].includes(pm.request.method) && csrf) {",
+          "    pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: csrf });",
+          "  }",
+          "}",
+          "function forget(done) { jar.clear(base, () => done()); }",
+          "function csrf(done) {",
+          "  pm.sendRequest({ url: base + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+          "    if (err || res.code !== 200) { throw new Error('csrf request failed: ' + (err || res.code)); }",
+          "    pm.collectionVariables.set('csrfToken', res.json().token);",
+          "    done(res.json().token);",
+          "  });",
+          "}",
+          "",
+          "if (persona === 'none') {",
+          "  // a call with no credentials at all: forget the session and the token (the next call as someone signs in again)",
+          "  pm.collectionVariables.set('signedInAs', '');",
+          "  forget(() => {});",
+          "  return;",
+          "}",
+          "if (pm.collectionVariables.get('signedInAs') === persona) { decorate(); return; }",
+          "forget(() => csrf((first) => {",
+          "  pm.sendRequest({",
+          "    url: base + '/api/v1/auth/login', method: 'POST',",
+          "    header: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': first },",
+          "    body: { mode: 'raw', raw: JSON.stringify({ email: account + '@demo.test', password: pm.collectionVariables.get('demoPassword') }) }",
+          "  }, (err, res) => {",
+          "    if (err || res.code !== 200) { throw new Error('sign-in failed for ' + account + ': ' + (err || res.code + ' ' + res.text())); }",
+          "    pm.collectionVariables.set('signedInAs', persona);",
+          "    // the session has a new CSRF token",
+          "    csrf(() => decorate());",
+          "  });",
+          "}));",
           ""
         ]
       }
@@ -53,10 +67,6 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:8080"
-    },
-    {
-      "key": "authUrl",
-      "value": "http://localhost:8081"
     },
     {
       "key": "persona",
@@ -153,9 +163,563 @@
     {
       "key": "platformDraftDocument",
       "value": ""
+    },
+    {
+      "key": "demoPassword",
+      "value": "demo-password-1234"
+    },
+    {
+      "key": "csrfToken",
+      "value": ""
+    },
+    {
+      "key": "signedInAs",
+      "value": ""
+    },
+    {
+      "key": "apiTokenId",
+      "value": ""
+    },
+    {
+      "key": "apiTokenSecret",
+      "value": ""
+    },
+    {
+      "key": "opsTokenId",
+      "value": ""
+    },
+    {
+      "key": "opsTokenSecret",
+      "value": ""
     }
   ],
   "item": [
+    {
+      "name": "0. Accounts, sessions and API tokens",
+      "description": "Sign-in with a session cookie and a CSRF token (decisions D65 to D74), the companies of the account, and an API token that works without a session until it is revoked.",
+      "item": [
+        {
+          "name": "CSRF token (also set as the XSRF-TOKEN cookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a token is returned', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().token).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/csrf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sign in with a wrong password is refused and says nothing about the account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// no CSRF token is sent here, so the first answer is 403; with one, the answer for a wrong password is 401",
+                  "pm.test('refused', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@demo.test\",\n  \"password\": \"not the password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Who am I (the account and its companies)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the account and its company', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.email).to.eql('admin@demo.test');",
+                  "  pm.expect(body.companies.map(x => x.id)).to.include('demo-tenant');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Companies of the account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the companies are listed', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().length).to.be.above(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "companies"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A state-changing call without the CSRF token is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 CSRF_TOKEN_INVALID', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().code).to.eql('CSRF_TOKEN_INVALID'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "wrong"
+              },
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"no csrf\",\n  \"role\": \"VIEWER\",\n  \"organizationIds\": [\n    \"org-1\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/api-tokens",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "api-tokens"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create an API token (the secret is shown once)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created with a secret', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.secret).to.match(/^lis_/);",
+                  "  pm.collectionVariables.set('apiTokenId', body.token.id);",
+                  "  pm.collectionVariables.set('apiTokenSecret', body.secret);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman read-only token\",\n  \"role\": \"VIEWER\",\n  \"organizationIds\": [\n    \"org-1\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/api-tokens",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "api-tokens"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create an operations token (ADMIN, for the metrics)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('opsTokenId', pm.response.json().token.id);",
+                  "  pm.collectionVariables.set('opsTokenSecret', pm.response.json().secret);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman operations token\",\n  \"role\": \"ADMIN\",\n  \"organizationIds\": [\n    \"org-1\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/api-tokens",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "api-tokens"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read with the API token and no session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the token alone is enough for a read', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiTokenSecret}}"
+              },
+              {
+                "key": "X-Persona",
+                "value": "none"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs?limit=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "The API token cannot change anything beyond its role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a viewer token may not score', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiTokenSecret}}"
+              },
+              {
+                "key": "X-Persona",
+                "value": "none"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessment\": {\n    \"organizationId\": \"org-1\",\n    \"templateId\": \"tpl-1\",\n    \"templateVersion\": \"1\",\n    \"status\": \"COMPLETED\",\n    \"completedAt\": \"2026-11-01T09:00:00Z\"\n  },\n  \"inputs\": [\n    {\n      \"questionId\": \"Q01\",\n      \"answer\": 4\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "calculate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Revoke the API token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('revoked', () => pm.expect([200, 204]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/api-tokens/{{apiTokenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "api-tokens",
+                "{{apiTokenId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A revoked API token stops working at once",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiTokenSecret}}"
+              },
+              {
+                "key": "X-Persona",
+                "value": "none"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/scoring-runs?limit=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scoring-runs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Security audit of the company",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the audit is readable by an administrator', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/security-audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "security-audit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sign out (ends the session)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signed out', () => pm.expect([200, 204]).to.include(pm.response.code));",
+                  "pm.collectionVariables.set('signedInAs', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
     {
       "name": "1. Scoring",
       "item": [
@@ -1107,7 +1671,12 @@
           "name": "Health",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/actuator/health",
               "host": [
@@ -1118,10 +1687,7 @@
                 "health"
               ]
             },
-            "description": "Open.",
-            "auth": {
-              "type": "noauth"
-            }
+            "description": "Open."
           },
           "event": [
             {
@@ -1139,7 +1705,12 @@
           "name": "Info",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/actuator/info",
               "host": [
@@ -1150,10 +1721,7 @@
                 "info"
               ]
             },
-            "description": "Open.",
-            "auth": {
-              "type": "noauth"
-            }
+            "description": "Open."
           },
           "event": [
             {
@@ -1171,7 +1739,16 @@
           "name": "Metrics list",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{opsTokenSecret}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/actuator/metrics",
               "host": [
@@ -1200,7 +1777,16 @@
           "name": "Metric detail (scoring.duration)",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{opsTokenSecret}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/actuator/metrics/scoring.duration",
               "host": [
@@ -1230,7 +1816,16 @@
           "name": "Prometheus scrape",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{opsTokenSecret}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/actuator/prometheus",
               "host": [
@@ -1259,7 +1854,16 @@
           "name": "OpenAPI document",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{opsTokenSecret}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/v3/api-docs",
               "host": [
@@ -1283,8 +1887,44 @@
               }
             }
           ]
+        },
+        {
+          "name": "Revoke the operations token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('revoked', () => pm.expect([200, 204]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/api-tokens/{{opsTokenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "api-tokens",
+                "{{opsTokenId}}"
+              ]
+            }
+          }
         }
-      ]
+      ],
+      "description": "Metrics and the OpenAPI document are read with an API token (folder 0 creates an ADMIN token and this folder revokes it at the end): a session always has a company, a scraper does not need one."
     },
     {
       "name": "4. Security and error cases",
@@ -1293,7 +1933,12 @@
           "name": "No token -> 401",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "none"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/scoring-runs",
               "host": [
@@ -1305,10 +1950,7 @@
                 "scoring-runs"
               ]
             },
-            "description": "Standard error body with correlationId.",
-            "auth": {
-              "type": "noauth"
-            }
+            "description": "Standard error body with correlationId."
           },
           "event": [
             {
@@ -2521,7 +3163,7 @@
                   "// Puts the five respondents on the team: adds the people who are not on the roster yet and moves the ones who are (the roster",
                   "// is permanent, so this collection can be run again).",
                   "const base = pm.collectionVariables.get('baseUrl');",
-                  "const auth = { 'Authorization': 'Bearer ' + pm.variables.get('accessToken'), 'Content-Type': 'application/json' };",
+                  "const auth = Object.assign({ 'Content-Type': 'application/json' }, JSON.parse(pm.variables.get('sessionHeaders') || '{}'));",
                   "const teamId = pm.collectionVariables.get('teamId');",
                   "pm.sendRequest({ url: base + '/api/v1/people', method: 'GET', header: auth }, (e, r) => {",
                   "  if (e) { throw e; }",
@@ -3171,24 +3813,33 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Respondents 2 to 5 answer in this request's script: each gets a token, saves a draft and submits.",
+                  "// Respondents 2 to 5 answer in this request's script: each signs in, saves a draft and submits; then the administrator signs in again",
+                  "// (the cookie jar holds one session), and the request itself runs as the administrator.",
                   "const base = pm.collectionVariables.get('baseUrl');",
-                  "const authUrl = pm.collectionVariables.get('authUrl');",
                   "const runId = pm.collectionVariables.get('assessmentRunId');",
                   "const answers = { answers: [1, 2, 3, 4].map((n) => ({ questionId: 'Q0' + n, answer: 2 })) };",
-                  "[2, 3, 4, 5].forEach((n) => {",
-                  "  pm.sendRequest({ url: authUrl + '/default/token', method: 'POST', header: { 'Content-Type': 'application/x-www-form-urlencoded' },",
-                  "    body: { mode: 'urlencoded', urlencoded: [{ key: 'grant_type', value: 'client_credentials' }, { key: 'client_id', value: 'respondent-' + n }, { key: 'client_secret', value: 'secret' }] } }, (e, r) => {",
-                  "    if (e) { throw e; }",
-                  "    const h = { 'Authorization': 'Bearer ' + r.json().access_token, 'Content-Type': 'application/json' };",
+                  "const csrf = (done) => pm.sendRequest({ url: base + '/api/v1/auth/csrf', method: 'GET' }, (e, r) => { if (e) { throw e; } done(r.json().token); });",
+                  "const signIn = (account, done) => pm.cookies.jar().clear(base, () => csrf((first) => pm.sendRequest({",
+                  "  url: base + '/api/v1/auth/login', method: 'POST', header: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': first },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ email: account + '@demo.test', password: pm.collectionVariables.get('demoPassword') }) } }, (e, r) => {",
+                  "  if (e || r.code !== 200) { throw new Error('sign-in failed for ' + account + ': ' + (r ? r.code : e)); }",
+                  "  csrf(done);",
+                  "})));",
+                  "const answer = (n) => {",
+                  "  if (n > 5) { signIn('assess-admin', (token) => { pm.collectionVariables.set('csrfToken', token); pm.collectionVariables.set('signedInAs', 'assess-admin'); }); return; }",
+                  "  signIn('respondent' + n, (token) => {",
+                  "    const h = { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': token, 'X-Company-Id': 'demo-tenant' };",
                   "    pm.sendRequest({ url: base + '/api/v1/respond/runs/' + runId + '/draft', method: 'PUT', header: h, body: { mode: 'raw', raw: JSON.stringify(answers) } }, (e2, r2) => {",
-                  "      if (e2 || r2.code !== 200) { throw new Error('respondent-' + n + ' could not save a draft: ' + (r2 ? r2.code : e2)); }",
+                  "      if (e2 || r2.code !== 200) { throw new Error('respondent' + n + ' could not save a draft: ' + (r2 ? r2.code : e2)); }",
                   "      pm.sendRequest({ url: base + '/api/v1/respond/runs/' + runId + '/submit', method: 'POST', header: h }, (e3, r3) => {",
-                  "        if (e3 || r3.code !== 200) { throw new Error('respondent-' + n + ' could not submit: ' + (r3 ? r3.code : e3)); }",
+                  "        if (e3 || r3.code !== 200) { throw new Error('respondent' + n + ' could not submit: ' + (r3 ? r3.code : e3)); }",
+                  "        answer(n + 1);",
                   "      });",
                   "    });",
                   "  });",
-                  "});"
+                  "};",
+                  "answer(2);",
+                  ""
                 ]
               }
             },
@@ -4386,7 +5037,7 @@
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
                   "const d = pm.response.json();",
-                  "pm.test('submitted by the administrator, no problem', () => { pm.expect(d.submittedBy).to.eql('assess-admin-user'); pm.expect(d.validationProblems).to.eql([]); });"
+                  "pm.test('submitted by the administrator, no problem', () => { pm.expect(d.submittedBy).to.match(/^[0-9a-f-]{36}$/); pm.expect(d.validationProblems).to.eql([]); });"
                 ]
               }
             }
@@ -4634,7 +5285,7 @@
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
                   "const d = pm.response.json();",
-                  "pm.test('active with the approval record', () => { pm.expect(d.status).to.eql('ACTIVE'); pm.expect(d.review.approvedBy).to.eql('assess-owner-user'); pm.expect(d.review.calibrationReference).to.eql('Postman run'); pm.expect(d.unvalidated).to.eql(false); });"
+                  "pm.test('active with the approval record', () => { pm.expect(d.status).to.eql('ACTIVE'); pm.expect(d.review.approvedBy).to.match(/^[0-9a-f-]{36}$/); pm.expect(d.review.calibrationReference).to.eql('Postman run'); pm.expect(d.unvalidated).to.eql(false); });"
                 ]
               }
             }
@@ -4972,7 +5623,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200', () => pm.response.to.have.status(200));",
-                  "pm.test('submitted by the administrator, no problem', () => { const d = pm.response.json(); pm.expect(d.submittedBy).to.eql('assess-admin-user'); pm.expect(d.validationProblems).to.eql([]); });"
+                  "pm.test('submitted by the administrator, no problem', () => { const d = pm.response.json(); pm.expect(d.submittedBy).to.match(/^[0-9a-f-]{36}$/); pm.expect(d.validationProblems).to.eql([]); });"
                 ]
               }
             }

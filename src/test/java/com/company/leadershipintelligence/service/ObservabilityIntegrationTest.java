@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.service;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
 import com.company.leadershipintelligence.service.command.Approval;
 import com.company.leadershipintelligence.service.command.Caller;
@@ -21,8 +22,6 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -77,14 +76,8 @@ class ObservabilityIntegrationTest extends PostgresIntegrationTest {
         }
     }
 
-    private static RequestPostProcessor user(String tenant, String... roles) {
-        SimpleGrantedAuthority[] authorities = java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r)).toArray(SimpleGrantedAuthority[]::new);
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("user-1");
-            j.claim("tenant_id", tenant);
-            j.claim("org_ids", List.of("org-1"));
-            j.claim("roles", List.of(roles));
-        }).authorities(authorities);
+    private static RequestPostProcessor user(String tenant, String... roles) {
+        return TestCallers.caller("user-1", tenant, List.of("org-1"), null, List.of(roles));
     }
 
     private RequestPostProcessor admin() {

@@ -36,20 +36,16 @@ describe('RequireCompany', () => {
     expect(screen.getByText('the app')).toBeInTheDocument();
   });
 
-  it('does nothing for the external provider, which has no companies', () => {
-    renderRoutes(guarded, { auth: { mode: 'oidc' } });
-    expect(screen.getByText('the app')).toBeInTheDocument();
-  });
+
 });
 
-describe('RequireAuth in the session mode', () => {
+describe('RequireAuth', () => {
   it('sends an anonymous visitor to the sign-in page', async () => {
     renderRoutes(guarded, { auth: anonymous });
     expect(await screen.findByText('login page')).toBeInTheDocument();
   });
 
   it('leaves a company screen with a full page load that remembers where the person was', async () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'session');
     const replace = vi.fn();
     vi.stubGlobal('location', { ...window.location, pathname: '/c/acme/members', search: '?x=1', replace });
     renderRoutes(guarded, { auth: anonymous });

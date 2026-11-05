@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { type Browser, type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 
 // Managing the scoring configuration (decisions D52 to D58). Everything happens in the scratch organization org-assess as an
 // organization override, so the seeded series of org-1 and org-2 never change. Two people are needed: the second-person rule
@@ -10,7 +11,7 @@ const nav = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 
 async function signIn(page: Page, persona: RegExp) {
   await page.goto('/login');
-  await page.getByRole('button', { name: persona }).click();
+  await pickPersona(page, persona);
   await page.waitForURL(/\/dashboard$/);
 }
 
@@ -131,7 +132,11 @@ test.describe('configuration management', () => {
       await owner.page.getByLabel('Calibration reference (optional)').fill('E2E: no real data');
       await owner.page.getByRole('button', { name: 'Approve and activate' }).click();
       await expect(owner.page.getByText('Active', { exact: true }).first()).toBeVisible();
-      await expect(owner.page.getByRole('region', { name: 'Review record' })).toContainText('Assessments owner'.length ? 'assess-owner-user' : '');
+      // the record names the two accounts by id (the author submitted, the owner approved), and they are not the same account
+      const record = (await owner.page.getByRole('region', { name: 'Review record' }).innerText()).replace(/\s+/g, ' ');
+      const submitter = /Submitted ?([0-9a-f-]{36})/.exec(record)?.[1];
+      const approver = /Approved ?([0-9a-f-]{36})/.exec(record)?.[1];
+      expect(submitter && approver && submitter !== approver, record).toBe(true);
       await expect(owner.page.getByRole('region', { name: 'Review record' })).toContainText('E2E: no real data');
       await expect(owner.page.getByRole('button', { name: 'Save draft' })).toHaveCount(0);
       await owner.page.getByRole('button', { name: 'JSON', exact: true }).click();
@@ -143,7 +148,7 @@ test.describe('configuration management', () => {
 
   test('an analyst can read the configuration and change nothing', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Analyst Reads/ }).click();
+    await pickPersona(page, /^Analyst Reads/);
     await page.waitForURL(/\/dashboard$/);
     await nav(page).getByRole('link', { name: 'Configuration' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Configuration' })).toBeVisible();
@@ -182,7 +187,7 @@ test.describe('configuration management', () => {
 test.describe('platform default', () => {
   test('the platform administrator sees the platform layer and the tenant roles cannot reach it', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Platform administrator/ }).click();
+    await pickPersona(page, /^Platform administrator/);
     await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
     await nav(page).getByRole('link', { name: 'Configuration' }).click();
     const card = page.getByLabel('Platform default');
@@ -201,7 +206,7 @@ test.describe('forms', () => {
       test.setTimeout(120_000);
       if (theme === 'light') await page.addInitScript(() => window.localStorage.setItem('lis.theme', 'light'));
       await page.goto('/login');
-      await page.getByRole('button', { name: /^Platform administrator/ }).click();
+      await pickPersona(page, /^Platform administrator/);
       await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
       await page.goto('/configuration/layers/platform');
       await page.getByRole('button', { name: 'New draft', exact: true }).click();

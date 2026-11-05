@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,32 +41,32 @@ public class RunController {
 
     @Operation(summary = "Runs of the caller organizations, newest first")
     @GetMapping
-    public List<AssessmentRunSummary> list(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String organizationId,
+    public List<AssessmentRunSummary> list(@AuthenticationPrincipal AuthenticatedCaller caller, @RequestParam(required = false) String organizationId,
                                  @RequestParam(required = false) String status) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         return runs.list(user.tenantId(), user.scope(), organizationId, status);
     }
 
     @Operation(summary = "A run with the progress of each team and who has not finished (the read is audited)")
     @GetMapping("/{runId}")
-    public AssessmentRunDetail get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID runId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public AssessmentRunDetail get(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID runId) {
+        CurrentUser user = CurrentUser.from(caller);
         return runs.get(user.tenantId(), user.scope(), user.actor(), runId);
     }
 
     @Operation(summary = "Start a run: pin the latest published version of a questionnaire for some teams of an organization")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public AssessmentRunDetail start(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody StartRun request) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public AssessmentRunDetail start(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody StartRun request) {
+        CurrentUser user = CurrentUser.from(caller);
         return runs.start(user.tenantId(), user.scope(), user.actor(), request.name(), request.organizationId(), request.questionnaireId(),
                 request.teamIds(), request.dueDate());
     }
 
     @Operation(summary = "Close a run: score the stored answers once with the pinned configuration")
     @PostMapping("/{runId}/close")
-    public AssessmentRunDetail close(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID runId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public AssessmentRunDetail close(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID runId) {
+        CurrentUser user = CurrentUser.from(caller);
         return runs.close(user.tenantId(), user.scope(), user.actor(), runId);
     }
 }

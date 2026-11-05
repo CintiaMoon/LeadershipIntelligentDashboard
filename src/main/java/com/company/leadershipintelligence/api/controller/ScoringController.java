@@ -28,7 +28,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,10 +69,10 @@ public class ScoringController {
 
     @Operation(summary = "Submit an assessment and its answers, score it and store the run")
     @PostMapping("/calculate")
-    public ScoringResultResponse calculate(@AuthenticationPrincipal Jwt jwt,
+    public ScoringResultResponse calculate(@AuthenticationPrincipal AuthenticatedCaller caller,
                                            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
                                            @Valid @RequestBody CalculateRequest request) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         user.scope().require(request.assessment().organizationId());
         List<ScoringInput> inputs = new ArrayList<>();
         List<ScopedResponse> responses = new ArrayList<>();
@@ -100,17 +100,17 @@ public class ScoringController {
 
     @Operation(summary = "Score a stored assessment (reuses an identical earlier run)")
     @PostMapping("/assessments/{assessmentId}/score")
-    public ScoringResultResponse score(@AuthenticationPrincipal Jwt jwt, @PathVariable String assessmentId,
+    public ScoringResultResponse score(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String assessmentId,
                                        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         ScoringRunView run = scoring.score(user.tenantId(), new AssessmentId(assessmentId), key(idempotencyKey), user.scope());
         return result(user, run);
     }
 
     @Operation(summary = "The latest completed result of an assessment")
     @GetMapping("/assessments/{assessmentId}/score")
-    public ScoringResultResponse latest(@AuthenticationPrincipal Jwt jwt, @PathVariable String assessmentId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public ScoringResultResponse latest(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String assessmentId) {
+        CurrentUser user = CurrentUser.from(caller);
         ScoringRunView run = scoring.latest(user.tenantId(), new AssessmentId(assessmentId), user.scope()).orElseThrow(() ->
                 new ScoringException(ScoringErrorCode.SCORING_RUN_NOT_FOUND, "the assessment has no scoring run yet",
                         Map.of("assessmentId", assessmentId)));
@@ -119,9 +119,9 @@ public class ScoringController {
 
     @Operation(summary = "Create a new run for an assessment, optionally with a chosen configuration version")
     @PostMapping("/assessments/{assessmentId}/score/recalculate")
-    public ScoringResultResponse recalculate(@AuthenticationPrincipal Jwt jwt, @PathVariable String assessmentId,
+    public ScoringResultResponse recalculate(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String assessmentId,
                                              @Valid @RequestBody(required = false) RecalculateRequest request) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         UUID version = null;
         if (request != null && request.configurationVersion() != null) {
             if (!user.hasAnyRole(Role.OWNER, Role.ADMIN)) {
@@ -135,15 +135,15 @@ public class ScoringController {
 
     @Operation(summary = "A stored scoring run")
     @GetMapping("/scoring-runs/{scoringRunId}")
-    public ScoringResultResponse run(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public ScoringResultResponse run(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         return result(user, read(user, scoringRunId));
     }
 
     @Operation(summary = "The stored explanation trace of a run (never recalculated)")
     @GetMapping("/scoring-runs/{scoringRunId}/explanation")
-    public ExplanationResponse explanation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public ExplanationResponse explanation(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         ScoringRunView run = read(user, scoringRunId);
         ExplanationResponse response = mapper.explanation(run, redact(user));
         scoring.auditExplanationAccess(user.tenantId(), user.actor(), scoringRunId, redact(user));
@@ -152,36 +152,36 @@ public class ScoringController {
 
     @Operation(summary = "Raw and adjusted dimension scores, coverage and contributions of a run")
     @GetMapping("/scoring-runs/{scoringRunId}/dimensions")
-    public RunDimensionsResponse dimensions(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public RunDimensionsResponse dimensions(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         return mapper.dimensions(read(user, scoringRunId), redact(user));
     }
 
     @Operation(summary = "Pattern evaluations of a run")
     @GetMapping("/scoring-runs/{scoringRunId}/patterns")
-    public RunPatternsResponse patterns(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public RunPatternsResponse patterns(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         return mapper.patterns(read(user, scoringRunId), redact(user));
     }
 
     @Operation(summary = "Penalty candidates, applied and suppressed deductions of a run")
     @GetMapping("/scoring-runs/{scoringRunId}/penalties")
-    public RunPenaltiesResponse penalties(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public RunPenaltiesResponse penalties(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         return mapper.penalties(read(user, scoringRunId), redact(user));
     }
 
     @Operation(summary = "The answers a run was scored with (owners, admins and analysts only; the read is audited)")
     @GetMapping("/scoring-runs/{scoringRunId}/answers")
-    public RunAnswersResponse answers(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public RunAnswersResponse answers(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         return new RunAnswersResponse(scoringRunId, scoring.answersOf(user.tenantId(), user.actor(), scoringRunId, user.scope()));
     }
 
     @Operation(summary = "Imbalance findings of a run")
     @GetMapping("/scoring-runs/{scoringRunId}/imbalances")
-    public RunImbalancesResponse imbalances(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public RunImbalancesResponse imbalances(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         return mapper.imbalances(read(user, scoringRunId));
     }
 

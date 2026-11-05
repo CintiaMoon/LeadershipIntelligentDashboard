@@ -3,7 +3,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/app/providers/auth-context';
 import { LoadingState } from '@/components/ui/StateViews';
 import { EmptyState } from '@/components/ui/StateViews';
-import { authConfig } from '@/services/auth/config';
 import { canManageAssessments, canReadConfiguration, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
 import { companyFromPath } from './company-path';
 
@@ -20,7 +19,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
   if (status === 'anonymous') {
     // the screens of a company have their own router, whose addresses start with /c/<company>: leaving them is a full page load
-    if (authConfig.mode === 'session' && companyFromPath(window.location.pathname)) return <LeaveToLogin />;
+    if (companyFromPath(window.location.pathname)) return <LeaveToLogin />;
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   return <>{children}</>;
@@ -97,11 +96,11 @@ function LeaveToLogin() {
  * on every call; this only avoids screens that cannot work.
  */
 export function RequireCompany({ children }: { children: ReactNode }) {
-  const { mode, account, company } = useAuth();
-  if (mode !== 'session') return <>{children}</>;
-  // a platform administrator belongs to no company: outside one they carry on, inside one they are told so
-  if (account?.platformAdmin ? !companyFromPath(window.location.pathname) : company) return <>{children}</>;
-  if (companyFromPath(window.location.pathname)) {
+  const { principal } = useAuth();
+  const inCompanyAddress = companyFromPath(window.location.pathname) !== null;
+  // the principal is the membership of the company in the address, or the platform administrator outside any company
+  if (principal && !(principal.platformAdmin && inCompanyAddress)) return <>{children}</>;
+  if (inCompanyAddress) {
     return (
       <div className="mx-auto max-w-3xl p-8">
         <EmptyState

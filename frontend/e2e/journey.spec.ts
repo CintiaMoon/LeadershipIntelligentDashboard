@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona, runsOf } from './api';
 
 // The ten steps of the brief (section 13), in order, on the deterministic seed data of organization org-2:
@@ -11,7 +11,7 @@ test('the executive journey from sign-in to comparing historical runs', async ({
   await test.step('1. the user authenticates', async () => {
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/login$/);
-    await page.getByRole('button', { name: /^Administrator Full access/ }).click();
+    await pickPersona(page, /^Administrator Full access/);
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByLabel('Your roles')).toContainText('Admin');
   });

@@ -1,16 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona } from './api';
-import { tokenFor } from './seed';
 
-const API = process.env.E2E_API_URL ?? 'http://localhost:8080';
 // a scratch organization of its own: the other specs rely on org-1 and org-2 holding only the seeded series
 const TEAM = 'E2E Alpha';
 const PEOPLE = [1, 2, 3, 4, 5].map((n) => ({ name: `Respondent ${n}`, email: `respondent${n}@demo.test`, persona: `respondent-${n}` }));
 
 async function signIn(page: Page, persona: RegExp, landing: RegExp) {
   await page.goto('/login');
-  await page.getByRole('button', { name: persona }).click();
+  await pickPersona(page, persona);
   await page.waitForURL(landing);
 }
 
@@ -166,22 +165,18 @@ test.describe('questionnaires, people, runs and the respondent flow', () => {
 
   test('the other respondents answer, and the administrator closes the run and reaches the result', async ({ page, request }) => {
     test.setTimeout(120_000);
-    const authorized = async (persona: string) => ({ Authorization: `Bearer ${await tokenFor(persona)}` });
     for (const person of PEOPLE.slice(1)) {
-      const headers = await authorized(person.persona);
-      const saved = await request.put(`${API}/api/v1/respond/runs/${runId}/draft`, {
-        headers,
-        data: {
-          answers: [
-            { questionId: 'Q01', answer: 2 },
-            { questionId: 'Q02', answer: 2 },
-            { questionId: 'Q03', answer: 2 },
-            { questionId: 'Q04', answer: 2 },
-          ],
-        },
+      const respondent = await asPersona(request, person.persona);
+      const saved = await respondent.put(`/respond/runs/${runId}/draft`, {
+        answers: [
+          { questionId: 'Q01', answer: 2 },
+          { questionId: 'Q02', answer: 2 },
+          { questionId: 'Q03', answer: 2 },
+          { questionId: 'Q04', answer: 2 },
+        ],
       });
       expect(saved.ok(), `${person.persona} saves a draft`).toBe(true);
-      const submitted = await request.post(`${API}/api/v1/respond/runs/${runId}/submit`, { headers });
+      const submitted = await respondent.post(`/respond/runs/${runId}/submit`);
       expect(submitted.ok(), `${person.persona} submits`).toBe(true);
     }
 
@@ -218,14 +213,14 @@ test.describe('questionnaires, people, runs and the respondent flow', () => {
     const detail = await admin.json<{ participants: Record<string, unknown>[] }>(`/runs/${runId}`);
     expect(detail.participants).toHaveLength(5);
     for (const p of detail.participants) expect(Object.keys(p).sort()).toEqual(['email', 'name', 'status', 'teamId']);
-    // a respondent token is refused everywhere outside the respondent flow
-    const headers = { Authorization: `Bearer ${await tokenFor('respondent-2')}` };
+    // a respondent is refused everywhere outside the respondent flow
+    const respondent = await asPersona(request, 'respondent-2');
     for (const path of ['/runs', '/teams', '/people', '/questionnaires', '/scoring-runs']) {
-      const response = await request.get(`${API}/api/v1${path}`, { headers });
+      const response = await respondent.get(path);
       expect(response.status(), path).toBe(403);
     }
     // and a person who is not on the roster has nothing to answer
-    const stranger = await request.get(`${API}/api/v1/respond/runs/${runId}`, { headers: { Authorization: `Bearer ${await tokenFor('respondent-6')}` } });
+    const stranger = await (await asPersona(request, 'respondent-6')).get(`/respond/runs/${runId}`);
     expect(stranger.status()).toBe(404);
   });
 
@@ -251,7 +246,7 @@ test.describe('questionnaires, people, runs and the respondent flow', () => {
       const teams = await admin.json<{ id: string; name: string }[]>('/teams?organizationId=org-assess');
       const teamId = teams.find((t) => t.name === TEAM)?.id as string;
       const created = await admin.post('/runs', { name: `${runName} scan ${theme}`, organizationId: 'org-assess', questionnaireId, teamIds: [teamId] });
-      expect(created.ok()).toBe(true);
+      expect(created.ok(), `${created.status()} ${await created.text()}`).toBe(true);
       const openRun = ((await created.json()) as { run: { id: string } }).run.id;
 
       await signIn(page, /^Assessments administrator/, /\/dashboard$/);

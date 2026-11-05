@@ -6,12 +6,13 @@ Every figure below comes from a command run during the release phase on a develo
 
 | Layer | Command | Result |
 |---|---|---|
-| Backend unit and integration | `mvn -B verify` | **771 tests, 0 failures, 0 errors** (P1 identity: 56 new; a real SMTP delivery to Mailpit and a sign-in, session and sign-out against the running jar were also checked by hand) (integration tests use PostgreSQL 16 in Testcontainers) |
+| Backend unit and integration | `mvn -B clean verify` | **900 tests, 0 failures, 0 errors** (identity phase P7, 2026-11-05; integration tests use PostgreSQL 16 in Testcontainers) |
 | Frontend static analysis | `npm run lint`, `npm run typecheck` | clean (0 problems) |
-| Frontend unit and component | `npm test` | **465 tests in 56 files, all pass** (coverage figures below are from the earlier run) |
+| Frontend unit and component | `npm test` | **570 tests in 68 files**; all pass. A few timing-sensitive component tests can fail when the machine is busy (for example while Maven runs at the same time) and pass when run alone |
 | Frontend build | `npm run build`, `npm run check:no-mocks` | builds; no test-only code in sources or bundle |
-| End to end (real stack, real browser) | `npm run e2e` | **81 tests, all pass**, from an empty database |
-| API contract | `newman run docs/postman/lis.postman_collection.json` | **179 requests executed (the collection plus its token calls), 244 assertions, 0 failures** (last run 2026-11-04 after every endpoint of the API was added: the roster rename and person update, the full configuration lifecycle for tenants and the platform default) |
+| End to end (real stack, real browser) | `npm run e2e` | **81 tests, all pass**, from an empty database, signed in as the demo accounts (P7) |
+| API contract | `newman run docs/postman/lis.postman_collection.json` | **333 requests executed, 258 assertions, 0 failures** (P7, 2026-11-05, from an empty database: the collection signs in with sessions and CSRF and has a folder for accounts and API tokens) |
+| End to end, accounts | `npm run e2e:accounts` | **23 tests, all pass**: the journey from the platform administrator to a revoked API token (emails read from Mailpit) and the accessibility of the account pages (P7) |
 
 Answers from several people (decision D45) were added after the first release run: 53 backend tests, 37 frontend unit tests, 4 end-to-end tests and 3 Postman requests (the collection now has 37 requests; newman reports 42 executed requests because it also counts the token calls of the authentication script). The earlier figures were 460, 171, 45 and 40 executed requests.
 | Frontend dependencies | `npm audit` | **0 vulnerabilities** (production and development) |
@@ -68,7 +69,7 @@ Earlier suites follow.
 
 | Spec | Tests | What it proves |
 |---|---|---|
-| `smoke` | 4 | OIDC sign-in with PKCE, organizations from the token, sign-out, unknown address |
+| `smoke` | 4 | sign-in with a demo account, organizations from the membership, sign-out, unknown address |
 | `dashboard` | 6 | score, four dimensions, findings, penalties, recommendations, trends, severity filter in the URL, analyst sees evidence values, viewer does not, another tenant sees nothing, accessible data tables |
 | `explainability` | 8 | explanation reaches the same final score as the dashboard; dimension drill-down with source answer for an analyst and none for a viewer; pattern, penalty and comparison pages; another tenant gets "not found"; viewer explanation redacted |
 | `journey` | 1 | the ten steps of the brief in order on deterministic data (81.25, 87.50, 67.00, and 67.00 on another template version) including a comparable and a non-comparable comparison |
@@ -99,7 +100,7 @@ These are regression budgets on a fast local network; they say nothing about a p
 
 - `npm audit`: 0 vulnerabilities. One advisory (minimatch denial of service, 13 moderate findings through the lint and OpenAPI tooling, development only) was resolved by pinning `minimatch` to a patched version with an npm override; lint, tests, build and API type generation were re-run afterwards.
 - Backend dependencies: **not scanned.** The OWASP dependency-check run was attempted and stopped after the NVD download stalled without an API key; there is no result to report (see `KNOWN_LIMITATIONS.md`, item 11).
-- Static security review, with a test for each item: tokens only in tab session storage and never in local storage or cookies; no scoring data or raw answers in client storage; a Content Security Policy without `unsafe-inline` scripts and with `connect-src` limited to the app and the identity provider; no stack traces, framework names or SQL in error bodies; tenant taken only from the token; answers and explanation reads audited without content; issuer and audience of access tokens validated when configured.
+- Static security review, with a test for each item: the session in an HttpOnly cookie and nothing in local or session storage; no scoring data or raw answers in client storage; a Content Security Policy without `unsafe-inline` scripts and with `connect-src 'self'`; no stack traces, framework names or SQL in error bodies; tenant taken only from the membership; answers and explanation reads audited without content; bearer values that are not application API tokens refused.
 
 ## Manual accessibility checklist
 

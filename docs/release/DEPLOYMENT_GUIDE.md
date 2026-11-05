@@ -1,6 +1,6 @@
 # Deployment guide
 
-Read `KNOWN_LIMITATIONS.md` first: items 1 to 4 must be resolved before a production deployment.
+Read `KNOWN_LIMITATIONS.md` first: items 1, 2 and 4 must be resolved before a production deployment, and `SECURITY_REVIEW_IDENTITY.md` lists what the identity design leaves to the operator.
 
 ## Components
 
@@ -9,53 +9,46 @@ Read `KNOWN_LIMITATIONS.md` first: items 1 to 4 must be resolved before a produc
 | API | Spring Boot jar (`mvn -B package`), `Dockerfile` in the repository root | Java 21 runtime, port 8080 |
 | Database | PostgreSQL 16 | schema is created and validated by Flyway at start (`spring.jpa.hibernate.ddl-auto=validate`) |
 | Web UI | `frontend/Dockerfile` (static build served by nginx) | port 80; proxies `/api/` to the API host `app:8080` |
-| Identity provider | your OIDC provider | must issue the token contract below; the mock provider in `docker-compose.yml` is for local use only |
+| Mail server, Redis | an SMTP server and, for more than one API instance, Redis | accounts need email (confirmation, reset, invitations); Redis holds only the sign-in throttle counters |
 
 ## Local stack
 
 ```text
-docker compose up -d --build        PostgreSQL, mock identity provider (:8081), API (:8080), web UI (:3000)
+docker compose up -d --build        PostgreSQL, Redis, Mailpit (inbox :8025), API (:8080), web UI (:3000)
 docker compose down -v              also removes the database (needed after changing the dev sample configuration)
-cd frontend && npm run e2e          seeds the demo series, then runs all browser tests
+cd frontend && npm run e2e          seeds the demo series, then runs the browser tests (signed in as the demo accounts)
 ```
 
-The `dev` profile seeds two demo tenants and the illustrative sample configuration. **Never run the `dev` profile in production.**
+The `dev` profile seeds two demo tenants, the illustrative sample configuration and demo accounts (`<name>@demo.test`: owner, admin, leader, analyst, viewer, org1-viewer, other-admin, sandbox-admin, sandbox-leader, assess-admin, assess-owner, respondent1 to respondent6, platform-admin, platform-admin-2, platform-admin-3; all with the password `demo-password-1234`). **Never run the `dev` profile in production.**
 
 ## API configuration
 
 | Setting (environment variable) | Required | Meaning |
 |---|---|---|
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | yes | JDBC URL and credentials |
-| `LIS_SECURITY_JWK_SET_URI` | yes | JWK set of the identity provider; without it every token is rejected |
-| `LIS_SECURITY_ISSUER` | strongly recommended | exact `iss` value tokens must carry; without it only signature and validity period are checked (a warning is logged) |
-| `LIS_SECURITY_AUDIENCE` | recommended | value that must appear in the token `aud` |
 | `SPRING_PROFILES_ACTIVE` | no | leave unset in production (never `dev`) |
 | `lis.logging.include-tenant-id` | no | `false` by default: tenant ids stay out of logs |
-| `management.endpoints.web.exposure.include` | no | `health,info,metrics,prometheus`; metrics and Prometheus are limited to OWNER and ADMIN by the application |
+| `management.endpoints.web.exposure.include` | no | `health,info,metrics,prometheus`; metrics and Prometheus are read with an API token of the ADMIN role (a session always has a company, a scraper has none) |
 | `lis.engine.version`, `lis.engine.algorithm-version` | no | recorded with every run |
 | `lis.configuration.approval.require-second-person` | no | `true` by default: a configuration version must be approved by someone who did not create, edit or submit it. With one platform administrator the platform default cannot be changed in the product; appoint two, or set this to `false` knowingly |
 | `lis.configuration.preview.use-recent-assessments` | no | `true` by default: owners and administrators may preview a draft against their tenant's recent assessments (in memory, audited). `false` previews fixtures only |
 | `lis.configuration.preview.max-assessments` | no | `50`: how many recent assessments a preview reads |
 
-Token contract: signed JWT with `sub`, `tenant_id` (the tenant; taken from nowhere else), `org_ids` (organizations the user may reach) and `roles` (`OWNER`, `ADMIN`, `ENGINEERING_LEADER`, `ANALYST`, `VIEWER`; see "Respondents" below for the role of people who answer questionnaires). Building questionnaires, keeping the roster and running assessments need OWNER or ADMIN. Writes need OWNER, ADMIN or ENGINEERING_LEADER; source answers need OWNER, ADMIN or ANALYST; evidence values are redacted for VIEWER; choosing an explicit configuration version needs OWNER or ADMIN.
+Roles (a membership holds one or more of them): `OWNER`, `ADMIN`, `ENGINEERING_LEADER`, `ANALYST`, `VIEWER`; see "Respondents" below for the role of people who answer questionnaires. Building questionnaires, keeping the roster and running assessments need OWNER or ADMIN. Writes need OWNER, ADMIN or ENGINEERING_LEADER; source answers need OWNER, ADMIN or ANALYST; evidence values are redacted for VIEWER; choosing an explicit configuration version needs OWNER or ADMIN. The company comes from the `X-Company-Id` header and is checked against an active membership on every request; the organizations a member may reach are part of the membership.
 
 Database: create an empty database and a user that can create tables in it. Flyway applies eleven migrations (`V1` to `V11`; `V11` adds accounts, one-time tokens, the security audit and the session store; `V10` adds the review record of a configuration version and the fixtures of a layer; `V8` adds the questionnaire library with a trigger that keeps a published version immutable; `V9` adds teams, people, assessment runs, participants, drafts and the table of submitted answers, which has no column that names a person; `V7` lets the audit hold a row without a tenant; `V6` adds the scopes of answers and runs and keeps every earlier row as an organization-level answer or run, so upgrading a populated database is safe, which was tested). Scoring history and active configuration versions are protected by triggers; back up the database like any system of record. Run migrations from one instance at a time.
 
-## Web UI configuration (build time)
+## Web UI configuration
 
-| Build argument | Value |
-|---|---|
-| `VITE_OIDC_AUTHORITY` | issuer URL of your provider |
-| `VITE_OIDC_CLIENT_ID` | the registered public client (authorization code with PKCE) |
-| `VITE_DEV_PERSONAS` | must be `false` |
+The image takes no build arguments and no runtime settings: the browser talks only to its own origin, and nginx proxies `/api/` to the API host `app:8080`.
 
-Runtime environment of the nginx container: `IDP_ORIGIN` is the identity provider's origin (scheme, host, port) and becomes `connect-src` in the Content Security Policy. Register `https://<ui-host>/auth/callback` as the redirect URI and `https://<ui-host>/login` as the post-logout URI.
+The content security policy is `default-src 'self'` with `connect-src 'self'`: no other origin is allowed.
 
 The container sends a Content Security Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and `Cross-Origin-Opener-Policy`, gzips text assets, caches fingerprinted assets for a year and never caches the application shell. Terminate TLS in front of it and add `Strict-Transport-Security` there. Adjust the proxy target in `frontend/nginx/default.conf.template` if the API is not reachable as `app:8080`.
 
-## Accounts, sessions and email (identity phase P1)
+## Accounts, sessions and email
 
-The application now owns accounts and sessions beside the bearer-token path (see `docs/implementation/IDENTITY_PROPOSAL.md`; the product still signs in with the external provider until phase P3). Migration `V11` adds `app_user`, `auth_token`, `security_audit_event` (append-only) and the two tables of Spring Session.
+The application owns accounts, sessions and company memberships (see `docs/implementation/IDENTITY_PROPOSAL.md`, decisions D65 to D74); callers that are not a browser use API tokens. Migration `V11` adds `app_user`, `auth_token`, `security_audit_event` (append-only) and the two tables of Spring Session.
 
 | Setting (environment variable) | Default | Meaning |
 |---|---|---|
@@ -75,27 +68,27 @@ The application now owns accounts and sessions beside the bearer-token path (see
 
 Serve the application and the web UI from the **same origin** (the bundled nginx proxies `/api`), because the session and CSRF cookies are not shared across origins. Terminate TLS in front and forward the original client address. The local compose stack adds Mailpit: every email is caught at http://localhost:8025.
 
-**Web application sign-in mode.** The web application is built for one way of signing in, chosen when the image is built (`--build-arg VITE_AUTH_MODE=...`, or `VITE_AUTH_MODE` for `npm run build`): `session` (the default) uses the application's own accounts, with the register, confirm, sign-in, reset, company-picker and invitation pages, and every screen of a company under `/c/<company>/...`; `oidc` uses the external identity provider with bearer tokens and is kept only until the last identity phase removes it. A production image uses `session` and sets none of the `VITE_OIDC_*` or `VITE_DEV_PERSONAS` arguments. Nothing else changes in the container: the address of a company screen (`/c/acme/dashboard`) is served by the same `index.html` fallback as every other address, the content security policy needs no change (the browser talks only to its own origin), and switching company is a full page load. Set `LIS_WEB_BASE_URL` to the address people open, because the links in confirmation, reset and invitation emails start with it.
+Every screen of a company lives under `/c/<company>/...`; the address of a company screen (`/c/acme/dashboard`) is served by the same `index.html` fallback as every other address, the content security policy needs no change, and switching company is a full page load. Set `LIS_WEB_BASE_URL` to the address people open, because the links in confirmation, reset and invitation emails start with it.
 
 ## The platform administrator
 
-Creating and listing tenants is for one role, `PLATFORM_ADMIN`, in the `roles` claim. It belongs to no tenant: its token has **no** `tenant_id` and no `org_ids`, so it can reach nothing tenant-scoped, and the tenant roles can reach nothing of platform administration. Grant it in the identity provider only to the few people who operate the platform, never to a tenant's users. In the product they land on the Tenants screen (list, filter, create); the same operations exist as `GET` and `POST /api/v1/platform/tenants`. Each creation and each list read is recorded in `scoring_access_audit` with the subject. A tenant id is permanent: choose the one your identity provider will issue as `tenant_id`. Nothing renames, disables or deletes a tenant (limitation 4).
+Creating and listing tenants is for the platform administrator: an account with the platform flag. It belongs to no company (no membership), so it reaches nothing tenant-scoped, and the tenant roles reach nothing of platform administration. The first one is created at startup from `LIS_BOOTSTRAP_ADMIN_EMAIL` (when no active one exists), and that person sets a password through the emailed link; give the flag only to the few people who operate the platform. In the product they land on the Tenants screen (list, filter, create, and invite the first owner); the same operations exist as `GET` and `POST /api/v1/platform/tenants`. Each creation and each list read is recorded in `scoring_access_audit` with the account. A tenant id is permanent. Nothing renames, disables or deletes a tenant (limitation 4).
 
 ## Respondents
 
-People who answer questionnaires are not users of the product in the tenant sense. Give them the role `RESPONDENT` in the `roles` claim and a `tenant_id`, and issue the **verified** e-mail address as the `email` claim. Nothing else is needed: no `org_ids`. The product matches the token to the roster entry whose e-mail address equals the claim (lower-cased) in the token's tenant, so:
+People who answer questionnaires are not managers of the product. Owners and administrators invite them from the People screen ("Invite to answer"): the person receives an email, registers or signs in with that address, confirms it, and joins the company with the role `RESPONDENT` and no organizations. The product matches the account to the roster entry whose e-mail address equals the **confirmed** address of the account (lower-cased) in that company, so:
 
-- an address on the roster that the provider does not verify lets someone answer as another person: issue only verified addresses (limitation 45);
-- a respondent token reaches `/api/v1/respond/**` and nothing else, and the tenant roles do not reach it; do not give the role to people who also administer, or they will need two tokens;
+- an address is trusted only after the application confirmed it by a link sent to it, so nobody can answer as another person by typing their address (this closed limitation 45);
+- a respondent reaches `/api/v1/respond/**` and nothing else, and the tenant roles do not reach it; a person who also administers has two memberships in the same company only if invited twice, so prefer a separate address;
 - a person who is not on the roster has nothing to answer and sees an empty list.
 
-Owners and administrators keep the roster in the product (People) and start runs (Assessment runs). The roster holds names and e-mail addresses, which are personal data with no retention rule yet (limitation 44). The local mock provider has `respondent-1` to `respondent-6` (`respondentN@demo.test`) and `assess-admin` (an administrator of the scratch organization `org-assess`), for the development stack and the browser tests only.
+Owners and administrators keep the roster in the product (People) and start runs (Assessment runs). The roster holds names and e-mail addresses, which are personal data with no retention rule yet (limitation 44). The `dev` profile has the demo accounts `respondent1` to `respondent6` (`respondentN@demo.test`) and `assess-admin` (an administrator of the scratch organization `org-assess`), for the development stack and the browser tests only.
 
 ## Changing the configuration while it runs
 
 Scoring configuration can be changed in the product without a restart (decisions D52 to D58). The platform administrator changes the platform default through `/api/v1/platform/configuration`; owners and administrators change their tenant override and the overrides of their organizations through `/api/v1/configuration` (analysts may read). A change is a **draft**, which is validated (every problem is listed), previewed against the layer's **fixtures** and, where allowed, the tenant's recent assessments, and submitted; a **different person** approves it with a note and, ideally, a calibration reference. Approval is refused while a fixture fails. Active versions are never edited: a mistake is rolled back by copying an earlier version as a new draft. Scores already stored never change.
 
-Things to arrange: **two platform administrators** (the identity provider issues `PLATFORM_ADMIN` to at least two people, never to tenant users), at least two owners or administrators per tenant that will change its own configuration, and a decision about the calibration reference (a dataset, pilot or review) that a version should name before it is trusted; a version without one is shown as unvalidated. The initial file is no longer the only way in: `SYNC` still activates a changed file as a new version, without a second person, as the startup system actor, so prefer the product for changes after the first start. The starter fixtures beside the bundled file (`initial-platform-default.fixtures.json`) are added once; edit them to match your own platform file, because a fixture that no longer holds blocks approval. The configuration cache is per instance (limitation 16), so another instance can serve an older version for up to five minutes after an approval.
+Things to arrange: **two platform administrators** (accounts with the platform flag for at least two people, never for tenant users), at least two owners or administrators per tenant that will change its own configuration, and a decision about the calibration reference (a dataset, pilot or review) that a version should name before it is trusted; a version without one is shown as unvalidated. The initial file is no longer the only way in: `SYNC` still activates a changed file as a new version, without a second person, as the startup system actor, so prefer the product for changes after the first start. The starter fixtures beside the bundled file (`initial-platform-default.fixtures.json`) are added once; edit them to match your own platform file, because a fixture that no longer holds blocks approval. The configuration cache is per instance (limitation 16), so another instance can serve an older version for up to five minutes after an approval.
 
 ## Putting a configuration in place
 
@@ -111,15 +104,15 @@ On the first start against an empty database the application validates the file,
 
 The bundled file is an initial, unvalidated proposal: its contents, the choices to review first and how to change them are in `docs/configuration/INITIAL_CONFIGURATION.md`. A configuration document contains `questions`, `signals`, `dimensions`, `patterns`, `penalties`, `imbalances`, `overall` and the optional `recommendations` and `presentation` catalogs and `responses` block (`defaultMethod` MEDIAN or MEAN, `minResponses`, `signalShare`, `fullConfidenceResponses`; each question may set its own `aggregation`; every default is unvalidated and decides how answers from several people are combined, when a question counts as missing, and how participation lowers confidence). `src/main/resources/dev/sample-platform-default.json` is a separate illustrative sample used only by the `dev` profile. Tenants, templates and organizations may override fields in their own layer; a run records the exact layer versions and the resulting hash.
 
-Tenants are created by the platform administrator in the product (see above) or through `POST /api/v1/platform/tenants`. To try the bundled configuration locally without the `dev` profile: `docker compose up -d postgres mock-oauth2`, run `mvn spring-boot:run`, sign in as the `platform-admin` persona and create a tenant (the `dev` profile would seed two demo tenants and use its own sample instead).
+Tenants are created by the platform administrator in the product (see above) or through `POST /api/v1/platform/tenants`. To try the bundled configuration locally without the `dev` profile: `docker compose up -d postgres mailpit redis`, run `LIS_BOOTSTRAP_ADMIN_EMAIL=you@example.test mvn spring-boot:run` (with `SPRING_MAIL_HOST=localhost SPRING_MAIL_PORT=1025`), open the reset link that arrives in Mailpit (http://localhost:8025), set a password, sign in and create a tenant (the `dev` profile would seed two demo tenants and use its own sample instead).
 
 ## Verifying a deployment
 
 1. `GET /actuator/health` returns `UP`.
-2. With a token of a real user: `GET /api/v1/organizations/{org}/dashboard` returns 200 (or an empty dashboard). With an administrator token, `GET /api/v1/questionnaires` returns 200; with a respondent token, `GET /api/v1/respond/runs` returns 200 and `GET /api/v1/runs` returns 403.
-3. `newman run docs/postman/lis.postman_collection.json` against a non-production environment (set `baseUrl` and `authUrl`; the persona mechanism of the collection works with the mock provider only, so supply tokens for a real provider).
+2. Signed in as a member (or with an API token): `GET /api/v1/organizations/{org}/dashboard` returns 200 (or an empty dashboard). As an administrator, `GET /api/v1/questionnaires` returns 200; as a respondent, `GET /api/v1/respond/runs` returns 200 and `GET /api/v1/runs` returns 403. Without a session or token every `/api/v1` call except sign-in and registration returns 401.
+3. `newman run docs/postman/lis.postman_collection.json` against a non-production environment started with the `dev` profile (the collection signs in as the demo accounts, which exist only there).
 4. In a browser: sign in, open the dashboard, open the explanation of a run, confirm the notice text appears with the score.
-5. `GET /actuator/prometheus` as an OWNER or ADMIN shows `scoring_requests_total` and the `scoring_duration_seconds` timers.
+5. `GET /actuator/prometheus` with an API token of the ADMIN role (create it on the API tokens screen) shows `scoring_requests_total` and the `scoring_duration_seconds` timers; with a session it is refused, because a session always has a company.
 
 ## Operating notes
 

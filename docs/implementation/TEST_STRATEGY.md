@@ -78,7 +78,7 @@ MockMvc: `/score` rejects an `inputs` body; `/calculate` accepts the assessment 
 
 ## 8. Security tests
 
-JWT required on all endpoints; role matrix per D19 (each role against each operation); VIEWER receives redacted evidence; organization outside `org_ids` rejected (D20); recalculate with a configuration version allowed only for OWNER/ADMIN and only for ACTIVE/ARCHIVED versions of the tenant (D21); idempotency key per D22; comparable flag and delta per D27; trace conforms to the D24 schema; no tenant/role taken from the request body; log inspection test for raw-answer leakage (V3 §33.3).
+Authentication (a session or an API token) required on all endpoints; role matrix per D19 (each role against each operation); VIEWER receives redacted evidence; organization outside `org_ids` rejected (D20); recalculate with a configuration version allowed only for OWNER/ADMIN and only for ACTIVE/ARCHIVED versions of the tenant (D21); idempotency key per D22; comparable flag and delta per D27; trace conforms to the D24 schema; no tenant/role taken from the request body; log inspection test for raw-answer leakage (V3 §33.3).
 
 ## 9. Non-functional
 

@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,57 +43,57 @@ public class QuestionnaireController {
 
     @Operation(summary = "The tenant's questionnaires, newest first")
     @GetMapping
-    public List<QuestionnaireSummary> list(@AuthenticationPrincipal Jwt jwt) {
-        return questionnaires.list(caller(jwt));
+    public List<QuestionnaireSummary> list(@AuthenticationPrincipal AuthenticatedCaller caller) {
+        return questionnaires.list(caller(caller));
     }
 
     @Operation(summary = "A questionnaire: its open draft, else its latest published version, or the version asked for")
     @GetMapping("/{id}")
-    public QuestionnaireDetail get(@AuthenticationPrincipal Jwt jwt, @PathVariable String id, @RequestParam(required = false) Integer version) {
-        return questionnaires.get(caller(jwt), id, version);
+    public QuestionnaireDetail get(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String id, @RequestParam(required = false) Integer version) {
+        return questionnaires.get(caller(caller), id, version);
     }
 
     @Operation(summary = "Create an empty questionnaire with a first draft")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public QuestionnaireDetail create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateQuestionnaireRequest request) {
-        return questionnaires.create(caller(jwt), request.name());
+    public QuestionnaireDetail create(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody CreateQuestionnaireRequest request) {
+        return questionnaires.create(caller(caller), request.name());
     }
 
     @Operation(summary = "Create a questionnaire whose first draft is a copy of the platform default; the notes list what the builder could not carry over")
     @PostMapping("/from-initial")
     @ResponseStatus(HttpStatus.CREATED)
-    public QuestionnaireDetail fromInitial(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateQuestionnaireRequest request) {
-        return questionnaires.fromInitial(caller(jwt), request.name());
+    public QuestionnaireDetail fromInitial(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody CreateQuestionnaireRequest request) {
+        return questionnaires.fromInitial(caller(caller), request.name());
     }
 
     @Operation(summary = "Save the open draft (opens the next draft when the latest version is published)")
     @PutMapping("/{id}")
-    public QuestionnaireDetail save(@AuthenticationPrincipal Jwt jwt, @PathVariable String id, @RequestBody QuestionnaireDocument document) {
-        return questionnaires.saveDraft(caller(jwt), id, document);
+    public QuestionnaireDetail save(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String id, @RequestBody QuestionnaireDocument document) {
+        return questionnaires.saveDraft(caller(caller), id, document);
     }
 
     @Operation(summary = "Publish the open draft as an active template layer; 422 lists everything that blocks it")
     @PostMapping("/{id}/publish")
-    public QuestionnaireDetail publish(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
-        return questionnaires.publish(caller(jwt), id);
+    public QuestionnaireDetail publish(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String id) {
+        return questionnaires.publish(caller(caller), id);
     }
 
     @Operation(summary = "Hide the questionnaire from new use (past assessments stay explainable)")
     @PostMapping("/{id}/archive")
-    public QuestionnaireDetail archive(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
-        return questionnaires.archive(caller(jwt), id);
+    public QuestionnaireDetail archive(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String id) {
+        return questionnaires.archive(caller(caller), id);
     }
 
     @Operation(summary = "A new questionnaire with a copy of this one as its first draft")
     @PostMapping("/{id}/duplicate")
     @ResponseStatus(HttpStatus.CREATED)
-    public QuestionnaireDetail duplicate(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
-        return questionnaires.duplicate(caller(jwt), id);
+    public QuestionnaireDetail duplicate(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String id) {
+        return questionnaires.duplicate(caller(caller), id);
     }
 
-    private static Caller caller(Jwt jwt) {
-        CurrentUser user = CurrentUser.from(jwt);
+    private static Caller caller(AuthenticatedCaller caller) {
+        CurrentUser user = CurrentUser.from(caller);
         return Caller.tenant(user.tenantId(), user.actor());
     }
 }

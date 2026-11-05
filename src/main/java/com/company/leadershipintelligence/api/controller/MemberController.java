@@ -13,7 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -44,41 +44,41 @@ public class MemberController {
 
     @Operation(summary = "The members and pending invitations of this company (not the removed ones)")
     @GetMapping
-    public List<MemberResponse> list(@AuthenticationPrincipal Jwt jwt) {
-        Callers.person(jwt);
-        return members.list(CurrentUser.from(jwt).tenantId().value()).stream().map(MemberController::response).toList();
+    public List<MemberResponse> list(@AuthenticationPrincipal AuthenticatedCaller caller) {
+        Callers.person(caller);
+        return members.list(CurrentUser.from(caller).tenantId().value()).stream().map(MemberController::response).toList();
     }
 
     @Operation(summary = "Invite a person by email with roles and, optionally, organizations; they are sent a single-use link")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public MemberResponse invite(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody InviteMemberRequest request, HttpServletRequest http) {
-        UUID actor = Callers.person(jwt);
-        return response(members.invite(actor, CurrentUser.from(jwt).tenantId().value(), request.email(), request.roles(), request.organizationIds(), Callers.client(http)));
+    public MemberResponse invite(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody InviteMemberRequest request, HttpServletRequest http) {
+        UUID actor = Callers.person(caller);
+        return response(members.invite(actor, CurrentUser.from(caller).tenantId().value(), request.email(), request.roles(), request.organizationIds(), Callers.client(http)));
     }
 
     @Operation(summary = "Change the roles, the organizations or the status (ACTIVE, SUSPENDED) of a member; applies at their next request")
     @PatchMapping("/{id}")
-    public MemberResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody UpdateMemberRequest request, HttpServletRequest http) {
-        UUID actor = Callers.person(jwt);
-        return response(members.update(actor, CurrentUser.from(jwt).tenantId().value(), id,
+    public MemberResponse update(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID id, @Valid @RequestBody UpdateMemberRequest request, HttpServletRequest http) {
+        UUID actor = Callers.person(caller);
+        return response(members.update(actor, CurrentUser.from(caller).tenantId().value(), id,
                 new MemberChange(request.roles(), request.organizationIds(), request.status()), Callers.client(http)));
     }
 
     @Operation(summary = "Remove a member or withdraw an invitation")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void remove(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, HttpServletRequest http) {
-        UUID actor = Callers.person(jwt);
-        members.remove(actor, CurrentUser.from(jwt).tenantId().value(), id, Callers.client(http));
+    public void remove(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID id, HttpServletRequest http) {
+        UUID actor = Callers.person(caller);
+        members.remove(actor, CurrentUser.from(caller).tenantId().value(), id, Callers.client(http));
     }
 
     @Operation(summary = "Send a pending invitation again; the earlier link stops working")
     @PostMapping("/{id}/resend-invitation")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void resend(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, HttpServletRequest http) {
-        UUID actor = Callers.person(jwt);
-        members.resendInvitation(actor, CurrentUser.from(jwt).tenantId().value(), id, Callers.client(http));
+    public void resend(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID id, HttpServletRequest http) {
+        UUID actor = Callers.person(caller);
+        members.resendInvitation(actor, CurrentUser.from(caller).tenantId().value(), id, Callers.client(http));
     }
 
     private static MemberResponse response(MemberView view) {

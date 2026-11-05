@@ -23,7 +23,7 @@ import com.company.leadershipintelligence.service.query.HistoryViews.RunSummary;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -62,12 +62,12 @@ public class HistoryController {
 
     @Operation(summary = "Assessments of the caller's organizations with their latest result")
     @GetMapping("/assessments")
-    public PageResponse<AssessmentResponse> assessments(@AuthenticationPrincipal Jwt jwt,
+    public PageResponse<AssessmentResponse> assessments(@AuthenticationPrincipal AuthenticatedCaller caller,
                                                         @RequestParam(required = false) String organizationId,
                                                         @RequestParam(required = false) String status,
                                                         @RequestParam(required = false) String cursor,
                                                         @RequestParam(required = false) Integer limit) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         if (status != null && !STATUSES.contains(status)) {
             throw new ApiRequestException("status is not a known assessment status");
         }
@@ -77,19 +77,19 @@ public class HistoryController {
 
     @Operation(summary = "One assessment with its latest result")
     @GetMapping("/assessments/{assessmentId}")
-    public AssessmentResponse assessment(@AuthenticationPrincipal Jwt jwt, @PathVariable String assessmentId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public AssessmentResponse assessment(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String assessmentId) {
+        CurrentUser user = CurrentUser.from(caller);
         return assessment(history.assessment(user.tenantId(), user.scope(), assessmentId));
     }
 
     @Operation(summary = "Score history with the previous score and whether the change is comparable")
     @GetMapping("/scoring-runs")
-    public PageResponse<RunSummaryResponse> runs(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String organizationId,
+    public PageResponse<RunSummaryResponse> runs(@AuthenticationPrincipal AuthenticatedCaller caller, @RequestParam(required = false) String organizationId,
                                                  @RequestParam(required = false) String assessmentId,
                                                  @RequestParam(required = false) String from, @RequestParam(required = false) String to,
                                                  @RequestParam(required = false) String cursor,
                                                  @RequestParam(required = false) Integer limit) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         Instant start = instant(from, "from");
         Instant end = instant(to, "to");
         Page<RunSummary> page = guarded(() -> history.runs(user.tenantId(), user.scope(), organizationId, assessmentId, start, end, cursor, limit(limit)));
@@ -98,8 +98,8 @@ public class HistoryController {
 
     @Operation(summary = "Compare two runs; a change is reported only when they are comparable")
     @GetMapping("/scoring-runs/compare")
-    public ComparisonResponse compare(@AuthenticationPrincipal Jwt jwt, @RequestParam String baseRunId, @RequestParam String runId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public ComparisonResponse compare(@AuthenticationPrincipal AuthenticatedCaller caller, @RequestParam String baseRunId, @RequestParam String runId) {
+        CurrentUser user = CurrentUser.from(caller);
         var c = history.compare(user.tenantId(), user.scope(), uuid(baseRunId, "baseRunId"), uuid(runId, "runId"));
         return new ComparisonResponse(run(c.base()), run(c.run()), c.comparable(), c.notComparableReasons(), c.scoreChange(),
                 c.dimensions().stream().map(d -> new DimensionChangeResponse(d.dimension(), d.baseScore(), d.score(), d.change())).toList(),
@@ -108,25 +108,25 @@ public class HistoryController {
 
     @Operation(summary = "Recommendations for a run, from the catalog of the configuration it was scored with")
     @GetMapping("/scoring-runs/{scoringRunId}/recommendations")
-    public RecommendationsResponse recommendations(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public RecommendationsResponse recommendations(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         var r = recommendations.forRun(user.tenantId(), user.scope(), scoringRunId);
         return new RecommendationsResponse(r.scoringRunId(), r.recommendations(), r.unmappedActionKeys(), Notices.DIAGNOSTIC);
     }
 
     @Operation(summary = "Display names, descriptions and score bands of the configuration a run was scored with")
     @GetMapping("/scoring-runs/{scoringRunId}/catalog")
-    public RunCatalog catalog(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID scoringRunId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public RunCatalog catalog(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID scoringRunId) {
+        CurrentUser user = CurrentUser.from(caller);
         return catalog.forRun(user.tenantId(), user.scope(), scoringRunId);
     }
 
     @Operation(summary = "Run series of an organization with dimensions, patterns and penalty totals per run, oldest first")
     @GetMapping("/organizations/{organizationId}/trends")
-    public TrendsResponse trends(@AuthenticationPrincipal Jwt jwt, @PathVariable String organizationId,
+    public TrendsResponse trends(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String organizationId,
                                  @RequestParam(required = false) String templateId, @RequestParam(required = false) String from,
                                  @RequestParam(required = false) String to, @RequestParam(required = false) Integer limit) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         var t = history.trends(user.tenantId(), user.scope(), organizationId, templateId, instant(from, "from"), instant(to, "to"),
                 limit == null ? 30 : limit(limit));
         return new TrendsResponse(t.organizationId(), t.templateId(), t.points().stream().map(p -> new TrendPointResponse(run(p.run()),
@@ -135,8 +135,8 @@ public class HistoryController {
 
     @Operation(summary = "Organization dashboard: latest result per template, recent runs and assessment counts")
     @GetMapping("/organizations/{organizationId}/dashboard")
-    public DashboardResponse dashboard(@AuthenticationPrincipal Jwt jwt, @PathVariable String organizationId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public DashboardResponse dashboard(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String organizationId) {
+        CurrentUser user = CurrentUser.from(caller);
         var d = history.dashboard(user.tenantId(), user.scope(), organizationId);
         return new DashboardResponse(d.organizationId(), d.latestPerTemplate().stream().map(HistoryController::run).toList(),
                 d.recentRuns().stream().map(HistoryController::run).toList(), d.assessmentsByStatus(), Notices.DIAGNOSTIC);

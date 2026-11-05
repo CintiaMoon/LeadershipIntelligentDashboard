@@ -6,7 +6,6 @@ import { FormError, Switch, inputClass, selectClass } from '@/components/ui/Form
 import { PageHeader } from '@/components/ui/PageHeader';
 import { QuerySection } from '@/components/ui/QuerySection';
 import { EmptyState } from '@/components/ui/StateViews';
-import { authConfig } from '@/services/auth/config';
 import { useCreatePerson, useCreateTeam, usePeople, useRenameTeam, useTeams, useUpdatePerson } from '@/services/queries/hooks';
 import { useInvitePerson } from '@/services/queries/identity';
 import { useSession } from '@/stores/session';
@@ -180,10 +179,10 @@ function PersonRow({ person, teams }: { person: PersonView; teams: TeamView[] })
             <Button variant="ghost" aria-label={`Edit ${person.name}`} onClick={() => setEditing(true)}>
               Edit
             </Button>
-            {authConfig.mode === 'session' && person.active && (
+            {person.active && (
               <Button
                 variant="ghost"
-                aria-label={`Invite ${person.name} to answer`}
+                aria-label={`${invite.isSuccess ? 'Invited' : 'Invite to answer'}: ${person.name}`}
                 disabled={invite.isPending || invite.isSuccess}
                 onClick={() => invite.mutate(person.id as string)}
                 title="Send an invitation to answer questionnaires, to the e-mail address listed here"

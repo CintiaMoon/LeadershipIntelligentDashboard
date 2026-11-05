@@ -1,6 +1,5 @@
 import { createContext, useContext } from 'react';
 import type { Principal } from '@/services/auth/principal';
-import type { AuthMode } from '@/services/auth/config';
 import type { Account, Company } from '@/types/identity';
 
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
@@ -9,10 +8,8 @@ export interface AuthContextValue {
   status: AuthStatus;
   /** What the user may do in the company they are looking at (or as platform administrator). Null outside a company. */
   principal: Principal | null;
-  signIn: (personaId?: string, returnTo?: string) => Promise<void>;
+  signIn: () => Promise<void>;
   signOut: () => Promise<void>;
-  /** How people sign in; only the session mode has the fields below. */
-  mode?: AuthMode;
   account?: Account | null;
   /** The companies the user may open (ACTIVE memberships only). */
   companies?: Company[];

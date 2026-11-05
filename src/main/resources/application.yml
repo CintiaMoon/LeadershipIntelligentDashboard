@@ -1,4 +1,7 @@
 spring:
+  autoconfigure:
+    # the application checks passwords itself (AuthenticationService); without this Boot adds a default user with a password it prints in the log
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   data:
     redis:
       # Redis holds throttle counters only (decision D71); no Spring Data repositories are built on it

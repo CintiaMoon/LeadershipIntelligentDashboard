@@ -5,7 +5,7 @@
 ## 1. Conventions
 
 - Base path `/api/v1`. JSON, UTF-8. Every endpoint enforces authentication, tenant scope and authorization (V3 §28).
-- Authentication: Spring Security resource server validating platform JWTs (D19). Claims `sub`, `tenant_id`, `org_ids`, `roles`. Roles OWNER, ADMIN, ENGINEERING_LEADER, ANALYST, VIEWER. Writes (`/calculate`, `/score`, `/recalculate`): OWNER, ADMIN, ENGINEERING_LEADER. Reads: all roles. Raw evidence/text in explanations: OWNER, ADMIN, ANALYST (VIEWER receives redacted evidence). Non-default configuration on recalculate: OWNER, ADMIN.
+- Authentication: a server-side session (cookie `LIS_SESSION`, CSRF token in `X-XSRF-TOKEN`) with the company in `X-Company-Id`, or an API token (`Authorization: Bearer lis_...`); sections 19 and 20. The caller is the account's active membership in that company: its roles (OWNER, ADMIN, ENGINEERING_LEADER, ANALYST, VIEWER) and organizations (D19 originally described these as JWT claims; the JWT path was removed in phase P7). Writes (`/calculate`, `/score`, `/recalculate`): OWNER, ADMIN, ENGINEERING_LEADER. Reads: all roles. Raw evidence/text in explanations: OWNER, ADMIN, ANALYST (VIEWER receives redacted evidence). Non-default configuration on recalculate: OWNER, ADMIN.
 - Tenant and organization identity come from the trusted server context, never from the request (V3 §7.1, §25.1). Tenancy is enforced (D9): every endpoint is tenant-scoped and cross-tenant access returns `TENANT_ACCESS_DENIED` or not-found.
 - The request never carries scoring or normalization configuration (V3 §8.2).
 - Numeric precision is documented and fixed (V3 §20.3, §31): 2 decimals in the result, rounded at defined stages (D16). The client must not add precision.
@@ -160,7 +160,7 @@ Recommendation text comes from a versioned configuration catalog keyed by action
 
 ## 8. As implemented (phase 12)
 
-- Authentication: bearer JWT, verified with the key set in `lis.security.jwk-set-uri`; claims `sub`, `tenant_id`, `org_ids`, `roles`.
+- Authentication: a session plus `X-Company-Id`, or an API token (sections 19 and 20); the claims `sub`, `tenant_id`, `org_ids` and `roles` of the first design are the membership of the caller now.
 - Extension error codes beyond V3 §28.11: `INVALID_REQUEST` (400, 405, 415), `UNAUTHENTICATED` (401), `ACCESS_DENIED` (403, role).
 - Sub-resource bodies are envelopes with `scoringRunId` and the stored findings (`dimensions` and `adjusted`, `patterns`, `penalties` with `effectiveByTarget` and `tieBreakVersion`, `imbalances`) plus a `redacted` flag; `/explanation` returns `{ scoringRunId, redacted, trace }`.
 - The result carries `source`, `configurationSelection` and `counts` as additive fields; absent values are omitted, so an insufficient dimension has no score fields.
@@ -313,7 +313,7 @@ A version carries its **review record** once submitted: submitter, validation pr
 
 ## 18. As implemented (accounts and sessions, phase P1: decisions D65 to D68, D73, D74)
 
-Built-in accounts (`docs/implementation/IDENTITY_PROPOSAL.md`). These endpoints use a **server-side session** and CSRF protection, not a bearer token; every other endpoint still takes the bearer token until the company memberships of phase P3 move it to sessions too. A session names a user and nothing else: tenant endpoints are reached with the company header described in section 19. All paths are under `/api/v1/auth`.
+Built-in accounts (`docs/implementation/IDENTITY_PROPOSAL.md`). These endpoints use a **server-side session** and CSRF protection, not a bearer token. A session names a user and nothing else: tenant endpoints are reached with the company header described in section 19. All paths are under `/api/v1/auth`.
 
 Cookies: `LIS_SESSION` (the session id; HttpOnly, Secure, SameSite=Lax; 30 minutes idle, 8 hours at most) and `XSRF-TOKEN` (readable by the web application). Every `POST` needs the header `X-XSRF-TOKEN` with the value of the `XSRF-TOKEN` cookie; without it the answer is 403 `CSRF_TOKEN_INVALID`. A new session and a new CSRF token are issued at every sign-in.
 
@@ -356,8 +356,8 @@ A **company is the tenant**. The session names a user; a **membership** (INVITED
 | Roles and organizations | From the membership: its roles (the five `Role` values, or `RESPONDENT` alone) and its organization list. A list means exactly those organizations. No list means every organization of the company, including ones that do not exist yet (organizations are created by first use, so the owner of a new company can create its first one): the caller is marked `org_all`, which only the application sets on its own caller object, and listings show the organizations that exist now. (Before this correction an empty list meant no organization at all, as an empty `org_ids` claim does, which locked a new owner out of organization data.) Role rules, redaction, tenant-scoped repositories, access audit (actor = the user id) are unchanged |
 | Platform administrator | A flag on the user, read at every request. It has no company: `/api/v1/platform/**` only; every tenant endpoint answers 403 to it, with or without a header, and a header is ignored on the platform endpoints. A user without the flag gets 403 there |
 | Account state | A session whose account is no longer ACTIVE answers 401 at the next request |
-| CSRF | A state-changing call that rides on the session cookie needs `X-XSRF-TOKEN` (403 `CSRF_TOKEN_INVALID`); a call with a bearer token or with no session is not subject to it (the latter is 401) |
-| Bearer tokens | The existing token path (`tenant_id`, `roles`, `org_ids` claims) is unchanged and needs no company header; it is removed in phase P7 |
+| CSRF | A state-changing call that rides on the session cookie needs `X-XSRF-TOKEN` (403 `CSRF_TOKEN_INVALID`), including sign-in itself (fetch a token from `GET /api/v1/auth/csrf` first; a new session issues a new one); a call with a bearer API token or with no session is not subject to it (the latter is 401) |
+| Bearer tokens | Only the application's own API tokens (`lis_...`, section 20) are accepted; any other bearer value is 401. The external-JWT path of the first design was removed in phase P7 |
 
 | Method and path | Answer |
 |---|---|

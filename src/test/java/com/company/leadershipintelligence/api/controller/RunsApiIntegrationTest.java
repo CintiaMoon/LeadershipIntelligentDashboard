@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.api.controller;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
 import com.company.leadershipintelligence.service.ConfigurationService;
 import com.company.leadershipintelligence.service.command.Approval;
@@ -16,8 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -74,17 +73,7 @@ class RunsApiIntegrationTest extends PostgresIntegrationTest {
     // ---------------- helpers ----------------
 
     private static RequestPostProcessor user(String tenant, List<String> orgs, String email, String... roles) {
-        SimpleGrantedAuthority[] authorities = java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                .toArray(SimpleGrantedAuthority[]::new);
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("sub-" + (email == null ? tenant : email));
-            j.claim("tenant_id", tenant);
-            j.claim("org_ids", orgs);
-            j.claim("roles", List.of(roles));
-            if (email != null) {
-                j.claim("email", email);
-            }
-        }).authorities(authorities);
+        return TestCallers.caller("sub-" + (email == null ? tenant : email), tenant, orgs, email, List.of(roles));
     }
 
     private static RequestPostProcessor admin() {

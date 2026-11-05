@@ -48,7 +48,7 @@ export function SessionAuthProvider({ tenantId, children }: { tenantId: string |
 
   // The credential is the cookie, so there is no token: the client only needs to know the company and to send the CSRF token.
   // Done while rendering, before any child can ask for data.
-  useState(() => configureApi({ getToken: () => null, onUnauthorized: () => forget(), getCompany: () => tenantId, csrf: true }));
+  useState(() => configureApi({ onUnauthorized: () => forget(), getCompany: () => tenantId, csrf: true }));
 
   const refresh = useCallback(async () => apply(await fetchSession()), [apply]);
 
@@ -79,7 +79,7 @@ export function SessionAuthProvider({ tenantId, children }: { tenantId: string |
   const principal = useMemo(() => (account ? principalFor(account, company) : null), [account, company]);
 
   const value = useMemo(
-    () => ({ status, principal, signIn, signOut, mode: 'session' as const, account, companies, company, refresh }),
+    () => ({ status, principal, signIn, signOut, account, companies, company, refresh }),
     [status, principal, signIn, signOut, account, companies, company, refresh],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

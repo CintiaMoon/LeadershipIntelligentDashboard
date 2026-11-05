@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,17 +37,17 @@ public class PlatformController {
 
     @Operation(summary = "Every tenant (platform administrators only; the read is audited)")
     @GetMapping("/tenants")
-    public TenantListResponse list(@AuthenticationPrincipal Jwt jwt) {
-        PlatformRole.require(jwt);
-        return new TenantListResponse(tenants.list(PlatformRole.actor(jwt)).stream().map(PlatformController::response).toList());
+    public TenantListResponse list(@AuthenticationPrincipal AuthenticatedCaller caller) {
+        PlatformRole.require(caller);
+        return new TenantListResponse(tenants.list(PlatformRole.actor(caller)).stream().map(PlatformController::response).toList());
     }
 
     @Operation(summary = "Create a tenant (platform administrators only; audited)")
     @PostMapping("/tenants")
     @ResponseStatus(HttpStatus.CREATED)
-    public TenantResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateTenantRequest request) {
-        PlatformRole.require(jwt);
-        return response(tenants.create(PlatformRole.actor(jwt), request.id(), request.name(), request.ownerEmail()));
+    public TenantResponse create(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody CreateTenantRequest request) {
+        PlatformRole.require(caller);
+        return response(tenants.create(PlatformRole.actor(caller), request.id(), request.name(), request.ownerEmail()));
     }
 
     private static TenantResponse response(TenantView view) {

@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.api.controller;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.domain.exception.ScoringErrorCode;
 import com.company.leadershipintelligence.domain.exception.ScoringException;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
@@ -27,7 +28,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,14 +77,7 @@ class ScoringApiIntegrationTest extends PostgresIntegrationTest {
         for (String role : roles) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
         }
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("user-1");
-            if (tenant != null) {
-                j.claim("tenant_id", tenant);
-            }
-            j.claim("org_ids", organizations);
-            j.claim("roles", List.of(roles));
-        }).authorities(authorities.toArray(new SimpleGrantedAuthority[0]));
+        return TestCallers.caller("user-1", tenant, organizations, null, List.of(roles));
     }
 
     private static RequestPostProcessor admin() {
