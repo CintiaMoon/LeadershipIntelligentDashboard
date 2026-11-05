@@ -61,7 +61,9 @@ public class DevDemoAccounts implements ApplicationRunner {
             new Demo("respondent5", "Respondent 5", false, "demo-tenant", List.of("RESPONDENT"), List.of()),
             new Demo("respondent6", "Respondent 6", false, "demo-tenant", List.of("RESPONDENT"), List.of()),
             new Demo("platform-admin", "Platform administrator", true, null, List.of(), List.of()),
-            new Demo("platform-admin-2", "Second platform administrator", true, null, List.of(), List.of()));
+            new Demo("platform-admin-2", "Second platform administrator", true, null, List.of(), List.of()),
+            // kept apart for the browser test of the account journey, which resets this account's password; the others keep the published one
+            new Demo("platform-admin-3", "Third platform administrator", true, null, List.of(), List.of()));
 
     private final JdbcTemplate jdbc;
     private final UserStore users;

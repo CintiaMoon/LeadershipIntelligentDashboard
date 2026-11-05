@@ -13,7 +13,7 @@ import { latestMail, linkIn } from './mail';
 const BASE = process.env.E2E_ACCOUNTS_URL ?? 'http://localhost:3000';
 const PASSWORD = 'correct horse battery';
 const PLATFORM_PASSWORD = 'a platform administrator passphrase';
-const ADMIN = 'platform-admin-2@demo.test'; // the second demo platform administrator (dev profile); the first one is the other suite's
+const ADMIN = 'platform-admin-3@demo.test'; // a demo platform administrator of its own (dev profile): this journey resets its password
 
 const stamp = Date.now().toString(36);
 const company = `e2e-${stamp}`;

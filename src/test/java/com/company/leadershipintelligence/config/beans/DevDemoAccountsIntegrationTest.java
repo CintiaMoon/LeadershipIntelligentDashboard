@@ -98,7 +98,7 @@ class DevDemoAccountsIntegrationTest extends AccountFlowTest {
 
     @Test
     void thePlatformAdministratorsHaveNoCompany() throws Exception {
-        for (String name : new String[]{"platform-admin", "platform-admin-2"}) {
+        for (String name : new String[]{"platform-admin", "platform-admin-2", "platform-admin-3"}) {
             SessionClient admin = signIn(name);
             assertThat(status(admin.get("/api/v1/platform/tenants"))).as(name).isEqualTo(200);
             assertThat(status(admin.inCompany("demo-tenant").get("/api/v1/questionnaires"))).as(name).isEqualTo(403);
