@@ -353,6 +353,32 @@ class RunsApiIntegrationTest extends PostgresIntegrationTest {
         assertThat(detail.get("participants")).allSatisfy(p -> assertThat(p.get("status").asText()).isEqualTo("SUBMITTED"));
     }
 
+    @Test
+    void submittingWritesNoSecurityEventAndNoAuditOrSessionRowConnectsAPersonToAnAnswer() throws Exception {
+        // decision D74: the respondent's sign-in is logged like anyone's, but answering is not, and nothing the audits or the sessions
+        // keep can link a person to a run or to an answer
+        people(teamA, 3, "Alpha");
+        String run = startRun(teamA);
+        Integer securityEventsBefore = jdbc.queryForObject("select count(*) from security_audit_event", Integer.class);
+        Integer accessEventsBefore = jdbc.queryForObject("select count(*) from scoring_access_audit", Integer.class);
+        for (int i = 1; i <= 3; i++) {
+            answerAndSubmit("alpha" + i + "@acme.test", run);
+        }
+        assertThat(jdbc.queryForObject("select count(*) from security_audit_event", Integer.class)).as("answering writes no security event").isEqualTo(securityEventsBefore);
+        assertThat(jdbc.queryForObject("select count(*) from scoring_access_audit", Integer.class)).as("nor an access event").isEqualTo(accessEventsBefore);
+        String trail = String.join(" ", jdbc.queryForList("select (e.*)::text from security_audit_event e", String.class))
+                + String.join(" ", jdbc.queryForList("select (a.*)::text from scoring_access_audit a", String.class))
+                + String.join(" ", jdbc.queryForList("select (s.*)::text from spring_session s", String.class))
+                + String.join(" ", jdbc.queryForList("select encode(attribute_bytes, 'escape') from spring_session_attributes", String.class));
+        assertThat(trail).doesNotContain("alpha1@acme.test").doesNotContain("alpha2@acme.test").doesNotContain("alpha3@acme.test")
+                .doesNotContain("coffee").doesNotContain("SOMETIMES");
+        // no column of the audits or the sessions refers to a run response, and none of the answer table refers to a user or a session
+        assertThat(jdbc.queryForList("select column_name from information_schema.columns where table_name in ('security_audit_event', 'spring_session', 'spring_session_attributes') "
+                + "and (column_name like '%response%' or column_name like '%answer%' or column_name = 'run_id')", String.class)).isEmpty();
+        assertThat(jdbc.queryForList("select column_name from information_schema.columns where table_name = 'run_response' "
+                + "and (column_name like '%user%' or column_name like '%session%' or column_name like '%person%' or column_name like '%email%')", String.class)).isEmpty();
+    }
+
     // ---------------- closing ----------------
 
     @Test

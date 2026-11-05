@@ -89,6 +89,12 @@ public class AuthRateLimiter {
         hit("api-token-invalid", "api-token-invalid|" + ip(client), limits.apiTokenFailureLimit(), limits.apiTokenWindow(), client);
     }
 
+    /** One invitation email: a company may send so many an hour, and one address may be invited so many times an hour. */
+    public void checkInvitation(String tenantId, String email, ClientInfo client) {
+        hit("invite-company", "invite-company|" + tenantId, limits.inviteCompanyLimit(), limits.accountWindow(), client);
+        hit("invite-email", "invite-email|" + hash(email), limits.inviteEmailLimit(), limits.accountWindow(), client);
+    }
+
     /** One use of a verification or reset link. */
     public void checkTokenUse(ClientInfo client) {
         hit("token-ip", "token-ip|" + ip(client), limits.tokenIpLimit(), limits.tokenWindow(), client);

@@ -4,7 +4,13 @@ import com.company.leadershipintelligence.api.request.RosterRequests.CreatePerso
 import com.company.leadershipintelligence.api.request.RosterRequests.CreateTeam;
 import com.company.leadershipintelligence.api.request.RosterRequests.RenameTeam;
 import com.company.leadershipintelligence.api.request.RosterRequests.UpdatePerson;
+import com.company.leadershipintelligence.api.response.MemberResponse;
 import com.company.leadershipintelligence.api.security.CurrentUser;
+import com.company.leadershipintelligence.domain.exception.ScoringErrorCode;
+import com.company.leadershipintelligence.domain.exception.ScoringException;
+import com.company.leadershipintelligence.service.identity.MemberService;
+import com.company.leadershipintelligence.service.identity.MemberView;
+import jakarta.servlet.http.HttpServletRequest;
 import com.company.leadershipintelligence.service.query.RunViews.PersonView;
 import com.company.leadershipintelligence.service.query.RunViews.TeamView;
 import com.company.leadershipintelligence.service.roster.RosterService;
@@ -25,6 +31,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -37,8 +44,10 @@ import java.util.UUID;
 public class RosterController {
 
     private final RosterService roster;
+    private final MemberService members;
 
-    public RosterController(RosterService roster) {
+    public RosterController(RosterService roster, MemberService members) {
+        this.members = members;
         this.roster = roster;
     }
 
@@ -77,6 +86,21 @@ public class RosterController {
     public PersonView createPerson(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreatePerson request) {
         CurrentUser user = CurrentUser.from(jwt);
         return roster.createPerson(user.tenantId(), user.scope(), user.actor(), request.teamId(), request.name(), request.email());
+    }
+
+    @Operation(summary = "Invite a person of the roster to answer questionnaires: a RESPONDENT-only invitation to their roster email address")
+    @PostMapping("/people/{personId}/invite")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MemberResponse invitePerson(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID personId, HttpServletRequest http) {
+        CurrentUser user = CurrentUser.from(jwt);
+        UUID actor = Callers.person(jwt);
+        PersonView person = roster.person(user.tenantId(), user.scope(), personId);
+        if (!person.active()) {
+            throw new ScoringException(ScoringErrorCode.ROSTER_INVALID, "an inactive person cannot be invited", Map.of());
+        }
+        MemberView invited = members.invite(actor, user.tenantId().value(), person.email(), List.of("RESPONDENT"), List.of(person.organizationId()), Callers.client(http));
+        return new MemberResponse(invited.id(), invited.email(), invited.displayName(), invited.status(), List.copyOf(invited.roles()),
+                List.copyOf(invited.organizationIds()), invited.createdAt(), invited.updatedAt());
     }
 
     @Operation(summary = "Change a person team, name, e-mail address or active flag")

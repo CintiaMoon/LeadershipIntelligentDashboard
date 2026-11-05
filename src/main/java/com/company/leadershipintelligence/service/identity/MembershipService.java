@@ -5,6 +5,7 @@ import com.company.leadershipintelligence.domain.exception.ScoringErrorCode;
 import com.company.leadershipintelligence.domain.exception.ScoringException;
 import com.company.leadershipintelligence.domain.identity.AccountStatus;
 import com.company.leadershipintelligence.domain.identity.EmailAddress;
+import com.company.leadershipintelligence.domain.identity.PasswordPolicy;
 import com.company.leadershipintelligence.repository.persistence.entity.MembershipRow;
 import com.company.leadershipintelligence.repository.persistence.entity.UserRow;
 import com.company.leadershipintelligence.repository.persistence.repository.MembershipStore;
@@ -32,6 +33,7 @@ public class MembershipService {
     private final MembershipStore memberships;
     private final UserStore users;
     private final TokenCodec codec;
+    private final PasswordHasher hasher;
     private final AccountMessages messages;
     private final AuthRateLimiter limiter;
     private final SecurityAudit audit;
@@ -39,7 +41,8 @@ public class MembershipService {
     private final Clock clock;
 
     public MembershipService(MembershipStore memberships, UserStore users, TokenCodec codec, AccountMessages messages, AuthRateLimiter limiter,
-                             SecurityAudit audit, IdentityProperties properties, Clock clock) {
+                             SecurityAudit audit, IdentityProperties properties, PasswordHasher hasher, Clock clock) {
+        this.hasher = hasher;
         this.memberships = memberships;
         this.users = users;
         this.codec = codec;
@@ -98,6 +101,55 @@ public class MembershipService {
         audit.record("MEMBERSHIP_INVITED", SecurityAudit.SUCCESS, null, tenantId, null, ClientInfo.unknown(), Map.of("role", "OWNER", "by", actor));
     }
 
+
+    /**
+     * What an invitation link offers, for the page that opens it. Anyone who holds the link is told the company, the address and
+     * whether that address has an account; a link that is unknown, used or expired is refused like every other invitation failure.
+     */
+    public InvitationPreview preview(String token, ClientInfo client) {
+        limiter.checkTokenUse(client);
+        MembershipRow invited = openInvitation(token).orElseThrow(MembershipService::invalidInvitation);
+        return new InvitationPreview(invited.tenantName(), invited.invitedEmail(), invited.roles(), users.findByEmail(invited.invitedEmail()).isPresent());
+    }
+
+    /**
+     * Creates an account from an invitation in one step. The link proves the mailbox, so the account is verified at once and the
+     * membership is activated; the person then signs in. An address that already has an account signs in and accepts instead.
+     */
+    @Transactional
+    public void registerWithInvitation(String token, String password, String rawName, ClientInfo client) {
+        limiter.checkTokenUse(client);
+        MembershipRow invited = openInvitation(token).orElseThrow(MembershipService::invalidInvitation);
+        String email = invited.invitedEmail();
+        String name = rawName == null ? "" : rawName.trim();
+        if (name.isEmpty() || name.length() > AccountService.MAX_NAME) {
+            throw new ScoringException(ScoringErrorCode.INVALID_ACCOUNT_REQUEST, "The name must have 1 to " + AccountService.MAX_NAME + " characters.");
+        }
+        String problem = PasswordPolicy.violation(password, email);
+        if (problem != null) {
+            throw new ScoringException(ScoringErrorCode.WEAK_PASSWORD, problem);
+        }
+        Instant now = clock.instant();
+        UUID id = UUID.randomUUID();
+        if (!users.insertVerified(id, email, name, hasher.hash(password), false, now)) {
+            throw new ScoringException(ScoringErrorCode.INVALID_ACCOUNT_REQUEST,
+                    "This address already has an account. Sign in and accept the invitation.");
+        }
+        if (!memberships.accept(codec.hash(token.trim()), id, now)) {
+            // nothing is kept: the account created a moment ago is rolled back with the refusal
+            throw invalidInvitation();
+        }
+        audit.record("REGISTERED", SecurityAudit.SUCCESS, id, invited.tenantId(), null, client, Map.of("via", "INVITATION"));
+        audit.record("MEMBERSHIP_ACCEPTED", SecurityAudit.SUCCESS, id, invited.tenantId(), null, client, Map.of());
+    }
+
+    private Optional<MembershipRow> openInvitation(String token) {
+        return token == null || token.isBlank() ? Optional.empty() : memberships.findInvitedByToken(codec.hash(token.trim()), clock.instant());
+    }
+
+    private static ScoringException invalidInvitation() {
+        return new ScoringException(ScoringErrorCode.INVALID_TOKEN, "The invitation is not valid or has expired.");
+    }
     /**
      * Accepts an invitation. The signed-in user's verified email must be the one the invitation was sent to; every refusal looks
      * the same (unknown, used or expired link, another person's invitation, a company the user already belongs to).

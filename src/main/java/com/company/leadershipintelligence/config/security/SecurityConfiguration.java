@@ -81,7 +81,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/verify-email", "/api/v1/auth/resend-verification",
-                                "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset").permitAll()
+                                "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset",
+                                "/api/v1/auth/invitations/preview", "/api/v1/auth/invitations/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/invitations/accept").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/password/change").authenticated()
@@ -135,6 +136,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         // platform administration (decision D46): only the platform role, and nothing tenant-scoped is reachable with it
                         .requestMatchers("/api/v1/platform/**").hasRole(PlatformRole.PLATFORM_ADMIN)
+                        // members and invitations (decision D72) and the security audit of the company (D74): owners and administrators
+                        .requestMatchers("/api/v1/members", "/api/v1/members/**").hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
+                        .requestMatchers(HttpMethod.GET, "/api/v1/security-audit").hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
                         // API tokens (decision D70): owners and administrators, and the controller refuses a token itself
                         .requestMatchers("/api/v1/api-tokens", "/api/v1/api-tokens/**").hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
                         // questionnaire library and builder (decisions D47, D50): administrators only, for reads as well as writes

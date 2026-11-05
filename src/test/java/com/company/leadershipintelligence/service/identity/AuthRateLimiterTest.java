@@ -28,7 +28,7 @@ class AuthRateLimiterTest {
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     // 3 sign-ins per 5 minutes per address; 2 failures then a 30 s delay that doubles up to 2 minutes; 2 account calls and 2 link uses per hour
     private final RateLimitProperties limits = new RateLimitProperties("memory", 3, Duration.ofMinutes(5), 2, Duration.ofMinutes(15),
-            Duration.ofSeconds(30), Duration.ofMinutes(2), 2, 2, Duration.ofHours(1), 2, Duration.ofHours(1), 3, 2, Duration.ofMinutes(1));
+            Duration.ofSeconds(30), Duration.ofMinutes(2), 2, 2, Duration.ofHours(1), 2, Duration.ofHours(1), 3, 2, Duration.ofMinutes(1), 3, 2);
     private final AuthRateLimiter limiter = new AuthRateLimiter(new InMemoryRateCounters(clock), limits, audit, meters);
 
     @Test
