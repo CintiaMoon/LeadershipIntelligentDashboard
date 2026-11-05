@@ -37,6 +37,14 @@ public class UserStore {
                 id, email, displayName, passwordHash, now, now, now) == 1;
     }
 
+    /** The latest registration of a still pending address wins: its name and password replace the earlier ones. */
+    @Transactional
+    public boolean replacePendingCredentials(UUID id, String displayName, String passwordHash, Instant at) {
+        Timestamp now = Timestamp.from(at);
+        return jdbc.update("update app_user set display_name = ?, password_hash = ?, password_changed_at = ?, updated_at = ? "
+                + "where id = ? and status = 'PENDING_VERIFICATION'", displayName, passwordHash, now, now, id) == 1;
+    }
+
     public Optional<UserRow> findByEmail(String normalizedEmail) {
         return jdbc.query("select " + COLUMNS + " from app_user where lower(email) = ?", MAPPER, normalizedEmail).stream().findFirst();
     }

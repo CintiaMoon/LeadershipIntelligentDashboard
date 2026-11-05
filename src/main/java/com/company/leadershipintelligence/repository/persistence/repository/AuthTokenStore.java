@@ -35,6 +35,12 @@ public class AuthTokenStore {
         jdbc.update("update auth_token set used_at = ? where user_id = ? and purpose = ? and used_at is null", Timestamp.from(at), userId, purpose.name());
     }
 
+    /** Whose token this is if it is unused, unexpired and for this purpose; does not use it. */
+    public Optional<UUID> findOpen(String tokenHash, TokenPurpose purpose, Instant at) {
+        return jdbc.query("select user_id from auth_token where token_hash = ? and purpose = ? and used_at is null and expires_at > ?",
+                (rs, n) -> rs.getObject(1, UUID.class), tokenHash, purpose.name(), Timestamp.from(at)).stream().findFirst();
+    }
+
     /** Uses the token if it is unused, unexpired and for this purpose; returns whose it was, or empty (and changes nothing). */
     @Transactional
     public Optional<UUID> consume(String tokenHash, TokenPurpose purpose, Instant at) {

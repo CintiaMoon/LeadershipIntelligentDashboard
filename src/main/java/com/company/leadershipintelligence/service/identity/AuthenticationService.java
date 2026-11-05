@@ -16,7 +16,9 @@ import java.util.UUID;
 /**
  * Checking credentials (decisions D65, D67). A sign-in succeeds only when the password matches, the account is ACTIVE and its
  * email is verified. Every other case, an unknown email, a wrong password, an unverified or a disabled account, gives the same
- * error and takes about the same time; the real reason is written to the security audit only.
+ * error and takes about the same time; the real reason is written to the security audit only. After too many failures for one
+ * email from one address, sign-in is refused for a while (429) before any password is checked. The success event is recorded
+ * by the caller once the session exists, so the audit never shows a sign-in that did not happen.
  */
 @Service
 public class AuthenticationService {
@@ -24,15 +26,22 @@ public class AuthenticationService {
     private final UserStore users;
     private final PasswordHasher hasher;
     private final SecurityAudit audit;
+    private final AuthRateLimiter limiter;
 
-    public AuthenticationService(UserStore users, PasswordHasher hasher, SecurityAudit audit) {
+    public AuthenticationService(UserStore users, PasswordHasher hasher, SecurityAudit audit, AuthRateLimiter limiter) {
         this.users = users;
         this.hasher = hasher;
         this.audit = audit;
+        this.limiter = limiter;
     }
 
     public AccountView authenticate(String rawEmail, String password, ClientInfo client) {
         String email = EmailAddress.normalize(rawEmail);
+        String ip = client == null ? "" : String.valueOf(client.ip());
+        if (email != null && !limiter.loginOpen(email, ip)) {
+            audit.record("LOGIN", SecurityAudit.FAILURE, null, null, email, client, Map.of("reason", "LOCKED"));
+            throw new ScoringException(ScoringErrorCode.TOO_MANY_REQUESTS, "Too many failed sign-ins. Try again later.");
+        }
         // a password longer than the policy allows is refused before any hashing, so it cannot be used to burn server time
         boolean usable = email != null && password != null && password.length() <= PasswordPolicy.MAX_LENGTH;
         Optional<UserRow> found = usable ? users.findByEmail(email) : Optional.empty();
@@ -41,7 +50,7 @@ public class AuthenticationService {
                 hasher.spendTime(password);
             }
             audit.record("LOGIN", SecurityAudit.FAILURE, null, null, email == null ? "" : email, client, Map.of("reason", "UNKNOWN_ACCOUNT"));
-            throw failed();
+            throw failed(email, ip);
         }
         UserRow user = found.get();
         boolean passwordOk = hasher.matches(password, user.passwordHash());
@@ -50,9 +59,9 @@ public class AuthenticationService {
                 : user.status() == AccountStatus.DISABLED ? "DISABLED" : null;
         if (reason != null) {
             audit.record("LOGIN", SecurityAudit.FAILURE, user.id(), null, null, client, Map.of("reason", reason));
-            throw failed();
+            throw failed(email, ip);
         }
-        audit.success("LOGIN", user.id(), client);
+        limiter.loginSucceeded(email, ip);
         return view(user);
     }
 
@@ -63,6 +72,13 @@ public class AuthenticationService {
 
     static AccountView view(UserRow user) {
         return new AccountView(user.id(), user.email(), user.displayName(), user.platformAdmin());
+    }
+
+    private ScoringException failed(String email, String ip) {
+        if (email != null) {
+            limiter.loginFailed(email, ip);
+        }
+        return failed();
     }
 
     private static ScoringException failed() {

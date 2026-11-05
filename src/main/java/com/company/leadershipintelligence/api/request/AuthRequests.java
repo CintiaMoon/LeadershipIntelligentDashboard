@@ -41,6 +41,18 @@ public final class AuthRequests {
         }
     }
 
+    /**
+     * The password is the one chosen at registration. Someone who registered an address but cannot read its mailbox never sees
+     * the link, and someone who reads the mailbox but did not register does not know the password, so neither can activate
+     * an account on their own.
+     */
+    public record VerifyEmail(@NotBlank @Size(max = 200) String token, @NotBlank @Size(max = 1000) String password) {
+        @Override
+        public String toString() {
+            return "VerifyEmail[redacted]";
+        }
+    }
+
     public record ResetPassword(@NotBlank @Size(max = 200) String token, @NotBlank @Size(max = 1000) String newPassword) {
         @Override
         public String toString() {

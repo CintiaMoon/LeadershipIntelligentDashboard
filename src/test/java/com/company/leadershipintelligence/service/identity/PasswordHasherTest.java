@@ -38,6 +38,14 @@ class PasswordHasherTest {
     }
 
     @Test
+    void aStoredValueWithoutAlgorithmPrefixFailsLikeAWrongPassword() {
+        // a row inserted by hand or imported from elsewhere must give a normal refusal, not an exception
+        assertThat(hasher.matches("correct horse battery", "$2a$04$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuvwxyz01234")).isFalse();
+        assertThat(hasher.matches("correct horse battery", "{unknown}whatever")).isFalse();
+        assertThat(hasher.matches("correct horse battery", "")).isFalse();
+    }
+
+    @Test
     void unicodeIsHandled() {
         String hash = hasher.hash("pässwörd-密码-🔐-long");
         assertThat(hasher.matches("pässwörd-密码-🔐-long", hash)).isTrue();

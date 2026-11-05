@@ -29,6 +29,10 @@ spring:
   # Outgoing email (decision D66). Set SPRING_MAIL_HOST (and _PORT, _USERNAME, _PASSWORD) to enable it; with no host,
   # emails are not sent and a warning says so. The sender address and links are lis.identity.* below.
 server:
+  # Behind a reverse proxy or load balancer set LIS_FORWARD_HEADERS=framework so the client address in the security audit and the
+  # rate limits, and the Secure flag of the cookies, come from X-Forwarded-*. Leave it as none when the app is reached directly:
+  # a client could otherwise send those headers itself and choose its own address.
+  forward-headers-strategy: ${LIS_FORWARD_HEADERS:none}
   servlet:
     session:
       cookie:
@@ -56,6 +60,11 @@ lis:
     web-base-url: ${LIS_WEB_BASE_URL:http://localhost:3000}
     mail-from: ${LIS_MAIL_FROM:no-reply@localhost}
     mail-async: true
+    # throttling of the sign-in and account endpoints (in memory, per instance, until the shared counters of phase P2)
+    ip-requests-per-minute: 60
+    login-failure-limit: 5
+    login-lockout: 15m
+    emails-per-address-per-hour: 5
     audit-hash-key: ${LIS_AUDIT_HASH_KEY:}
   engine:
     version: 3.0.0
