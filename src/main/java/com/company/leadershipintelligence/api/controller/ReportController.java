@@ -15,7 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,9 +48,9 @@ public class ReportController {
 
     @Operation(summary = "A report of a stored run as json, csv or pdf (a comparison reads baseRunId and runId)")
     @GetMapping("/{type}")
-    public ResponseEntity<?> report(@AuthenticationPrincipal Jwt jwt, @PathVariable String type, @RequestParam(required = false) String runId,
+    public ResponseEntity<?> report(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String type, @RequestParam(required = false) String runId,
                                     @RequestParam(required = false) String baseRunId, @RequestParam(required = false) String format) {
-        CurrentUser user = CurrentUser.from(jwt);
+        CurrentUser user = CurrentUser.from(caller);
         ReportType reportType = ReportType.parse(type).orElseThrow(() -> new ApiRequestException(
                 "type must be one of LEADERSHIP_INTELLIGENCE, DIMENSION_ANALYSIS, PATTERN_PENALTY, HISTORICAL_COMPARISON"));
         String kind = format == null ? "json" : format.toLowerCase(java.util.Locale.ROOT);

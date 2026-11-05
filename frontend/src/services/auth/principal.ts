@@ -22,32 +22,6 @@ export const PLATFORM_ADMIN = 'PLATFORM_ADMIN';
 /** The role claim of a person who answers questionnaires. It is not one of the tenant roles. */
 export const RESPONDENT = 'RESPONDENT';
 
-function base64UrlDecode(part: string): string {
-  const padded = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=');
-  const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-export function decodePrincipal(accessToken: string | null | undefined): Principal | null {
-  if (!accessToken) return null;
-  try {
-    const payload = JSON.parse(base64UrlDecode(accessToken.split('.')[1] ?? '')) as Record<string, unknown>;
-    const claimedTenant = payload['tenant_id'];
-    const tenantId = typeof claimedTenant === 'string' ? claimedTenant : '';
-    const platformAdmin = Array.isArray(payload['roles']) && payload['roles'].includes(PLATFORM_ADMIN);
-    // a token with neither a tenant nor the platform role is not one this interface can use
-    if (tenantId === '' && !platformAdmin) return null;
-    const orgs = Array.isArray(payload['org_ids']) ? payload['org_ids'].filter((o): o is string => typeof o === 'string') : [];
-    const roles = Array.isArray(payload['roles'])
-      ? payload['roles'].filter((r): r is Role => typeof r === 'string' && (ROLES as readonly string[]).includes(r))
-      : [];
-    const respondent = Array.isArray(payload['roles']) && payload['roles'].includes(RESPONDENT);
-    return { subject: typeof payload['sub'] === 'string' ? payload['sub'] : '', tenantId, organizations: orgs, roles, platformAdmin, respondent };
-  } catch {
-    return null;
-  }
-}
-
 function hasAny(principal: Principal | null, allowed: readonly Role[]): boolean {
   return principal !== null && principal.roles.some((r) => allowed.includes(r));
 }

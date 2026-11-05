@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,34 +36,34 @@ public class SecurityAuditController {
 
     @Operation(summary = "The security events of this company, newest first: membership changes, API token events, denied access")
     @GetMapping("/security-audit")
-    public SecurityAuditResponse company(@AuthenticationPrincipal Jwt jwt,
+    public SecurityAuditResponse company(@AuthenticationPrincipal AuthenticatedCaller caller,
                                          @RequestParam(required = false) String eventType, @RequestParam(required = false) String outcome,
                                          @RequestParam(required = false) UUID userId,
                                          @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
                                          @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
                                          @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size, HttpServletRequest http) {
         // the company is the caller's own and cannot be named; a token may read it too, and is recorded under its own subject
-        String tenant = CurrentUser.from(jwt).tenantId().value();
-        UUID reader = reader(jwt);
+        String tenant = CurrentUser.from(caller).tenantId().value();
+        UUID reader = reader(caller);
         return SecurityAuditResponse.of(audit.search(reader, new AuditFilter(tenant, eventType, outcome, userId, from, to), page, size, Callers.client(http)));
     }
 
     @Operation(summary = "Every security event of the platform, newest first, optionally of one company (platform administrators only)")
     @GetMapping("/platform/security-audit")
-    public SecurityAuditResponse platform(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String tenantId,
+    public SecurityAuditResponse platform(@AuthenticationPrincipal AuthenticatedCaller caller, @RequestParam(required = false) String tenantId,
                                           @RequestParam(required = false) String eventType, @RequestParam(required = false) String outcome,
                                           @RequestParam(required = false) UUID userId,
                                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
                                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
                                           @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size, HttpServletRequest http) {
-        PlatformRole.require(jwt);
-        return SecurityAuditResponse.of(audit.search(reader(jwt), new AuditFilter(tenantId, eventType, outcome, userId, from, to), page, size, Callers.client(http)));
+        PlatformRole.require(caller);
+        return SecurityAuditResponse.of(audit.search(reader(caller), new AuditFilter(tenantId, eventType, outcome, userId, from, to), page, size, Callers.client(http)));
     }
 
     /** The account that reads, or null for a token (the read is then recorded without a user). */
-    private static UUID reader(Jwt jwt) {
+    private static UUID reader(AuthenticatedCaller caller) {
         try {
-            return UUID.fromString(jwt.getSubject());
+            return UUID.fromString(caller.subject());
         } catch (RuntimeException e) {
             return null;
         }

@@ -3,7 +3,7 @@ package com.company.leadershipintelligence.api.controller;
 import com.company.leadershipintelligence.service.identity.ClientInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 
 import java.util.UUID;
 
@@ -17,9 +17,9 @@ final class Callers {
      * The signed-in person behind the request (the subject is their account id). An API token, or a caller that is not an account of
      * this application, is refused: tokens never manage tokens or members.
      */
-    static UUID person(Jwt jwt) {
+    static UUID person(AuthenticatedCaller caller) {
         try {
-            return UUID.fromString(jwt.getSubject());
+            return UUID.fromString(caller.subject());
         } catch (RuntimeException e) {
             throw new AccessDeniedException("this needs a signed-in session");
         }

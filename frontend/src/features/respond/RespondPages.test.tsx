@@ -14,7 +14,7 @@ const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
-beforeEach(() => configureApi({ getToken: () => 'tok', onUnauthorized: () => undefined }));
+beforeEach(() => configureApi({ onUnauthorized: () => undefined }));
 
 const respondent = { subject: 'r-1', tenantId: 'demo-tenant', organizations: [], roles: [], respondent: true };
 

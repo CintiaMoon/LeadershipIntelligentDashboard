@@ -7,10 +7,8 @@ import { CompanyPickerPage } from '@/features/account/CompanyPickerPage';
 import { ForgotPasswordPage, ResetPasswordPage } from '@/features/account/PasswordResetPages';
 import { RegisterPage } from '@/features/account/RegisterPage';
 import { VerifyEmailPage } from '@/features/account/VerifyEmailPage';
-import { CallbackPage } from '@/features/auth/CallbackPage';
-import { LoginPage } from '@/features/auth/LoginPage';
+import { SessionLoginPage } from '@/features/account/SessionLoginPage';
 import { NotFoundPage } from '@/features/errors/NotFoundPage';
-import { authConfig } from '@/services/auth/config';
 import { companyBase, companyFromPath } from './company-path';
 import { HomeRedirect, RequireAuth, RequireCompany, RequireConfigurationReader, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
 
@@ -32,14 +30,9 @@ function accountRoutes(): RouteObject[] {
   ];
 }
 
-/** Chosen when the page loads: the application's own accounts, or the external provider (kept until the last identity phase). */
+/** Every route: sign-in and the account pages (outside any company), then the application with the screens of a company. */
 export function buildRoutes(): RouteObject[] {
-  const session = authConfig.mode === 'session';
-  return [
-    { path: '/login', element: <LoginPage /> },
-    ...(session ? accountRoutes() : [{ path: '/auth/callback', element: <CallbackPage /> }]),
-    ...appRoutes(),
-  ];
+  return [{ path: '/login', element: <SessionLoginPage /> }, ...accountRoutes(), ...appRoutes()];
 }
 
 function appRoutes(): RouteObject[] {

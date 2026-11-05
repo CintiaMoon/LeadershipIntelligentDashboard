@@ -13,7 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,26 +45,26 @@ public class ApiTokenController {
     @Operation(summary = "Create an API token for this company; the secret is returned once")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CreatedApiTokenResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateApiTokenRequest request, HttpServletRequest http) {
-        UUID creator = Callers.person(jwt);
-        IssuedApiToken issued = tokens.create(creator, CurrentUser.from(jwt).tenantId().value(), request.name(), request.role(), request.expiresAt(),
+    public CreatedApiTokenResponse create(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody CreateApiTokenRequest request, HttpServletRequest http) {
+        UUID creator = Callers.person(caller);
+        IssuedApiToken issued = tokens.create(creator, CurrentUser.from(caller).tenantId().value(), request.name(), request.role(), request.expiresAt(),
                 request.organizationIds(), Callers.client(http));
         return new CreatedApiTokenResponse(response(issued.token()), issued.secret());
     }
 
     @Operation(summary = "The API tokens of this company, newest first (never their secrets)")
     @GetMapping
-    public List<ApiTokenResponse> list(@AuthenticationPrincipal Jwt jwt) {
-        Callers.person(jwt);
-        return tokens.list(CurrentUser.from(jwt).tenantId().value()).stream().map(ApiTokenController::response).toList();
+    public List<ApiTokenResponse> list(@AuthenticationPrincipal AuthenticatedCaller caller) {
+        Callers.person(caller);
+        return tokens.list(CurrentUser.from(caller).tenantId().value()).stream().map(ApiTokenController::response).toList();
     }
 
     @Operation(summary = "Revoke an API token at once. Revoking a revoked token is not an error")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revoke(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, HttpServletRequest http) {
-        UUID by = Callers.person(jwt);
-        tokens.revoke(CurrentUser.from(jwt).tenantId().value(), id, by, Callers.client(http));
+    public void revoke(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID id, HttpServletRequest http) {
+        UUID by = Callers.person(caller);
+        tokens.revoke(CurrentUser.from(caller).tenantId().value(), id, by, Callers.client(http));
     }
 
     private static ApiTokenResponse response(ApiTokenView view) {

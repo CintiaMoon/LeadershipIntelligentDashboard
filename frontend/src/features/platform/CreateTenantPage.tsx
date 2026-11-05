@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { BackLink, PageHeader } from '@/components/ui/PageHeader';
 import { ApiError, describeError } from '@/services/api/errors';
-import { authConfig } from '@/services/auth/config';
 import { useCreateTenant } from '@/services/queries/hooks';
 
 // The same rule as the backend, so most mistakes are caught before the request; the backend still decides.
@@ -74,7 +73,7 @@ export function CreateTenantPage() {
             <input id="tenant-name" type="text" autoComplete="off" className={input} aria-invalid={!!errors.name} aria-describedby="tenant-name-error" {...form.register('name')} />
             <p id="tenant-name-error" role="alert" className="mt-1 text-xs text-risk-critical">{errors.name?.message}</p>
           </div>
-          {authConfig.mode === 'session' && (
+          {(
             <div>
               <label htmlFor="tenant-owner" className="text-sm font-medium">Owner email address</label>
               <input id="tenant-owner" type="email" autoComplete="off" className={input} aria-invalid={!!errors.ownerEmail} aria-describedby="tenant-owner-help tenant-owner-error" {...form.register('ownerEmail')} />

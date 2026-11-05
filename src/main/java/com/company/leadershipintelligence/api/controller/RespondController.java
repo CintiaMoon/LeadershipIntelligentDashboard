@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,22 +44,22 @@ public class RespondController {
 
     @Operation(summary = "The runs I am asked to answer")
     @GetMapping("/runs")
-    public List<RespondentRun> runs(@AuthenticationPrincipal Jwt jwt) {
-        RespondentRole.require(jwt);
-        return respondent.list(CurrentUser.from(jwt).tenantId(), RespondentRole.email(jwt));
+    public List<RespondentRun> runs(@AuthenticationPrincipal AuthenticatedCaller caller) {
+        RespondentRole.require(caller);
+        return respondent.list(CurrentUser.from(caller).tenantId(), RespondentRole.email(caller));
     }
 
     @Operation(summary = "A run I am asked to answer: its questions (without any scoring detail) and my draft")
     @GetMapping("/runs/{runId}")
-    public RespondentRunDetail run(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID runId) {
-        RespondentRole.require(jwt);
-        return respondent.get(CurrentUser.from(jwt).tenantId(), RespondentRole.email(jwt), runId);
+    public RespondentRunDetail run(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID runId) {
+        RespondentRole.require(caller);
+        return respondent.get(CurrentUser.from(caller).tenantId(), RespondentRole.email(caller), runId);
     }
 
     @Operation(summary = "Save answers into my draft; a null or empty answer removes it")
     @PutMapping("/runs/{runId}/draft")
-    public RespondentRunDetail saveDraft(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID runId, @Valid @RequestBody SaveDraft request) {
-        RespondentRole.require(jwt);
+    public RespondentRunDetail saveDraft(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID runId, @Valid @RequestBody SaveDraft request) {
+        RespondentRole.require(caller);
         Map<String, JsonNode> answers = new LinkedHashMap<>();
         for (DraftAnswer answer : request.answers()) {
             if (answers.containsKey(answer.questionId())) {
@@ -67,13 +67,13 @@ public class RespondController {
             }
             answers.put(answer.questionId(), answer.answer());
         }
-        return respondent.saveDraft(CurrentUser.from(jwt).tenantId(), RespondentRole.email(jwt), runId, answers);
+        return respondent.saveDraft(CurrentUser.from(caller).tenantId(), RespondentRole.email(caller), runId, answers);
     }
 
     @Operation(summary = "Submit my answers: they are stored with my team only and my draft is deleted")
     @PostMapping("/runs/{runId}/submit")
-    public RespondentRunDetail submit(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID runId) {
-        RespondentRole.require(jwt);
-        return respondent.submit(CurrentUser.from(jwt).tenantId(), RespondentRole.email(jwt), runId);
+    public RespondentRunDetail submit(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID runId) {
+        RespondentRole.require(caller);
+        return respondent.submit(CurrentUser.from(caller).tenantId(), RespondentRole.email(caller), runId);
     }
 }

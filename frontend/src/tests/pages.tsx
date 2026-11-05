@@ -11,7 +11,7 @@ export function installMockApi() {
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
   beforeEach(() => {
-    configureApi({ getToken: () => 'tok', onUnauthorized: () => undefined });
+    configureApi({ onUnauthorized: () => undefined });
     useSession.setState({ organizationId: 'org-1' });
     server.use(...dashboardHandlers());
   });

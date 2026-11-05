@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.api.controller;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
 import com.company.leadershipintelligence.service.ConfigurationService;
 import com.company.leadershipintelligence.service.command.Approval;
@@ -14,8 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -57,21 +56,12 @@ class ConfigurationApiIntegrationTest extends PostgresIntegrationTest {
         configurations.activate(ops, draft.id(), new Approval("ops-approver", null));
     }
 
-    private static RequestPostProcessor user(String tenant, String subject, String... roles) {
-        SimpleGrantedAuthority[] authorities = java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r)).toArray(SimpleGrantedAuthority[]::new);
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject(subject);
-            j.claim("tenant_id", tenant);
-            j.claim("org_ids", List.of("org-1"));
-            j.claim("roles", List.of(roles));
-        }).authorities(authorities);
+    private static RequestPostProcessor user(String tenant, String subject, String... roles) {
+        return TestCallers.caller(subject, tenant, List.of("org-1"), null, List.of(roles));
     }
 
     private static RequestPostProcessor platform(String subject) {
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject(subject);
-            j.claim("roles", List.of("PLATFORM_ADMIN"));
-        }).authorities(new SimpleGrantedAuthority("ROLE_PLATFORM_ADMIN"));
+        return TestCallers.caller(subject, null, List.of(), null, List.of("PLATFORM_ADMIN"));
     }
 
     private static final RequestPostProcessor ADMIN = user("ca-a", "admin-1", "ADMIN");

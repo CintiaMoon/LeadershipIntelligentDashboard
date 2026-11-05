@@ -1,4 +1,3 @@
-import { authConfig } from '@/services/auth/config';
 import { canManageAssessments, canReadConfiguration, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
 
 export type NavIcon = 'dashboard' | 'compare' | 'tenants' | 'questionnaires' | 'runs' | 'people' | 'answer' | 'configuration' | 'reports' | 'members' | 'tokens' | 'audit';
@@ -19,7 +18,7 @@ export function navItems(principal: Principal | null): NavItem[] {
     return [
       { to: '/platform/tenants', label: 'Tenants', icon: 'tenants' },
       { to: '/configuration', label: 'Configuration', icon: 'configuration' },
-      ...(authConfig.mode === 'session' ? [{ to: '/platform/security-audit', label: 'Security audit', icon: 'audit' as const }] : []),
+      { to: '/platform/security-audit', label: 'Security audit', icon: 'audit' },
     ];
   }
   if (isRespondent(principal)) {
@@ -39,7 +38,7 @@ export function navItems(principal: Principal | null): NavItem[] {
   }
   if (canReadConfiguration(principal)) items.push({ to: '/configuration', label: 'Configuration', icon: 'configuration' });
   // members, API tokens and the security audit belong to the application's own accounts (decisions D70, D72, D74)
-  if (authConfig.mode === 'session' && canManageAssessments(principal)) {
+  if (canManageAssessments(principal)) {
     items.push(
       { to: '/members', label: 'Members', icon: 'members' },
       { to: '/api-tokens', label: 'API tokens', icon: 'tokens' },

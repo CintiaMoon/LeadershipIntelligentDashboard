@@ -12,7 +12,7 @@ const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
-beforeEach(() => configureApi({ getToken: () => 'tok', onUnauthorized: () => undefined }));
+beforeEach(() => configureApi({ onUnauthorized: () => undefined }));
 
 const items = [
   { id: 'q-1', name: 'Q3 Leadership 360', state: 'PUBLISHED', archived: false, publishedVersion: 3, updatedAt: '2026-10-30T09:00:00Z' },

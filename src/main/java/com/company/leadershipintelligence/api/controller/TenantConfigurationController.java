@@ -7,7 +7,7 @@ import com.company.leadershipintelligence.service.configuration.ConfigurationRev
 import com.company.leadershipintelligence.service.configuration.Manager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,8 +25,8 @@ public class TenantConfigurationController extends ConfigurationApi {
     }
 
     @Override
-    protected Manager manager(Jwt jwt) {
-        CurrentUser user = CurrentUser.from(jwt);
+    protected Manager manager(AuthenticatedCaller caller) {
+        CurrentUser user = CurrentUser.from(caller);
         return new Manager(Caller.tenant(user.tenantId(), user.actor()), user.scope());
     }
 

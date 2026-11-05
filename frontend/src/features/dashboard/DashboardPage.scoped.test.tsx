@@ -36,7 +36,7 @@ function scopedHandlers() {
 }
 
 beforeEach(() => {
-  configureApi({ getToken: () => 'tok', onUnauthorized: () => undefined });
+  configureApi({ onUnauthorized: () => undefined });
   useSession.setState({ organizationId: 'org-1' });
   server.use(...scopedHandlers());
 });

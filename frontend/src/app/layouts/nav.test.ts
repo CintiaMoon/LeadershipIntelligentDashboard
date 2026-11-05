@@ -8,7 +8,7 @@ const labels = (p: Principal | null) => navItems(p).map((i) => i.label);
 describe('navItems', () => {
   it('gives owners and administrators the dashboard, the comparison and everything that manages assessments', () => {
     for (const role of ['OWNER', 'ADMIN'] as const) {
-      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare', 'Reports', 'Questionnaires', 'Assessment runs', 'People', 'Configuration']);
+      expect(labels(tenant(role))).toEqual(['Dashboard', 'Compare', 'Reports', 'Questionnaires', 'Assessment runs', 'People', 'Configuration', 'Members', 'API tokens', 'Security audit']);
     }
   });
 
@@ -20,7 +20,7 @@ describe('navItems', () => {
   });
 
   it('gives the platform administrator the tenants and the platform configuration, nothing tenant-scoped', () => {
-    expect(labels({ subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true })).toEqual(['Tenants', 'Configuration']);
+    expect(labels({ subject: 'root', tenantId: '', organizations: [], roles: [], platformAdmin: true })).toEqual(['Tenants', 'Configuration', 'Security audit']);
   });
 
   it('gives a respondent their own assessments and nothing else', () => {

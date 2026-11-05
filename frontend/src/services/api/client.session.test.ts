@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { apiFetch, configureApi, forgetCsrfToken } from './client';
 import { ApiError, describeError } from './errors';
 import { identityApi } from './identity';
@@ -18,7 +18,7 @@ let unauthorized = 0;
 beforeEach(() => {
   unauthorized = 0;
   forgetCsrfToken();
-  configureApi({ getToken: () => null, onUnauthorized: () => (unauthorized += 1), getCompany: () => 'acme', csrf: true });
+  configureApi({ onUnauthorized: () => (unauthorized += 1), getCompany: () => 'acme', csrf: true });
 });
 
 describe('the session client', () => {
@@ -111,17 +111,5 @@ describe('the session client', () => {
     const error = await identityApi.login('a@example.com', 'a long enough password').catch((e: unknown) => e);
     expect(error).toMatchObject({ status: 429, retryAfter: 90 });
     expect(describeError(error).message).toContain('2 minutes');
-  });
-});
-
-describe('the bearer client', () => {
-  it('is unchanged: a bearer token, no CSRF token and no company', async () => {
-    configureApi({ getToken: () => 'tok', onUnauthorized: vi.fn() });
-    let seen: Request | undefined;
-    server.use(http.post(`${ORIGIN}/calculate`, ({ request }) => ((seen = request), HttpResponse.json({}))));
-    await apiFetch('/calculate', { method: 'POST', body: {} });
-    expect(seen?.headers.get('Authorization')).toBe('Bearer tok');
-    expect(seen?.headers.get('X-XSRF-TOKEN')).toBeNull();
-    expect(seen?.headers.get('X-Company-Id')).toBeNull();
   });
 });

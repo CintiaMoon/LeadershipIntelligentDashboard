@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.api.controller;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
 import com.company.leadershipintelligence.service.ConfigurationService;
 import com.company.leadershipintelligence.service.command.Approval;
@@ -16,8 +17,6 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -55,21 +54,11 @@ class PlatformTenantsApiIntegrationTest extends PostgresIntegrationTest {
 
     /** A platform administrator: the role, a subject, and no tenant. */
     private static RequestPostProcessor platformAdmin() {
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("platform-admin-user");
-            j.claim("roles", List.of("PLATFORM_ADMIN"));
-        }).authorities(new SimpleGrantedAuthority("ROLE_PLATFORM_ADMIN"));
+        return TestCallers.caller("platform-admin-user", null, List.of(), null, List.of("PLATFORM_ADMIN"));
     }
 
-    private static RequestPostProcessor tenantUser(String tenant, String... roles) {
-        SimpleGrantedAuthority[] authorities = java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                .toArray(SimpleGrantedAuthority[]::new);
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("user-1");
-            j.claim("tenant_id", tenant);
-            j.claim("org_ids", List.of("org-1"));
-            j.claim("roles", List.of(roles));
-        }).authorities(authorities);
+    private static RequestPostProcessor tenantUser(String tenant, String... roles) {
+        return TestCallers.caller("user-1", tenant, List.of("org-1"), null, List.of(roles));
     }
 
     private static String body(String id, String name) {
@@ -147,11 +136,7 @@ class PlatformTenantsApiIntegrationTest extends PostgresIntegrationTest {
     void aTokenCannotClaimTheRoleForAnotherTenantsBenefitByCarryingBoth() throws Exception {
         // the role is checked on the verified token; having a tenant as well changes nothing about what the endpoints return
         tenant("existing");
-        RequestPostProcessor both = SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("both");
-            j.claim("tenant_id", "existing");
-            j.claim("roles", List.of("VIEWER"));
-        }).authorities(new SimpleGrantedAuthority("ROLE_VIEWER"));
+        RequestPostProcessor both = TestCallers.caller("both", "existing", List.of(), null, List.of("VIEWER"));
         mvc.perform(get("/api/v1/platform/tenants").with(both)).andExpect(status().isForbidden());
     }
 

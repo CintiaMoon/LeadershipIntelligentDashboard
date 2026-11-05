@@ -16,7 +16,6 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 beforeEach(() => {
-  vi.stubEnv('VITE_AUTH_MODE', 'session');
   configureSession('acme');
   server.use(csrfHandler);
   useSession.setState({ organizationId: 'org-1' });
@@ -60,10 +59,4 @@ describe('PeoplePage invitations to answer', () => {
     expect(await within(card).findByText(/already a member of the company/)).toBeInTheDocument();
   });
 
-  it('is not offered with the external provider, which has no members to invite', async () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'oidc');
-    render();
-    const card = await screen.findByRole('region', { name: 'Team Alpha' });
-    expect(within(card).queryByRole('button', { name: /to answer/ })).not.toBeInTheDocument();
-  });
 });

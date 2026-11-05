@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.api.controller;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.domain.valueobject.TenantId;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
 import com.company.leadershipintelligence.service.ConfigurationService;
@@ -15,8 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -56,15 +55,8 @@ class CatalogAndTrendsApiIntegrationTest extends PostgresIntegrationTest {
         configurations.activate(platform, draft.id(), new Approval("approver", null));
     }
 
-    private static RequestPostProcessor user(String tenant, List<String> organizations, String... roles) {
-        SimpleGrantedAuthority[] authorities = java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                .toArray(SimpleGrantedAuthority[]::new);
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("user-1");
-            j.claim("tenant_id", tenant);
-            j.claim("org_ids", organizations);
-            j.claim("roles", List.of(roles));
-        }).authorities(authorities);
+    private static RequestPostProcessor user(String tenant, List<String> organizations, String... roles) {
+        return TestCallers.caller("user-1", tenant, organizations, null, List.of(roles));
     }
 
     private static RequestPostProcessor admin() {

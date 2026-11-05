@@ -1,4 +1,4 @@
-# Rendered at container start (the official nginx image substitutes ${IDP_ORIGIN}, the origin of the identity provider).
+# The web application: the built SPA, and /api proxied to the application. The browser talks only to its own origin.
 server {
   listen 80;
   server_name _;
@@ -12,7 +12,7 @@ server {
 
   # Security headers. They are defined once at server level: a location that adds its own header would drop these.
   # TLS and Strict-Transport-Security belong to the proxy or load balancer in front of this container.
-  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ${IDP_ORIGIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
   add_header X-Content-Type-Options "nosniff" always;
   add_header X-Frame-Options "DENY" always;
   add_header Referrer-Policy "no-referrer" always;

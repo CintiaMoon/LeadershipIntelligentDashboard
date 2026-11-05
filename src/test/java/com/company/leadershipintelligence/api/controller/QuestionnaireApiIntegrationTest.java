@@ -1,5 +1,6 @@
 package com.company.leadershipintelligence.api.controller;
 
+import com.company.leadershipintelligence.support.TestCallers;
 import com.company.leadershipintelligence.repository.configuration.ConfigurationSamples;
 import com.company.leadershipintelligence.service.ConfigurationService;
 import com.company.leadershipintelligence.service.command.Approval;
@@ -18,8 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -59,15 +58,8 @@ class QuestionnaireApiIntegrationTest extends PostgresIntegrationTest {
         configurations.activate(platform, draft.id(), new Approval("approver", null));
     }
 
-    private static RequestPostProcessor user(String tenant, String... roles) {
-        SimpleGrantedAuthority[] authorities = java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                .toArray(SimpleGrantedAuthority[]::new);
-        return SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("user-" + tenant);
-            j.claim("tenant_id", tenant);
-            j.claim("org_ids", List.of("org-1"));
-            j.claim("roles", List.of(roles));
-        }).authorities(authorities);
+    private static RequestPostProcessor user(String tenant, String... roles) {
+        return TestCallers.caller("user-" + tenant, tenant, List.of("org-1"), null, List.of(roles));
     }
 
     private RequestPostProcessor admin() {
@@ -372,10 +364,7 @@ class QuestionnaireApiIntegrationTest extends PostgresIntegrationTest {
         mvc.perform(get("/api/v1/questionnaires").with(user("qa", "OWNER"))).andExpect(status().isOk());
         mvc.perform(get("/api/v1/questionnaires")).andExpect(status().isUnauthorized());
         // the platform administrator belongs to no tenant and reaches no tenant data
-        RequestPostProcessor platform = SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> {
-            j.subject("platform-admin-user");
-            j.claim("roles", List.of("PLATFORM_ADMIN"));
-        }).authorities(new SimpleGrantedAuthority("ROLE_PLATFORM_ADMIN"));
+        RequestPostProcessor platform = TestCallers.caller("platform-admin-user", null, List.of(), null, List.of("PLATFORM_ADMIN"));
         mvc.perform(get("/api/v1/questionnaires").with(platform)).andExpect(status().isForbidden());
     }
 }

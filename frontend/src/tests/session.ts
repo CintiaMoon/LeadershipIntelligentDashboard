@@ -12,7 +12,7 @@ export const csrfHandler = http.get(`${API}/auth/csrf`, () => HttpResponse.json(
 /** The client as the session provider configures it: no bearer token, the company of the address, CSRF on. */
 export function configureSession(company: string | null = 'acme'): void {
   forgetCsrfToken();
-  configureApi({ getToken: () => null, onUnauthorized: () => undefined, getCompany: () => company, csrf: true });
+  configureApi({ onUnauthorized: () => undefined, getCompany: () => company, csrf: true });
 }
 
 export const ana: Account = { id: 'u-1', email: 'ana@example.com', displayName: 'Ana Silva', platformAdmin: false, companies: [{ id: 'acme', name: 'Acme Corp' }] };
@@ -31,7 +31,6 @@ export function signedIn(options: { account?: Account; company?: Company | null;
   const company = options.company === undefined ? acme() : options.company;
   return {
     status: 'authenticated',
-    mode: 'session',
     account,
     company,
     companies: options.companies ?? (company ? [company] : []),
@@ -40,4 +39,4 @@ export function signedIn(options: { account?: Account; company?: Company | null;
   };
 }
 
-export const anonymous: Partial<AuthContextValue> = { status: 'anonymous', mode: 'session', account: null, principal: null, companies: [], company: null };
+export const anonymous: Partial<AuthContextValue> = { status: 'anonymous', account: null, principal: null, companies: [], company: null };

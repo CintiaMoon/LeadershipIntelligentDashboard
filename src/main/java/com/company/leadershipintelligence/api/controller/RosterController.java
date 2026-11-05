@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.company.leadershipintelligence.api.security.AuthenticatedCaller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -53,47 +53,47 @@ public class RosterController {
 
     @Operation(summary = "Teams of the caller organizations, optionally of one organization")
     @GetMapping("/teams")
-    public List<TeamView> teams(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String organizationId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public List<TeamView> teams(@AuthenticationPrincipal AuthenticatedCaller caller, @RequestParam(required = false) String organizationId) {
+        CurrentUser user = CurrentUser.from(caller);
         return roster.teams(user.tenantId(), user.scope(), organizationId);
     }
 
     @Operation(summary = "Create a team in an organization")
     @PostMapping("/teams")
     @ResponseStatus(HttpStatus.CREATED)
-    public TeamView createTeam(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateTeam request) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public TeamView createTeam(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody CreateTeam request) {
+        CurrentUser user = CurrentUser.from(caller);
         return roster.createTeam(user.tenantId(), user.scope(), request.organizationId(), request.name());
     }
 
     @Operation(summary = "Rename a team")
     @PutMapping("/teams/{teamId}")
-    public TeamView renameTeam(@AuthenticationPrincipal Jwt jwt, @PathVariable String teamId, @Valid @RequestBody RenameTeam request) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public TeamView renameTeam(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable String teamId, @Valid @RequestBody RenameTeam request) {
+        CurrentUser user = CurrentUser.from(caller);
         return roster.renameTeam(user.tenantId(), user.scope(), teamId, request.name());
     }
 
     @Operation(summary = "People on the roster, optionally of one team (the read is audited)")
     @GetMapping("/people")
-    public List<PersonView> people(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String teamId) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public List<PersonView> people(@AuthenticationPrincipal AuthenticatedCaller caller, @RequestParam(required = false) String teamId) {
+        CurrentUser user = CurrentUser.from(caller);
         return roster.people(user.tenantId(), user.scope(), user.actor(), teamId);
     }
 
     @Operation(summary = "Add a person to a team")
     @PostMapping("/people")
     @ResponseStatus(HttpStatus.CREATED)
-    public PersonView createPerson(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreatePerson request) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public PersonView createPerson(@AuthenticationPrincipal AuthenticatedCaller caller, @Valid @RequestBody CreatePerson request) {
+        CurrentUser user = CurrentUser.from(caller);
         return roster.createPerson(user.tenantId(), user.scope(), user.actor(), request.teamId(), request.name(), request.email());
     }
 
     @Operation(summary = "Invite a person of the roster to answer questionnaires: a RESPONDENT-only invitation to their roster email address")
     @PostMapping("/people/{personId}/invite")
     @ResponseStatus(HttpStatus.CREATED)
-    public MemberResponse invitePerson(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID personId, HttpServletRequest http) {
-        CurrentUser user = CurrentUser.from(jwt);
-        UUID actor = Callers.person(jwt);
+    public MemberResponse invitePerson(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID personId, HttpServletRequest http) {
+        CurrentUser user = CurrentUser.from(caller);
+        UUID actor = Callers.person(caller);
         PersonView person = roster.person(user.tenantId(), user.scope(), personId);
         if (!person.active()) {
             throw new ScoringException(ScoringErrorCode.ROSTER_INVALID, "an inactive person cannot be invited", Map.of());
@@ -105,8 +105,8 @@ public class RosterController {
 
     @Operation(summary = "Change a person team, name, e-mail address or active flag")
     @PutMapping("/people/{personId}")
-    public PersonView updatePerson(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID personId, @Valid @RequestBody UpdatePerson request) {
-        CurrentUser user = CurrentUser.from(jwt);
+    public PersonView updatePerson(@AuthenticationPrincipal AuthenticatedCaller caller, @PathVariable UUID personId, @Valid @RequestBody UpdatePerson request) {
+        CurrentUser user = CurrentUser.from(caller);
         return roster.updatePerson(user.tenantId(), user.scope(), user.actor(), personId, request.teamId(), request.name(), request.email(),
                 request.active());
     }

@@ -15,7 +15,6 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 beforeEach(() => {
-  vi.stubEnv('VITE_AUTH_MODE', 'session');
   configureSession(null);
   server.use(csrfHandler);
 });
@@ -24,7 +23,7 @@ const platform = { subject: 'root', tenantId: '', organizations: [], roles: [], 
 const render = () =>
   renderRoutes([{ path: '/platform/tenants/new', element: <CreateTenantPage /> }, { path: '/platform/tenants', element: <p>tenant list page</p> }], {
     route: '/platform/tenants/new',
-    auth: { principal: platform, mode: 'session' },
+    auth: { principal: platform },
   });
 const fill = async (owner: string) => {
   await userEvent.type(screen.getByLabelText('Tenant id'), 'initech');
@@ -62,9 +61,4 @@ describe('CreateTenantPage with the application accounts', () => {
     expect(requests).toBe(0);
   });
 
-  it('is not asked for with the external provider', () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'oidc');
-    render();
-    expect(screen.queryByLabelText('Owner email address')).not.toBeInTheDocument();
-  });
 });

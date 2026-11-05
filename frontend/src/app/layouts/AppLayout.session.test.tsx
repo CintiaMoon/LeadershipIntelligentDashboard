@@ -12,7 +12,6 @@ const routes = [{ path: '/', element: <AppLayout />, children: [{ path: 'dashboa
 
 beforeEach(() => {
   useSession.setState({ organizationId: null, extraOrganizations: [] });
-  vi.stubEnv('VITE_AUTH_MODE', 'session');
   return () => vi.unstubAllEnvs();
 });
 
@@ -61,7 +60,6 @@ describe('the navigation with the application accounts', () => {
   const labels = (roles: string[]) => navItems(principalFor(ana, acme(roles))).map((i) => i.label);
 
   it('gives owners and administrators members, API tokens and the security audit', () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'session');
     for (const role of ['OWNER', 'ADMIN']) {
       expect(labels([role])).toEqual(expect.arrayContaining(['Members', 'API tokens', 'Security audit']));
     }
@@ -69,7 +67,6 @@ describe('the navigation with the application accounts', () => {
   });
 
   it('gives nobody else any of them', () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'session');
     for (const role of ['ENGINEERING_LEADER', 'ANALYST', 'VIEWER']) {
       expect(labels([role])).not.toEqual(expect.arrayContaining(['Members']));
       expect(labels([role])).not.toContain('API tokens');
@@ -80,15 +77,9 @@ describe('the navigation with the application accounts', () => {
   });
 
   it('gives the platform administrator the platform audit', () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'session');
     const items = navItems(principalFor({ ...ana, platformAdmin: true }, null));
     expect(items.map((i) => i.to)).toEqual(['/platform/tenants', '/configuration', '/platform/security-audit']);
     vi.unstubAllEnvs();
   });
 
-  it('shows none of this with the external provider', () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'oidc');
-    expect(labels(['OWNER'])).not.toContain('Members');
-    vi.unstubAllEnvs();
-  });
 });
