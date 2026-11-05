@@ -47,7 +47,7 @@ public class PlatformController {
     @ResponseStatus(HttpStatus.CREATED)
     public TenantResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateTenantRequest request) {
         PlatformRole.require(jwt);
-        return response(tenants.create(PlatformRole.actor(jwt), request.id(), request.name()));
+        return response(tenants.create(PlatformRole.actor(jwt), request.id(), request.name(), request.ownerEmail()));
     }
 
     private static TenantResponse response(TenantView view) {

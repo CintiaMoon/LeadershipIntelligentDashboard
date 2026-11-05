@@ -66,6 +66,10 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
     final class Browser {
         final Map<String, Cookie> jar = new LinkedHashMap<>();
 
+        MvcResult getInCompany(String path, String company) throws Exception {
+            return send(MockMvcRequestBuilders.get(path).header("X-Company-Id", company));
+        }
+
         MvcResult get(String path) throws Exception {
             return send(MockMvcRequestBuilders.get(path));
         }
@@ -445,9 +449,18 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
     void aSessionCookieAloneReachesNothingTenantScoped() throws Exception {
         activeAccount(EMAIL, PASSWORD);
         Browser b = signedIn(EMAIL, PASSWORD);
-        for (String path : new String[]{"/api/v1/assessments", "/api/v1/scoring-runs", "/api/v1/configuration", "/api/v1/platform/tenants", "/api/v1/teams"}) {
-            assertThat(status(b.get(path))).as(path).isEqualTo(401);
+        // a session names a user, not a company: without a company header a tenant endpoint is refused (400), and the company
+        // named by the header must be one where the user has an ACTIVE membership (this user has none)
+        for (String path : new String[]{"/api/v1/assessments", "/api/v1/scoring-runs", "/api/v1/configuration", "/api/v1/teams"}) {
+            MvcResult none = b.get(path);
+            assertThat(status(none)).as(path).isEqualTo(400);
+            assertThat(body(none).get("code").asText()).isEqualTo("COMPANY_REQUIRED");
+            MvcResult named = b.getInCompany(path, "acme");
+            assertThat(status(named)).as(path).isEqualTo(403);
+            assertThat(body(named).get("code").asText()).isEqualTo("COMPANY_ACCESS_DENIED");
         }
+        // and the platform endpoints need the platform flag
+        assertThat(status(b.get("/api/v1/platform/tenants"))).isEqualTo(403);
     }
 
     // ---- CSRF -------------------------------------------------------------------------------------------

@@ -70,6 +70,9 @@ lis:
     mail-from: ${LIS_MAIL_FROM:no-reply@localhost}
     mail-async: true
     audit-hash-key: ${LIS_AUDIT_HASH_KEY:}
+    invitation-ttl: 7d
+    # when no platform administrator exists at startup, this account becomes one (created and sent a link to set its password if new)
+    bootstrap-admin-email: ${LIS_BOOTSTRAP_ADMIN_EMAIL:}
   rate-limit:
     # throttles of the sign-in and account endpoints (decision D71); starting values, not calibrated. store: memory (this process only)
     # or redis (shared by every instance, with an in-process fallback when Redis is down; needs SPRING_DATA_REDIS_HOST)

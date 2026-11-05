@@ -61,6 +61,25 @@ public class UserStore {
                 + "where id = ? and status = 'PENDING_VERIFICATION'", now, now, id) == 1;
     }
 
+    public boolean existsPlatformAdmin() {
+        Integer n = jdbc.queryForObject("select count(*) from app_user where platform_admin and status = 'ACTIVE'", Integer.class);
+        return n != null && n > 0;
+    }
+
+    /** Creates an ACTIVE, verified account whose password is not known to anyone (the owner sets one through a reset link). */
+    @Transactional
+    public boolean insertVerified(UUID id, String email, String displayName, String passwordHash, boolean platformAdmin, Instant at) {
+        Timestamp now = Timestamp.from(at);
+        return jdbc.update("insert into app_user (id, email, display_name, password_hash, status, email_verified_at, platform_admin, password_changed_at, created_at, updated_at) "
+                + "values (?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?) on conflict do nothing",
+                id, email, displayName, passwordHash, now, platformAdmin, now, now, now) == 1;
+    }
+
+    @Transactional
+    public void setPlatformAdmin(UUID id, boolean platformAdmin, Instant at) {
+        jdbc.update("update app_user set platform_admin = ?, updated_at = ? where id = ?", platformAdmin, Timestamp.from(at), id);
+    }
+
     @Transactional
     public void updatePassword(UUID id, String passwordHash, Instant at) {
         Timestamp now = Timestamp.from(at);

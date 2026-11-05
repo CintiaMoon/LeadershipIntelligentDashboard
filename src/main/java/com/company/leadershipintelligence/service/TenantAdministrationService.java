@@ -5,6 +5,7 @@ import com.company.leadershipintelligence.domain.exception.ScoringException;
 import com.company.leadershipintelligence.repository.persistence.entity.TenantRow;
 import com.company.leadershipintelligence.repository.persistence.repository.AccessAuditStore;
 import com.company.leadershipintelligence.repository.persistence.repository.TenantStore;
+import com.company.leadershipintelligence.service.identity.MembershipService;
 import com.company.leadershipintelligence.service.query.TenantView;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,9 +29,11 @@ public class TenantAdministrationService {
 
     private final TenantStore tenants;
     private final AccessAuditStore audit;
+    private final MembershipService memberships;
     private final Clock clock;
 
-    public TenantAdministrationService(TenantStore tenants, AccessAuditStore audit, Clock clock) {
+    public TenantAdministrationService(TenantStore tenants, AccessAuditStore audit, MembershipService memberships, Clock clock) {
+        this.memberships = memberships;
         this.tenants = tenants;
         this.audit = audit;
         this.clock = clock;
@@ -38,6 +41,12 @@ public class TenantAdministrationService {
 
     @Transactional
     public TenantView create(String actor, String id, String name) {
+        return create(actor, id, name, null);
+    }
+
+    /** Creates the tenant and, when an owner email is given, invites that person as its first OWNER in the same transaction. */
+    @Transactional
+    public TenantView create(String actor, String id, String name, String ownerEmail) {
         String cleanId = id == null ? "" : id.trim();
         String cleanName = name == null ? "" : name.trim();
         if (!ID.matcher(cleanId).matches()) {
@@ -51,6 +60,9 @@ public class TenantAdministrationService {
         }
         // the audit row names the new tenant, so it also shows up in that tenant's own audit
         audit.record(cleanId, actor, "TENANT_CREATED", null, "{}", clock.instant());
+        if (ownerEmail != null && !ownerEmail.isBlank()) {
+            memberships.inviteOwner(cleanId, cleanName, ownerEmail, actor);
+        }
         return view(tenants.find(cleanId));
     }
 
