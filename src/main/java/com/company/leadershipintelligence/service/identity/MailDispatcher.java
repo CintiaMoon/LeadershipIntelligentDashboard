@@ -4,14 +4,12 @@ import com.company.leadershipintelligence.config.properties.IdentityProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.util.concurrent.Executor;
 
 /**
  * Sends the emails of the account flows through SMTP (decision D66). A message is sent only after the transaction that
@@ -26,12 +24,12 @@ public class MailDispatcher {
 
     private final ObjectProvider<JavaMailSender> sender;
     private final IdentityProperties properties;
-    private final Executor executor;
+    private final BackgroundWork work;
 
-    public MailDispatcher(ObjectProvider<JavaMailSender> sender, IdentityProperties properties, @Qualifier("mailExecutor") Executor executor) {
+    public MailDispatcher(ObjectProvider<JavaMailSender> sender, IdentityProperties properties, BackgroundWork work) {
         this.sender = sender;
         this.properties = properties;
-        this.executor = executor;
+        this.work = work;
     }
 
     public void send(String to, String subject, String body) {
@@ -40,11 +38,11 @@ public class MailDispatcher {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    executor.execute(job);
+                    work.run(job);
                 }
             });
         } else {
-            executor.execute(job);
+            work.run(job);
         }
     }
 

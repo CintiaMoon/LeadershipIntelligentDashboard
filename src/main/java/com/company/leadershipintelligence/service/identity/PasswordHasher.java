@@ -32,7 +32,15 @@ public class PasswordHasher {
     }
 
     public boolean matches(String password, String storedHash) {
-        return password != null && storedHash != null && encoder.matches(digest(password), storedHash);
+        if (password == null || storedHash == null) {
+            return false;
+        }
+        try {
+            return encoder.matches(digest(password), storedHash);
+        } catch (IllegalArgumentException e) {
+            // a stored value without a known algorithm prefix is a bad row; it fails like a wrong password, not as a 500
+            return false;
+        }
     }
 
     /** Does the same work as a real check, for a sign-in with an unknown email, so the answer takes about as long. */

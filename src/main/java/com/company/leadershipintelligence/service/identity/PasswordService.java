@@ -13,6 +13,7 @@ import com.company.leadershipintelligence.repository.persistence.repository.User
 import com.company.leadershipintelligence.repository.security.SessionRevoker;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -36,10 +37,14 @@ public class PasswordService {
     private final SessionRevoker sessions;
     private final SecurityAudit audit;
     private final IdentityProperties properties;
+    private final AuthRateLimiter limiter;
+    private final BackgroundWork work;
+    private final TransactionTemplate transaction;
     private final Clock clock;
 
     public PasswordService(UserStore users, AuthTokenStore tokens, PasswordHasher hasher, TokenCodec codec, AccountMessages messages,
-                           SessionRevoker sessions, SecurityAudit audit, IdentityProperties properties, Clock clock) {
+                           SessionRevoker sessions, SecurityAudit audit, IdentityProperties properties, AuthRateLimiter limiter,
+                           BackgroundWork work, TransactionTemplate transaction, Clock clock) {
         this.users = users;
         this.tokens = tokens;
         this.hasher = hasher;
@@ -48,35 +53,55 @@ public class PasswordService {
         this.sessions = sessions;
         this.audit = audit;
         this.properties = properties;
+        this.limiter = limiter;
+        this.work = work;
+        this.transaction = transaction;
         this.clock = clock;
     }
 
-    /** Sends a reset link to an ACTIVE account (a verification link to a pending one). Silent for any other address. */
-    @Transactional
+    /**
+     * Sends a reset link to an ACTIVE account (a verification link to a pending one). Silent for any other address. The
+     * lookup and the audit row are the same for every address; the link is issued in the background, so the answer takes the
+     * same time whether or not an account exists.
+     */
     public void requestReset(String rawEmail, ClientInfo client) {
         String email = EmailAddress.normalize(rawEmail);
+        boolean allowed = email == null || limiter.allowMail(email);
         Optional<UserRow> found = email == null ? Optional.empty() : users.findByEmail(email);
         if (found.isEmpty()) {
             audit.record("PASSWORD_RESET_REQUESTED", SecurityAudit.FAILURE, null, null, email == null ? "" : email, client, Map.of("reason", "UNKNOWN_ACCOUNT"));
             return;
         }
         UserRow user = found.get();
-        Instant now = clock.instant();
+        if (!allowed) {
+            audit.record("PASSWORD_RESET_REQUESTED", SecurityAudit.FAILURE, user.id(), null, null, client, Map.of("reason", "RATE_LIMITED"));
+            return;
+        }
         if (user.status() == AccountStatus.ACTIVE) {
-            tokens.revokeOpen(user.id(), TokenPurpose.RESET_PASSWORD, now);
-            String token = codec.newToken();
-            tokens.insert(user.id(), TokenPurpose.RESET_PASSWORD, codec.hash(token), now.plus(properties.resetTtl()), now);
-            messages.passwordReset(user.email(), user.displayName(), token);
             audit.success("PASSWORD_RESET_REQUESTED", user.id(), client);
+            work.run(() -> transaction.executeWithoutResult(status -> issueReset(user)));
         } else if (user.status() == AccountStatus.PENDING_VERIFICATION) {
-            tokens.revokeOpen(user.id(), TokenPurpose.VERIFY_EMAIL, now);
-            String token = codec.newToken();
-            tokens.insert(user.id(), TokenPurpose.VERIFY_EMAIL, codec.hash(token), now.plus(properties.verificationTtl()), now);
-            messages.verification(user.email(), user.displayName(), token);
             audit.record("PASSWORD_RESET_REQUESTED", SecurityAudit.FAILURE, user.id(), null, null, client, Map.of("reason", "NOT_VERIFIED"));
+            work.run(() -> transaction.executeWithoutResult(status -> issueVerification(user)));
         } else {
             audit.record("PASSWORD_RESET_REQUESTED", SecurityAudit.FAILURE, user.id(), null, null, client, Map.of("reason", "DISABLED"));
         }
+    }
+
+    private void issueReset(UserRow user) {
+        Instant now = clock.instant();
+        tokens.revokeOpen(user.id(), TokenPurpose.RESET_PASSWORD, now);
+        String token = codec.newToken();
+        tokens.insert(user.id(), TokenPurpose.RESET_PASSWORD, codec.hash(token), now.plus(properties.resetTtl()), now);
+        messages.passwordReset(user.email(), user.displayName(), token);
+    }
+
+    private void issueVerification(UserRow user) {
+        Instant now = clock.instant();
+        tokens.revokeOpen(user.id(), TokenPurpose.VERIFY_EMAIL, now);
+        String token = codec.newToken();
+        tokens.insert(user.id(), TokenPurpose.VERIFY_EMAIL, codec.hash(token), now.plus(properties.verificationTtl()), now);
+        messages.verification(user.email(), user.displayName(), token);
     }
 
     @Transactional
@@ -85,6 +110,8 @@ public class PasswordService {
         if (early != null) {
             throw new ScoringException(ScoringErrorCode.WEAK_PASSWORD, early);
         }
+        // the slow hash is computed before the link is used, so no row is locked while bcrypt runs
+        String hash = hasher.hash(newPassword);
         Optional<UUID> userId = token == null || token.isBlank() ? Optional.empty()
                 : tokens.consume(codec.hash(token.trim()), TokenPurpose.RESET_PASSWORD, clock.instant());
         Optional<UserRow> user = userId.flatMap(users::findById).filter(u -> u.status() == AccountStatus.ACTIVE);
@@ -95,9 +122,10 @@ public class PasswordService {
         // checked once the owner is known; the exception rolls the token use back, so the link still works for a better password
         String problem = PasswordPolicy.violation(newPassword, user.get().email());
         if (problem != null) {
+            audit.record("PASSWORD_RESET_COMPLETED", SecurityAudit.FAILURE, user.get().id(), null, null, client, Map.of("reason", "WEAK_PASSWORD"));
             throw new ScoringException(ScoringErrorCode.WEAK_PASSWORD, problem);
         }
-        apply(user.get(), newPassword, null, "PASSWORD_RESET_COMPLETED", client);
+        apply(user.get(), hash, null, "PASSWORD_RESET_COMPLETED", client);
     }
 
     @Transactional
@@ -112,14 +140,15 @@ public class PasswordService {
         if (problem != null) {
             throw new ScoringException(ScoringErrorCode.WEAK_PASSWORD, problem);
         }
-        apply(user, newPassword, keepSessionId, "PASSWORD_CHANGED", client);
+        apply(user, hasher.hash(newPassword), keepSessionId, "PASSWORD_CHANGED", client);
     }
 
-    private void apply(UserRow user, String newPassword, String keepSessionId, String event, ClientInfo client) {
+    private void apply(UserRow user, String newHash, String keepSessionId, String event, ClientInfo client) {
         Instant now = clock.instant();
-        users.updatePassword(user.id(), hasher.hash(newPassword), now);
+        users.updatePassword(user.id(), newHash, now);
         // a link sent before the change must not work after it
         tokens.revokeOpen(user.id(), TokenPurpose.RESET_PASSWORD, now);
+        tokens.revokeOpen(user.id(), TokenPurpose.VERIFY_EMAIL, now);
         int ended = sessions.revokeAll(user.id().toString(), keepSessionId);
         messages.passwordChanged(user.email(), user.displayName());
         audit.record(event, SecurityAudit.SUCCESS, user.id(), null, null, client, Map.of("sessionsEnded", Integer.toString(ended)));

@@ -18,6 +18,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
  */
 @SpringBootTest
 @Import(TestClockConfiguration.class)
+// the tests share one client address and make many calls; the limits themselves are tested in AuthRateLimitIntegrationTest
+@org.springframework.test.context.TestPropertySource(properties = {"lis.identity.ip-requests-per-minute=100000",
+        "lis.identity.login-failure-limit=100000", "lis.identity.emails-per-address-per-hour=100000"})
 public abstract class PostgresIntegrationTest {
 
     protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");

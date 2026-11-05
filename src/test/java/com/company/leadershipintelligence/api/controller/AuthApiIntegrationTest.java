@@ -131,6 +131,14 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
         return Map.of("email", email, "password", password);
     }
 
+    private static Map<String, String> verification(String token) {
+        return verification(token, PASSWORD);
+    }
+
+    private static Map<String, String> verification(String token, String password) {
+        return Map.of("token", token, "password", password);
+    }
+
     private String lastToken() {
         assertThat(sent).isNotEmpty();
         Matcher m = TOKEN.matcher(sent.get(sent.size() - 1).getText());
@@ -142,7 +150,7 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
     private void activeAccount(String email, String password) throws Exception {
         Browser b = new Browser();
         assertThat(status(b.post("/api/v1/auth/register", register(email, password)))).isEqualTo(202);
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", lastToken())))).isEqualTo(204);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(lastToken(), password)))).isEqualTo(204);
     }
 
     private Browser signedIn(String email, String password) throws Exception {
@@ -200,11 +208,11 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
         Browser b = new Browser();
         b.post("/api/v1/auth/register", register(EMAIL, PASSWORD));
         String token = lastToken();
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", token)))).isEqualTo(204);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(token)))).isEqualTo(204);
         assertThat(jdbc.queryForMap("select status, email_verified_at is not null as verified from app_user"))
                 .containsEntry("status", "ACTIVE").containsEntry("verified", true);
 
-        MvcResult again = b.post("/api/v1/auth/verify-email", Map.of("token", token));
+        MvcResult again = b.post("/api/v1/auth/verify-email", verification(token));
         assertThat(status(again)).isEqualTo(400);
         assertThat(body(again).get("code").asText()).isEqualTo("INVALID_TOKEN");
         assertThat(status(b.post("/api/v1/auth/login", login(EMAIL, PASSWORD)))).isEqualTo(200);
@@ -215,9 +223,9 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
         Browser b = new Browser();
         b.post("/api/v1/auth/register", register(EMAIL, PASSWORD));
         String token = lastToken();
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", "not-a-real-token")))).isEqualTo(400);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification("not-a-real-token")))).isEqualTo(400);
         clock.advance(Duration.ofHours(24).plusSeconds(1));
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", token)))).isEqualTo(400);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(token)))).isEqualTo(400);
         assertThat(jdbc.queryForObject("select status from app_user", String.class)).isEqualTo("PENDING_VERIFICATION");
     }
 
@@ -229,8 +237,8 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
         assertThat(status(b.post("/api/v1/auth/resend-verification", Map.of("email", EMAIL)))).isEqualTo(202);
         String second = lastToken();
         assertThat(second).isNotEqualTo(first);
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", first)))).isEqualTo(400);
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", second)))).isEqualTo(204);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(first)))).isEqualTo(400);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(second)))).isEqualTo(204);
     }
 
     @Test
@@ -271,15 +279,36 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void registeringAPendingAddressAgainCannotTakeItOver() throws Exception {
+    void anAddressCannotBeTakenOverByRegisteringItFirst() throws Exception {
+        Browser attacker = new Browser();
+        attacker.post("/api/v1/auth/register", register(EMAIL, "attacker chosen passphrase"));
+        String attackerLink = lastToken();
+        // the real owner receives that link and clicks it, but does not know the attacker's password
+        Browser owner = new Browser();
+        MvcResult refused = owner.post("/api/v1/auth/verify-email", verification(attackerLink, PASSWORD));
+        assertThat(status(refused)).isEqualTo(400);
+        assertThat(body(refused).get("code").asText()).isEqualTo("INVALID_TOKEN");
+        assertThat(jdbc.queryForObject("select status from app_user", String.class)).isEqualTo("PENDING_VERIFICATION");
+        assertThat(jdbc.queryForList("select detail::text from security_audit_event where event_type = 'EMAIL_VERIFIED'", String.class).toString())
+                .contains("BAD_PASSWORD");
+
+        // the owner registers the address themselves: the latest registration wins and the earlier link is retired
+        assertThat(status(owner.post("/api/v1/auth/register", register(EMAIL, PASSWORD)))).isEqualTo(202);
+        String ownerLink = lastToken();
+        assertThat(count("select count(*) from app_user")).isEqualTo(1);
+        assertThat(status(attacker.post("/api/v1/auth/verify-email", verification(attackerLink, "attacker chosen passphrase")))).isEqualTo(400);
+        assertThat(status(owner.post("/api/v1/auth/verify-email", verification(ownerLink)))).isEqualTo(204);
+        assertThat(status(owner.post("/api/v1/auth/login", login(EMAIL, "attacker chosen passphrase")))).isEqualTo(401);
+        assertThat(status(owner.post("/api/v1/auth/login", login(EMAIL, PASSWORD)))).isEqualTo(200);
+    }
+
+    @Test
+    void aWrongPasswordDoesNotUseUpTheVerificationLink() throws Exception {
         Browser b = new Browser();
         b.post("/api/v1/auth/register", register(EMAIL, PASSWORD));
-        assertThat(status(b.post("/api/v1/auth/register", register(EMAIL, "attacker chosen passphrase")))).isEqualTo(202);
-        assertThat(count("select count(*) from app_user")).isEqualTo(1);
-        // the owner opens the newest link; the password is still the first one
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", lastToken())))).isEqualTo(204);
-        assertThat(status(b.post("/api/v1/auth/login", login(EMAIL, "attacker chosen passphrase")))).isEqualTo(401);
-        assertThat(status(b.post("/api/v1/auth/login", login(EMAIL, PASSWORD)))).isEqualTo(200);
+        String token = lastToken();
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(token, "not the password at all")))).isEqualTo(400);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(token)))).isEqualTo(204);
     }
 
     @Test
@@ -538,9 +567,9 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
         b.post("/api/v1/auth/register", register(EMAIL, PASSWORD));
         String verification = lastToken();
         assertThat(status(b.post("/api/v1/auth/password/reset", Map.of("token", verification, "newPassword", "a brand new passphrase")))).isEqualTo(400);
-        b.post("/api/v1/auth/verify-email", Map.of("token", verification));
+        b.post("/api/v1/auth/verify-email", verification(verification));
         b.post("/api/v1/auth/password/forgot", Map.of("email", EMAIL));
-        assertThat(status(b.post("/api/v1/auth/verify-email", Map.of("token", lastToken())))).isEqualTo(400);
+        assertThat(status(b.post("/api/v1/auth/verify-email", verification(lastToken())))).isEqualTo(400);
     }
 
     @Test
@@ -576,7 +605,7 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
         Browser b = new Browser();
         b.post("/api/v1/auth/register", register(EMAIL, PASSWORD));
         String token = lastToken();
-        b.post("/api/v1/auth/verify-email", Map.of("token", token));
+        b.post("/api/v1/auth/verify-email", verification(token));
         b.post("/api/v1/auth/login", login("stranger@example.com", PASSWORD));
         b.post("/api/v1/auth/login", login(EMAIL, "wrong password here"));
         b.post("/api/v1/auth/login", login(EMAIL, PASSWORD));
@@ -604,6 +633,29 @@ class AuthApiIntegrationTest extends PostgresIntegrationTest {
         b.post("/api/v1/auth/password/reset", Map.of("token", "bad", "newPassword", "a brand new passphrase"));
         assertThat(jdbc.queryForList("select event_type || ':' || outcome from security_audit_event where event_type like 'PASSWORD%' order by id", String.class))
                 .containsExactly("PASSWORD_RESET_REQUESTED:SUCCESS", "PASSWORD_RESET_COMPLETED:SUCCESS", "PASSWORD_RESET_COMPLETED:FAILURE");
+    }
+
+    @Test
+    void aWeakNewPasswordWithAValidResetLinkIsAuditedAndKeepsTheLink() throws Exception {
+        activeAccount(EMAIL, PASSWORD);
+        Browser b = new Browser();
+        b.post("/api/v1/auth/password/forgot", Map.of("email", EMAIL));
+        String token = lastToken();
+        // long enough to pass the first check, but it is the account's own email, which only the second check can see
+        assertThat(status(b.post("/api/v1/auth/password/reset", Map.of("token", token, "newPassword", EMAIL)))).isEqualTo(422);
+        assertThat(jdbc.queryForList("select detail::text from security_audit_event where event_type = 'PASSWORD_RESET_COMPLETED' and outcome = 'FAILURE'", String.class).toString())
+                .contains("WEAK_PASSWORD");
+        assertThat(status(b.post("/api/v1/auth/password/reset", Map.of("token", token, "newPassword", "a brand new passphrase")))).isEqualTo(204);
+    }
+
+    @Test
+    void theSuccessfulSignInIsRecordedOnlyOnceTheSessionExists() throws Exception {
+        activeAccount(EMAIL, PASSWORD);
+        Browser b = new Browser();
+        assertThat(status(b.post("/api/v1/auth/login", login(EMAIL, PASSWORD)))).isEqualTo(200);
+        assertThat(b.sessionId()).isNotNull();
+        assertThat(count("select count(*) from security_audit_event where event_type = 'LOGIN' and outcome = 'SUCCESS'")).isEqualTo(1);
+        assertThat(count("select count(*) from spring_session")).isEqualTo(1);
     }
 
     @Test
