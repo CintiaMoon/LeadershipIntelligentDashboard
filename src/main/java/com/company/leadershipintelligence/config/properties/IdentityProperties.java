@@ -17,11 +17,9 @@ import java.time.Duration;
  * @param mailAsync          send emails on a background thread (false only in tests, so they can read the outbox at once)
  * @param auditHashKey       secret that keys the hash stored for an email that belongs to no account; empty means a random key per
  *                           process, which is fine because that hash is only for spotting repeats within one run
- * @param ipRequestsPerMinute  calls one client address may make a minute to the sign-in and account endpoints (429 above it)
- * @param loginFailureLimit    failed sign-ins for one email from one address before sign-in is refused for {@code loginLockout}
- * @param loginLockout         how long sign-in stays refused after too many failures (also the window in which failures count)
- * @param emailsPerAddressPerHour  account emails (verification, reset) sent to one address an hour; further requests are
- *                           answered as usual but send nothing, so the service cannot be used to flood a mailbox
+ * @param invitationTtl      how long an invitation to join a company works
+ * @param bootstrapAdminEmail  when no platform administrator exists at startup, the account with this email becomes one (it is
+ *                           created if needed and sent a link to set its password); empty means none is created
  */
 @ConfigurationProperties(prefix = "lis.identity")
 public record IdentityProperties(
@@ -33,8 +31,6 @@ public record IdentityProperties(
         @DefaultValue("no-reply@localhost") String mailFrom,
         @DefaultValue("true") boolean mailAsync,
         @DefaultValue("") String auditHashKey,
-        @DefaultValue("60") int ipRequestsPerMinute,
-        @DefaultValue("5") int loginFailureLimit,
-        @DefaultValue("15m") Duration loginLockout,
-        @DefaultValue("5") int emailsPerAddressPerHour) {
+        @DefaultValue("7d") Duration invitationTtl,
+        @DefaultValue("") String bootstrapAdminEmail) {
 }

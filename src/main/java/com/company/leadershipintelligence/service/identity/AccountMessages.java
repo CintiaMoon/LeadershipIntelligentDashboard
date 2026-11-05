@@ -44,6 +44,20 @@ public class AccountMessages {
                         + "If this was not you, reset your password now:\n\n" + properties.webBaseUrl() + "/forgot-password\n");
     }
 
+    public void invitation(String to, String companyName, String token) {
+        mail.send(to, "You are invited to " + companyName,
+                "Hello,\n\nYou were invited to join " + companyName + ". Sign in (or create an account with this email address), then open:\n\n"
+                        + link("/invitations/accept", token) + "\n\nThe link works for " + properties.invitationTtl().toDays()
+                        + " days and only once, and only for this email address. If you did not expect this, ignore this message.\n");
+    }
+
+    public void platformAdministrator(String to, String name, String token) {
+        mail.send(to, "Set your password",
+                "Hello " + name + ",\n\nAn account was prepared for you as a platform administrator. Choose a password with this link:\n\n"
+                        + link("/reset-password", token) + "\n\nThe link works for " + minutes(properties.resetTtl())
+                        + " and only once; if it has expired, ask for a new one with \"forgot password\".\n");
+    }
+
     private String link(String path, String token) {
         return properties.webBaseUrl() + path + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
     }

@@ -228,7 +228,7 @@ Only the `PLATFORM_ADMIN` role reaches `/api/v1/platform/**`. The role belongs t
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/platform/tenants` | `{items: [{id, name, createdAt}]}`, oldest first; the read is audited as `TENANTS_LISTED` (the count, no tenant) |
-| POST | `/platform/tenants` | body `{id, name}` and nothing else (unknown fields are rejected). `id`: 2 to 63 lowercase letters, digits or hyphens, starting with a letter or digit, permanent; it is trimmed. `name`: 1 to 200 characters, trimmed. 201 with the tenant. 409 `TENANT_ALREADY_EXISTS` for a taken id (nothing changes); 422 `INVALID_TENANT` for an id or name that is not allowed; 400 for a missing or oversized field. Audited as `TENANT_CREATED` against the new tenant, with the subject of the caller |
+| POST | `/platform/tenants` | body `{id, name, ownerEmail?}` and nothing else (unknown fields are rejected); `ownerEmail` (optional until the web application sends it, see section 19) invites that person as the first OWNER. `id`: 2 to 63 lowercase letters, digits or hyphens, starting with a letter or digit, permanent; it is trimmed. `name`: 1 to 200 characters, trimmed. 201 with the tenant. 409 `TENANT_ALREADY_EXISTS` for a taken id (nothing changes); 422 `INVALID_TENANT` for an id or name that is not allowed; 400 for a missing or oversized field. Audited as `TENANT_CREATED` against the new tenant, with the subject of the caller |
 
 A tenant can score assessments as soon as it exists and the identity provider issues tokens with its `tenant_id`. Organizations are still registered the first time an assessment names them.
 
@@ -313,7 +313,7 @@ A version carries its **review record** once submitted: submitter, validation pr
 
 ## 18. As implemented (accounts and sessions, phase P1: decisions D65 to D68, D73, D74)
 
-Built-in accounts (`docs/implementation/IDENTITY_PROPOSAL.md`). These endpoints use a **server-side session** and CSRF protection, not a bearer token; every other endpoint still takes the bearer token until the company memberships of phase P3 move it to sessions too. A session cookie alone reaches nothing tenant-scoped (401). All paths are under `/api/v1/auth`.
+Built-in accounts (`docs/implementation/IDENTITY_PROPOSAL.md`). These endpoints use a **server-side session** and CSRF protection, not a bearer token; every other endpoint still takes the bearer token until the company memberships of phase P3 move it to sessions too. A session names a user and nothing else: tenant endpoints are reached with the company header described in section 19. All paths are under `/api/v1/auth`.
 
 Cookies: `LIS_SESSION` (the session id; HttpOnly, Secure, SameSite=Lax; 30 minutes idle, 8 hours at most) and `XSRF-TOKEN` (readable by the web application). Every `POST` needs the header `X-XSRF-TOKEN` with the value of the `XSRF-TOKEN` cookie; without it the answer is 403 `CSRF_TOKEN_INVALID`. A new session and a new CSRF token are issued at every sign-in.
 
@@ -330,5 +330,38 @@ Cookies: `LIS_SESSION` (the session id; HttpOnly, Secure, SameSite=Lax; 30 minut
 | `POST /password/reset` | `{token, newPassword}` | 204 and every session of the user is ended; 400 `INVALID_TOKEN`; 422 `WEAK_PASSWORD` (the link still works afterwards) |
 | `POST /password/change` | `{currentPassword, newPassword}` | 204 (needs a session); the user's other sessions are ended; 422 when the current password is wrong |
 
-Password rule: 12 to 128 characters, not a very common password, not the email address, not a single repeated pattern; no composition rules. Emails are normalized (trimmed, lower case). `companies` is always empty in P1 and will list only companies with an ACTIVE membership. New codes: `AUTHENTICATION_FAILED` (401), `INVALID_ACCOUNT_REQUEST` and `WEAK_PASSWORD` (422), `INVALID_TOKEN` (400), `CSRF_TOKEN_INVALID` (403), `TOO_MANY_REQUESTS` (429).
-Throttling (in memory per instance; shared counters arrive with P2, D71): a client address may make 60 calls a minute to the unauthenticated endpoints (429 above it); 5 failed sign-ins for one email from one address lock sign-in for that pair for 15 minutes (429, the same for an unknown email); an address gets at most 5 account emails an hour, and further requests are still answered as usual but send nothing. Settings: `lis.identity.ip-requests-per-minute`, `login-failure-limit`, `login-lockout`, `emails-per-address-per-hour`. Behind a proxy set `LIS_FORWARD_HEADERS=framework` so the client address and the Secure flag of cookies come from `X-Forwarded-*` (default `none`: not trusted).Registering a still pending address again replaces the earlier registration (the latest wins, earlier links are retired). Activation needs the link and the password together, so a stranger who registered an address first cannot get it activated by its owner clicking the link.
+Password rule: 12 to 128 characters, not a very common password, not the email address, not a single repeated pattern; no composition rules. Emails are normalized (trimmed, lower case). `companies` lists only companies with an ACTIVE membership (section 19). New codes: `AUTHENTICATION_FAILED` (401), `INVALID_ACCOUNT_REQUEST` and `WEAK_PASSWORD` (422), `INVALID_TOKEN` (400), `CSRF_TOKEN_INVALID` (403), `TOO_MANY_REQUESTS` (429).
+
+Throttling (decision D71; starting values, not calibrated): every refusal is `429 TOO_MANY_REQUESTS` with a `Retry-After` header (seconds) and is written to the security audit as `RATE_LIMITED` with the rule that fired (`details.rule`). The counts depend only on what the caller sent, never on whether an account exists.
+
+| Rule | Limit |
+|---|---|
+| `login-ip` | 20 sign-in calls per address per 5 minutes |
+| `login-account` | 5 failed sign-ins per account per 15 minutes, then a delay of 30 s that doubles with every further failure, up to 15 minutes; never a permanent lock; a successful sign-in clears it |
+| `account-ip-*`, `account-email-*` | 5 calls per address and 5 per email per hour, each of register, resend-verification and forgot-password on its own |
+| `token-ip` | 20 uses of a verification or reset link per address per hour |
+
+Settings are under `lis.rate-limit.*`. `lis.rate-limit.store=memory` keeps the counters in the process (default; one instance); `redis` shares them between instances through `SPRING_DATA_REDIS_HOST`. If Redis cannot be reached the limits keep applying with counters in the process, a warning is logged and the metric `auth.ratelimit.fallback` counts the calls served that way; the metric `auth.ratelimit.hits{rule}` counts refusals. Behind a proxy set `LIS_FORWARD_HEADERS=framework` so the client address and the Secure flag of cookies come from `X-Forwarded-*` (default `none`: not trusted).
+
+Registering a still pending address again replaces the earlier registration (the latest wins, earlier links are retired). Activation needs the link and the password together, so a stranger who registered an address first cannot get it activated by its owner clicking the link.
+
+## 19. As implemented (company memberships, phase P3: decision D69)
+
+A **company is the tenant**. The session names a user; a **membership** (INVITED, ACTIVE, SUSPENDED, REMOVED, with its roles and organizations) gives that user access to one company, and it is read on every request, so suspending or removing it, or changing its roles, takes effect at the next call. Nothing about tenant, role or organization is taken from a body, query string or path.
+
+| Rule | Behaviour |
+|---|---|
+| Company in a call | Session callers send `X-Company-Id: <tenantId>` (the web application takes it from the `/c/{tenantId}` URL). Missing on a tenant endpoint: `400 COMPANY_REQUIRED`. No ACTIVE membership in that company, or no such company: `403 COMPANY_ACCESS_DENIED`, the same answer for both (existence is not revealed), audited as `COMPANY_ACCESS_DENIED` |
+| Roles and organizations | From the membership: its roles (the five `Role` values, or `RESPONDENT` alone) and its organization list. A list means exactly those organizations. No list means every organization of the company, including ones that do not exist yet (organizations are created by first use, so the owner of a new company can create its first one): the caller is marked `org_all`, which only the application sets on its own caller object, and listings show the organizations that exist now. (Before this correction an empty list meant no organization at all, as an empty `org_ids` claim does, which locked a new owner out of organization data.) Role rules, redaction, tenant-scoped repositories, access audit (actor = the user id) are unchanged |
+| Platform administrator | A flag on the user, read at every request. It has no company: `/api/v1/platform/**` only; every tenant endpoint answers 403 to it, with or without a header, and a header is ignored on the platform endpoints. A user without the flag gets 403 there |
+| Account state | A session whose account is no longer ACTIVE answers 401 at the next request |
+| CSRF | A state-changing call that rides on the session cookie needs `X-XSRF-TOKEN` (403 `CSRF_TOKEN_INVALID`); a call with a bearer token or with no session is not subject to it (the latter is 401) |
+| Bearer tokens | The existing token path (`tenant_id`, `roles`, `org_ids` claims) is unchanged and needs no company header; it is removed in phase P7 |
+
+| Method and path | Answer |
+|---|---|
+| `GET /api/v1/companies` | Session only (401 otherwise), no company header. `[{id, name, roles}]` for the ACTIVE memberships only, by name then id. The same list is in `companies` of `GET /api/v1/auth/me` and of login (`{id, name}`) |
+| `POST /api/v1/auth/invitations/accept` | body `{token}`; needs a session (CSRF as the other auth calls). 204 and the membership becomes ACTIVE. 400 `INVALID_TOKEN`, identical for an unknown, used or expired link, an invitation sent to another email, and a company the user already belongs to; a refusal does not use the link up |
+| `POST /api/v1/platform/tenants` | now also takes `ownerEmail`: an INVITED OWNER membership is created for that (normalized) email in the same transaction and an invitation email is sent after commit (link `/invitations/accept?token=`, 7 days, once, hash stored). A malformed owner email: 422 `INVALID_TENANT` and no company is created |
+
+An invitation is accepted by a signed-in user whose **verified** email is the invited one. Registering with an invitation token in one step, inviting further members, changing roles or organizations, and suspending or removing members are phase P5; until then memberships beyond the first owner are created in the database. The first platform administrator is created at startup when `LIS_BOOTSTRAP_ADMIN_EMAIL` is set and no ACTIVE platform administrator exists: the account is made one (created verified with an unknown password and sent a link to choose one if it did not exist). New codes: `COMPANY_REQUIRED` (400), `COMPANY_ACCESS_DENIED` (403).
