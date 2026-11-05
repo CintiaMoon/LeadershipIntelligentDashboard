@@ -14,19 +14,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +42,6 @@ import java.util.Map;
 public class CompanyContextFilter extends OncePerRequestFilter {
 
     public static final String COMPANY_HEADER = "X-Company-Id";
-    private static final Duration LIFETIME = Duration.ofMinutes(5);
 
     private final MembershipService memberships;
     private final ApiErrorWriter errors;
@@ -86,7 +78,7 @@ public class CompanyContextFilter extends OncePerRequestFilter {
                 errors.accessDenied(request, response, new AccessDeniedException("only a platform administrator may do this"));
                 return;
             }
-            replace(token(user, null, List.of(PlatformRole.PLATFORM_ADMIN), List.of(), false), List.of(new SimpleGrantedAuthority("ROLE_" + PlatformRole.PLATFORM_ADMIN)));
+            replace(CallerTokens.caller(user.id().toString(), user.email(), null, List.of(PlatformRole.PLATFORM_ADMIN), List.of(), false, clock));
             chain.doFilter(request, response);
             return;
         }
@@ -107,28 +99,14 @@ public class CompanyContextFilter extends OncePerRequestFilter {
             return;
         }
         List<String> roles = List.copyOf(membership.roles());
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        roles.forEach(r -> authorities.add(new SimpleGrantedAuthority("ROLE_" + r)));
         OrganizationReach reach = memberships.reach(membership.tenantId(), membership.organizationIds());
-        replace(token(user, membership.tenantId(), roles, List.copyOf(reach.organizationIds()), reach.all()), authorities);
+        replace(CallerTokens.caller(user.id().toString(), user.email(), membership.tenantId(), roles, List.copyOf(reach.organizationIds()), reach.all(), clock));
         chain.doFilter(request, response);
     }
 
-    private Jwt token(SessionAccount user, String tenantId, List<String> roles, List<String> organizations, boolean allOrganizations) {
-        Instant now = clock.instant();
-        Jwt.Builder builder = Jwt.withTokenValue(CurrentUser.INTERNAL_TOKEN_VALUE).header("alg", "none").subject(user.id().toString())
-                .claim("email", user.email()).claim(CurrentUser.ROLES_CLAIM, roles)
-                .claim(CurrentUser.ORGANIZATIONS_CLAIM, organizations).claim(CurrentUser.ALL_ORGANIZATIONS_CLAIM, allOrganizations)
-                .issuedAt(now).expiresAt(now.plus(LIFETIME));
-        if (tenantId != null) {
-            builder.claim(CurrentUser.TENANT_CLAIM, tenantId);
-        }
-        return builder.build();
-    }
-
-    private void replace(Jwt jwt, List<? extends GrantedAuthority> authorities) {
+    private void replace(Authentication authentication) {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(new JwtAuthenticationToken(jwt, authorities, jwt.getSubject()));
+        context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
     }
 }

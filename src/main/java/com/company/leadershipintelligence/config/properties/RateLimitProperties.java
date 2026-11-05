@@ -17,6 +17,8 @@ import java.time.Duration;
  * @param accountIpLimit      register, resend-verification or forgot-password calls from one address per {@code accountWindow}, each
  * @param accountEmailLimit   the same calls for one email address per {@code accountWindow}, each
  * @param tokenIpLimit        uses of a verification or reset link from one address per {@code tokenWindow}
+ * @param apiTokenLimit       calls with one API token per {@code apiTokenWindow}
+ * @param apiTokenFailureLimit  calls from one address with an API token that is not valid, per {@code apiTokenWindow}
  */
 @ConfigurationProperties(prefix = "lis.rate-limit")
 public record RateLimitProperties(
@@ -31,5 +33,8 @@ public record RateLimitProperties(
         @DefaultValue("5") int accountEmailLimit,
         @DefaultValue("1h") Duration accountWindow,
         @DefaultValue("20") int tokenIpLimit,
-        @DefaultValue("1h") Duration tokenWindow) {
+        @DefaultValue("1h") Duration tokenWindow,
+        @DefaultValue("600") int apiTokenLimit,
+        @DefaultValue("60") int apiTokenFailureLimit,
+        @DefaultValue("1m") Duration apiTokenWindow) {
 }

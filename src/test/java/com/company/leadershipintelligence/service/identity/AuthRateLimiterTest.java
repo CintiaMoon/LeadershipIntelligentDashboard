@@ -28,7 +28,7 @@ class AuthRateLimiterTest {
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     // 3 sign-ins per 5 minutes per address; 2 failures then a 30 s delay that doubles up to 2 minutes; 2 account calls and 2 link uses per hour
     private final RateLimitProperties limits = new RateLimitProperties("memory", 3, Duration.ofMinutes(5), 2, Duration.ofMinutes(15),
-            Duration.ofSeconds(30), Duration.ofMinutes(2), 2, 2, Duration.ofHours(1), 2, Duration.ofHours(1));
+            Duration.ofSeconds(30), Duration.ofMinutes(2), 2, 2, Duration.ofHours(1), 2, Duration.ofHours(1), 3, 2, Duration.ofMinutes(1));
     private final AuthRateLimiter limiter = new AuthRateLimiter(new InMemoryRateCounters(clock), limits, audit, meters);
 
     @Test
@@ -120,6 +120,29 @@ class AuthRateLimiterTest {
         assertThatCode(() -> limiter.checkTokenUse(ELSEWHERE)).doesNotThrowAnyException();
     }
 
+
+    @Test
+    void anApiTokenIsLimitedPerTokenPerMinute() {
+        java.util.UUID one = java.util.UUID.randomUUID();
+        java.util.UUID two = java.util.UUID.randomUUID();
+        for (int i = 0; i < 3; i++) {
+            limiter.checkApiToken(one, HERE);
+        }
+        assertThatThrownBy(() -> limiter.checkApiToken(one, HERE)).isInstanceOfSatisfying(RateLimitedException.class,
+                e -> assertThat(e.details()).containsEntry("rule", "api-token"));
+        assertThatCode(() -> limiter.checkApiToken(two, HERE)).as("another token has its own count").doesNotThrowAnyException();
+        clock.advance(Duration.ofSeconds(61));
+        assertThatCode(() -> limiter.checkApiToken(one, HERE)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void anAddressThatKeepsPresentingInvalidApiTokensIsRefused() {
+        limiter.apiTokenRejected(HERE);
+        limiter.apiTokenRejected(HERE);
+        assertThatThrownBy(() -> limiter.apiTokenRejected(HERE)).isInstanceOfSatisfying(RateLimitedException.class,
+                e -> assertThat(e.details()).containsEntry("rule", "api-token-invalid"));
+        assertThatCode(() -> limiter.apiTokenRejected(ELSEWHERE)).doesNotThrowAnyException();
+    }
     @Test
     void theCountersHoldNoEmailAddress() {
         // the key of an email is its hash: a counter can be inspected without learning who is being throttled
