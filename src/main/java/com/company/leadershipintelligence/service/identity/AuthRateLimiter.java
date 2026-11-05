@@ -79,6 +79,16 @@ public class AuthRateLimiter {
         }
     }
 
+    /** One call with an API token (decision D70, D71: 600 a minute per token). */
+    public void checkApiToken(java.util.UUID tokenId, ClientInfo client) {
+        hit("api-token", "api-token|" + tokenId, limits.apiTokenLimit(), limits.apiTokenWindow(), client);
+    }
+
+    /** One call from this address with an API token that is not valid; an address that keeps trying is refused. */
+    public void apiTokenRejected(ClientInfo client) {
+        hit("api-token-invalid", "api-token-invalid|" + ip(client), limits.apiTokenFailureLimit(), limits.apiTokenWindow(), client);
+    }
+
     /** One use of a verification or reset link. */
     public void checkTokenUse(ClientInfo client) {
         hit("token-ip", "token-ip|" + ip(client), limits.tokenIpLimit(), limits.tokenWindow(), client);

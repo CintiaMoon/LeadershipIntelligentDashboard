@@ -1,7 +1,10 @@
 package com.company.leadershipintelligence.config.security;
 
 import com.company.leadershipintelligence.api.exception.ApiErrorWriter;
+import com.company.leadershipintelligence.api.security.ApiTokenAuthenticationFilter;
 import com.company.leadershipintelligence.api.security.CompanyContextFilter;
+import com.company.leadershipintelligence.service.identity.ApiTokenService;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import com.company.leadershipintelligence.service.identity.MembershipService;
 import com.company.leadershipintelligence.service.identity.SecurityAudit;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
@@ -109,7 +112,7 @@ public class SecurityConfiguration {
 
     @Bean
     @Order(2)
-    SecurityFilterChain filterChain(HttpSecurity http, ApiErrorWriter errors, MembershipService memberships, SecurityAudit audit, IdentityProperties identity,
+    SecurityFilterChain filterChain(HttpSecurity http, ApiErrorWriter errors, MembershipService memberships, ApiTokenService apiTokens, SecurityAudit audit, IdentityProperties identity,
                                     Clock clock, CookieCsrfTokenRepository csrfTokens, @Value("${server.servlet.session.cookie.name:JSESSIONID}") String sessionCookie) throws Exception {
         // sessions are read, never created, here; a request with a bearer token is not a session request
         HttpSessionSecurityContextRepository sessions = new HttpSessionSecurityContextRepository();
@@ -125,12 +128,15 @@ public class SecurityConfiguration {
                 .securityContext(c -> c.securityContextRepository(sessions))
                 .requestCache(c -> c.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
                 .addFilterBefore(new AbsoluteSessionTimeoutFilter(identity.sessionAbsolute(), clock), SecurityContextHolderFilter.class)
+                .addFilterBefore(new ApiTokenAuthenticationFilter(apiTokens, memberships, errors, clock), BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(new CompanyContextFilter(memberships, errors, audit, clock), BearerTokenAuthenticationFilter.class)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.NEVER))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         // platform administration (decision D46): only the platform role, and nothing tenant-scoped is reachable with it
                         .requestMatchers("/api/v1/platform/**").hasRole(PlatformRole.PLATFORM_ADMIN)
+                        // API tokens (decision D70): owners and administrators, and the controller refuses a token itself
+                        .requestMatchers("/api/v1/api-tokens", "/api/v1/api-tokens/**").hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
                         // questionnaire library and builder (decisions D47, D50): administrators only, for reads as well as writes
                         .requestMatchers("/api/v1/questionnaires", "/api/v1/questionnaires/**")
                         .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
@@ -154,6 +160,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/v1/**", "/v3/api-docs", "/v3/api-docs/**").hasAnyRole(everyone)
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o
+                        // an application API token (lis_...) is authenticated by ApiTokenAuthenticationFilter, not decoded as a JWT
+                        .bearerTokenResolver(request -> ApiTokenAuthenticationFilter.tokenOf(request) != null ? null : new DefaultBearerTokenResolver().resolve(request))
                         .jwt(j -> j.jwtAuthenticationConverter(rolesConverter()))
                         .authenticationEntryPoint(errors::unauthenticated)
                         .accessDeniedHandler(errors::accessDenied))

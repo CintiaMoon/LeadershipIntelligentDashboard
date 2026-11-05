@@ -43,6 +43,11 @@ public final class SessionClient {
         return send(request(path, body).header("X-XSRF-TOKEN", jar.get("XSRF-TOKEN").getValue()));
     }
 
+    public MvcResult delete(String path) throws Exception {
+        csrf();
+        return send(MockMvcRequestBuilders.delete(path).header("X-XSRF-TOKEN", jar.get("XSRF-TOKEN").getValue()));
+    }
+
     public MvcResult postWithoutCsrf(String path, Object body) throws Exception {
         csrf();
         return send(request(path, body));

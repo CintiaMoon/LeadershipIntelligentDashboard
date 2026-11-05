@@ -37,6 +37,13 @@ public class ApiErrorWriter {
         write(response, 403, "CSRF_TOKEN_INVALID", "The request was refused because its CSRF token is missing or not valid.");
     }
 
+    /** A throttle refused the call (decision D71). */
+    public void rateLimited(HttpServletResponse response, com.company.leadershipintelligence.domain.exception.RateLimitedException e) throws IOException {
+        long seconds = Math.max(1, (e.retryAfter().toMillis() + 999) / 1000);
+        response.setHeader("Retry-After", Long.toString(seconds));
+        write(response, 429, "TOO_MANY_REQUESTS", e.getMessage());
+    }
+
     /** A tenant endpoint was called by a session without naming the company (decision D69). */
     public void companyRequired(HttpServletResponse response) throws IOException {
         write(response, 400, "COMPANY_REQUIRED", "The X-Company-Id header must name the company.");

@@ -340,6 +340,7 @@ Throttling (decision D71; starting values, not calibrated): every refusal is `42
 | `login-account` | 5 failed sign-ins per account per 15 minutes, then a delay of 30 s that doubles with every further failure, up to 15 minutes; never a permanent lock; a successful sign-in clears it |
 | `account-ip-*`, `account-email-*` | 5 calls per address and 5 per email per hour, each of register, resend-verification and forgot-password on its own |
 | `token-ip` | 20 uses of a verification or reset link per address per hour |
+| `api-token`, `api-token-invalid` | 600 calls per API token per minute; 60 calls per address per minute with an API token that is not valid (section 20) |
 
 Settings are under `lis.rate-limit.*`. `lis.rate-limit.store=memory` keeps the counters in the process (default; one instance); `redis` shares them between instances through `SPRING_DATA_REDIS_HOST`. If Redis cannot be reached the limits keep applying with counters in the process, a warning is logged and the metric `auth.ratelimit.fallback` counts the calls served that way; the metric `auth.ratelimit.hits{rule}` counts refusals. Behind a proxy set `LIS_FORWARD_HEADERS=framework` so the client address and the Secure flag of cookies come from `X-Forwarded-*` (default `none`: not trusted).
 
@@ -365,3 +366,23 @@ A **company is the tenant**. The session names a user; a **membership** (INVITED
 | `POST /api/v1/platform/tenants` | now also takes `ownerEmail`: an INVITED OWNER membership is created for that (normalized) email in the same transaction and an invitation email is sent after commit (link `/invitations/accept?token=`, 7 days, once, hash stored). A malformed owner email: 422 `INVALID_TENANT` and no company is created |
 
 An invitation is accepted by a signed-in user whose **verified** email is the invited one. Registering with an invitation token in one step, inviting further members, changing roles or organizations, and suspending or removing members are phase P5; until then memberships beyond the first owner are created in the database. The first platform administrator is created at startup when `LIS_BOOTSTRAP_ADMIN_EMAIL` is set and no ACTIVE platform administrator exists: the account is made one (created verified with an unknown password and sent a link to choose one if it did not exist). New codes: `COMPANY_REQUIRED` (400), `COMPANY_ACCESS_DENIED` (403).
+
+## 20. As implemented (API tokens, phase P4: decision D70)
+
+For callers that are not a browser. A token is an opaque secret `lis_` + 43 URL-safe characters (256 random bits) sent as `Authorization: Bearer lis_...`. Only its SHA-256 is stored. It belongs to **one company** and to the **user who created it**, has **one role** and optionally a list of organizations. It needs **no `X-Company-Id`** (the company is the token's, and a header is ignored) and **no CSRF token** (it is not an ambient credential). A request that carries both a token and a session cookie is a token request.
+
+| Method and path | Who | Answer |
+|---|---|---|
+| `POST /api/v1/api-tokens` | OWNER or ADMIN with a **session** | body `{name, role, expiresAt?, organizationIds?}` (unknown fields refused). 201 `{token: {id, name, role, prefix, organizationIds, createdBy, createdAt, expiresAt, lastUsedAt, revokedAt, status}, secret}`: **the secret is in this answer only** and cannot be read again. 422 `INVALID_API_TOKEN` for a bad name (1 to 100 characters), role, expiry (must be in the future), organization, or when the company already has 50 usable tokens; 400 for a missing field |
+| `GET /api/v1/api-tokens` | OWNER or ADMIN with a session | the company's tokens, newest first, never their secrets; `status` is `ACTIVE`, `EXPIRED` or `REVOKED` |
+| `DELETE /api/v1/api-tokens/{id}` | OWNER or ADMIN with a session | 204; takes effect at the next request. A token of another company, or none, is 404 `API_TOKEN_NOT_FOUND`; revoking a revoked token is 204 again |
+
+A token cannot manage tokens: an ADMIN token passes the role rule and is refused (403), and `GET /api/v1/companies` is 401 for it. It never reaches `/api/v1/platform/**`.
+
+**Who may create what.** Roles are ranked OWNER, ADMIN, ENGINEERING_LEADER, ANALYST, VIEWER. A token's role is one of ADMIN, ENGINEERING_LEADER, ANALYST, VIEWER: **never OWNER**, never RESPONDENT or the platform role, and **no stronger than the strongest role its creator holds** (an ADMIN may create an ADMIN token, not an OWNER one). A creator limited to some organizations may only create tokens limited to a subset of them (a token without a list would reach more). No list means every organization of the company, including ones created later, exactly as for a membership (section 19).
+
+**When a token stops working** (always at the next request, with the same plain `401 UNAUTHENTICATED` for the caller; the reason is in the security audit as `API_TOKEN_REJECTED`): it is revoked (`REVOKED`); it expired (`EXPIRED`); its creator's account is no longer ACTIVE (`CREATOR_DISABLED`); the creator no longer has an ACTIVE membership in the company (`CREATOR_NOT_MEMBER`); the creator now holds a weaker role than the token (`CREATOR_ROLE_LOWER`); or the creator's organization list no longer covers the token's (`CREATOR_SCOPE_NARROWER`). An unknown or malformed `lis_` value is the same 401. A bearer value that does not start with `lis_` goes to the external-token path, unchanged.
+
+**Limits** (decision D71, `lis.rate-limit.api-token-limit` 600 per minute per token, `api-token-failure-limit` 60 per minute per address for tokens that are not valid): over the limit is `429 TOO_MANY_REQUESTS` with `Retry-After`, audited as `RATE_LIMITED` (rules `api-token`, `api-token-invalid`).
+
+**Audit.** Security audit: `API_TOKEN_CREATED`, `API_TOKEN_REVOKED`, `API_TOKEN_REJECTED` (with the reason) and `API_TOKEN_USED` (the first use of each UTC day). `lastUsedAt` is kept to within the hour. What a token does is recorded in the access audit with the subject `api-token:<id>`, so it can be told apart from a person.

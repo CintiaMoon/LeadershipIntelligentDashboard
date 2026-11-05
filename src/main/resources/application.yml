@@ -88,6 +88,9 @@ lis:
     account-window: 1h
     token-ip-limit: 20
     token-window: 1h
+    api-token-limit: 600
+    api-token-failure-limit: 60
+    api-token-window: 1m
   engine:
     version: 3.0.0
     algorithm-version: 1.0.0
