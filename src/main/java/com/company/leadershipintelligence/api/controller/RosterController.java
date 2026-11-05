@@ -35,8 +35,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Teams and the roster (decision D48). Owners and administrators only; the tenant comes from the token and every organization is
- * checked against the token organizations. Names and e-mail addresses are personal data: reads are audited and nothing is logged.
+ * Teams and the roster (decision D48). Owners and administrators only; the company comes from the signed-in membership and every
+ * organization is checked against the organizations of that membership. Names and e-mail addresses are personal data: reads are audited and nothing is logged.
  */
 @RestController
 @RequestMapping("/api/v1")

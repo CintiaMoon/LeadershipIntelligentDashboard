@@ -58,7 +58,7 @@ class DevDemoAccountsIntegrationTest extends AccountFlowTest {
         assertThat(jdbc.queryForObject("select count(*) from app_user", Long.class)).isEqualTo(accounts);
         assertThat(jdbc.queryForObject("select count(*) from company_membership", Long.class)).isEqualTo(memberships);
         assertThat(jdbc.queryForObject("select count(*) from app_user where status = 'ACTIVE' and email_verified_at is not null", Long.class)).isEqualTo(accounts);
-        assertThat(jdbc.queryForObject("select count(*) from app_user where platform_admin", Long.class)).isEqualTo(2L);
+        assertThat(jdbc.queryForObject("select count(*) from app_user where platform_admin", Long.class)).isEqualTo(3L);
     }
 
     @Test

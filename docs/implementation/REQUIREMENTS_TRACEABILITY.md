@@ -56,7 +56,7 @@ Test IDs: `U-` unit, `I-` integration, `A-` API, `P-` property/invariant (see `T
 | R-045 | Endpoints: POST/GET score, POST calculate (D10), recalculate, GET scoring-runs/{id}, /explanation, /dimensions, /patterns, /penalties, /imbalances | V3 §28.1-§28.9 | `ScoringController` | API client | A-endpoints | DONE (9 V3 endpoints plus `/calculate`, phase 12) |
 | R-046 | Error format with correlationId; stable error code catalog (34 codes); HTTP mapping | V3 §28.10, §28.11, §29.3 | exception mapper | ErrorState | A-errors | DONE (standard error body with correlationId; status mapping for every code; extension codes INVALID_REQUEST, UNAUTHENTICATED, ACCESS_DENIED) |
 | R-047 | Tenant context from security context; isolation across all tenant-owned data; repository tenant scope; optional RLS (D9: enforced) | V3 §25 | `TenantContext`, repositories | none | I-tenant-isolation (V3 §25.6) | DONE (tenant and organization enforced in persistence, services and API; tests in phases 10-12) |
-| R-048 | Authentication via platform JWT; authorization per operation | V3 §33.1, §33.2, §25.5 | security config | auth service | A-security | DONE (resource server, role matrix D19, fail-closed decoder; a real key set is deployment configuration) |
+| R-048 | Authentication via platform JWT; authorization per operation | V3 §33.1, §33.2, §25.5 | security config | auth service | A-security | DONE (role matrix D19; the resource server of the first design was replaced by sessions and API tokens in D65-D74, phase P7) |
 | R-049 | Audit events for configuration and scoring actions without raw content | V3 §33.4 | audit adapter | none | I-audit | DONE (configuration actions and explanation reads audited without content, D36) |
 | R-050 | Metrics (12), structured logs, tracing; telemetry never influences scoring | V3 §34 | Micrometer | none | I-metrics | DONE (12 metrics, spans, ECS logs, D36; ObservabilityIntegrationTest) |
 | R-051 | Stateless engine; bounded queries; performance baseline measured | V3 §35 | adapters | none | I-query-count, perf baseline | DONE (constant statements per run and linear engine cost measured; V3 §35.1 sets no latency target) |
@@ -168,7 +168,7 @@ Detail lives in `docs/frontend/COMPONENT_INVENTORY.md` and `API_DEPENDENCIES.md`
 | R-F07 | Trends, history, comparison | FE §13 | history/compare (not in V3), V3 §36.3 | A-history | NOT_STARTED (D27) |
 | R-F08 | Reports | FE §14 | D59-D64 (`REPORTS_PROPOSAL.md`) | A-reports | BUILT: `GET /reports/{type}` (JSON, CSV, PDF) and the Reports screen (`reports.spec`, `ReportsPage.test`) |
 | R-F09 | Assessments, lifecycle, recalculation | FE §15 | `/calculate` (D13), derived list/details, V3 §20.2 statuses | A-assessments | NOT_STARTED |
-| R-F10 | Roles, route authorization, 401/403 | FE §5, §19 | roles, JWT | A-security | NOT_STARTED |
+| R-F10 | Roles, route authorization, 401/403 | FE §5, §19 | roles, memberships | A-security | NOT_STARTED |
 | R-F11 | Frontend never calculates scores | FE §2.5, §22.5 | complete backend payloads | frontend lint and tests | NOT_STARTED |
 | R-F12 | Accessibility, responsive, performance | FE §20, §21, §23 | none | frontend suites | NOT_STARTED |
 | R-F13 | INSUFFICIENT_DATA and PARTIAL display; no fabricated numbers | V3 §20.3 | `scoreStatus`, dimension `status` | frontend tests | NOT_STARTED |

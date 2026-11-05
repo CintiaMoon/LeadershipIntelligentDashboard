@@ -23,10 +23,11 @@ import java.util.Optional;
 /**
  * Authenticates a request that carries an application API token (decision D70): {@code Authorization: Bearer lis_...}. The token
  * is looked up by hash on every request and gives the caller its one company, role and organizations, in the same shape a session
- * and a verified external token give, so nothing downstream changes. A token needs no company header and no CSRF token (it is not an
+ * gives, so nothing downstream changes. A token needs no company header and no CSRF token (it is not an
  * ambient credential). A token that is not valid, whatever the reason, is a plain 401; one over its call limit is a 429.
  *
- * <p>A bearer value that does not start with the token prefix is left to the external-token path.
+ * <p>A bearer value that does not start with the token prefix is not a credential of this application: the request stays anonymous
+ * and is answered 401.
  */
 public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
 

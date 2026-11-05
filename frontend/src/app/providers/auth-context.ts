@@ -8,7 +8,7 @@ export interface AuthContextValue {
   status: AuthStatus;
   /** What the user may do in the company they are looking at (or as platform administrator). Null outside a company. */
   principal: Principal | null;
-  signIn: (personaId?: string, returnTo?: string) => Promise<void>;
+  signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   account?: Account | null;
   /** The companies the user may open (ACTIVE memberships only). */

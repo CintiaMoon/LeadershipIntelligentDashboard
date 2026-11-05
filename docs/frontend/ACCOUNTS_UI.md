@@ -1,6 +1,6 @@
-# Accounts, companies and sessions in the web application (identity phase P6)
+# Accounts, companies and sessions in the web application (identity phases P6 and P7)
 
-The screens and rules below belong to the application's own accounts (`VITE_AUTH_MODE=session`, the default). The external-provider mode (`oidc`) is unchanged and is removed in the last identity phase together with its end-to-end suite. Decisions D65 to D74 and `docs/implementation/API_CONTRACT.md` sections 18 to 21 are the contract.
+The screens and rules below are the only way to sign in: the application's own accounts. The external-provider mode (OIDC, the persona picker, bearer tokens in the browser) was removed in phase P7. Decisions D65 to D74 and `docs/implementation/API_CONTRACT.md` sections 18 to 21 are the contract.
 
 ## Two routers
 
@@ -34,5 +34,5 @@ A member who is not limited to a list of organizations sees the organizations th
 ## Running it
 
 - `npm run dev`: the application's own accounts against `mvn spring-boot:run -Dspring-boot.run.profiles=dev` or the compose stack; emails are in Mailpit (http://localhost:8025).
-- `npm run dev:oidc`: the external provider and its persona picker (`.env.oidc`).
-- Compose: http://localhost:3001 is the application own accounts (what `npm run e2e:accounts` drives: the whole journey from the first administrator to a revoked API token, reading the emails from Mailpit), http://localhost:3000 the persona picker (what `npm run e2e` drives). If a host port is taken: `LIS_POSTGRES_PORT=15432 LIS_REDIS_PORT=16379 docker compose up -d --build`. The account endpoints are throttled, so a few runs an hour are fine; `docker compose exec redis redis-cli FLUSHALL` clears the counters.
+- Demo accounts (profile `dev` only): `<name>@demo.test` with the password `demo-password-1234`: `owner`, `admin`, `leader`, `analyst`, `viewer`, `org1-viewer` (one organization), `other-admin` (another company), `sandbox-admin`, `sandbox-leader`, `assess-admin`, `assess-owner`, `respondent1` to `respondent6`, and the platform administrators `platform-admin`, `platform-admin-2` and `platform-admin-3`.
+- Compose: http://localhost:3000 is the web application. `npm run e2e` drives it signed in as the demo accounts (it seeds the demo series of org-1 and org-2 first); `npm run e2e:accounts` drives the whole journey from the platform administrator to a revoked API token with accounts it creates itself, reading the emails from Mailpit (its password-reset step uses `platform-admin-3`, so run it before or after, never during, a run that needs that account). If a host port is taken: `LIS_POSTGRES_PORT=15432 LIS_REDIS_PORT=16379 docker compose up -d --build`. The account endpoints are throttled, so a few runs an hour are fine; `docker compose exec redis redis-cli FLUSHALL` clears the counters.

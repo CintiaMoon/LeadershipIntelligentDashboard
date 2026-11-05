@@ -9,12 +9,12 @@ Leadership Intelligence Scoring Engine and executive dashboard, with the questio
 - A deterministic, explainable scoring engine: normalization, signal derivation, coverage checks, four dimensions, imbalances, configurable patterns with evidence and confidence, five penalty strategies with six stacking policies, weighted LIS, interpretation, and a versioned calculation trace. `BigDecimal` only; identical inputs, configuration and engine version give identical results.
 - Versioned, immutable configuration (platform default, template, organization, tenant layers; lifecycle, merge, hash, tenant-keyed cache). Active versions and scoring history are protected by database triggers.
 - Run persistence with idempotency, tenant isolation, failed-run recording and a reproducible input/configuration identity.
-- A REST API under `/api/v1` with JWT security (roles, organizations, tenant from the token only): scoring, results, explanation, dimensions, patterns, penalties, imbalances, recommendations, catalog, history, comparison, trends, dashboard and source answers.
+- A REST API under `/api/v1` with built-in accounts, sessions and API tokens (D65 to D74: roles and organizations from the company membership, the company accepted only with an active membership): scoring, results, explanation, dimensions, patterns, penalties, imbalances, recommendations, catalog, history, comparison, trends, dashboard and source answers.
 - Observability: twelve metrics (Prometheus), spans, ECS JSON logs, an access audit for explanation and answer reads. No raw answer is ever logged.
 
 **Frontend** (`frontend/`: React 19, Vite, TypeScript 5.9, Tailwind 4, TanStack Query, Zustand, React Hook Form + zod, Recharts)
 
-- OIDC authorization code with PKCE, organization selector, role-aware interface, typed API client generated from the backend OpenAPI document.
+- Sign-in with the application's own accounts (email and password, an HttpOnly session cookie, CSRF), company picker and `/c/<company>` addresses, organization selector, role-aware interface, typed API client generated from the backend OpenAPI document.
 - Executive dashboard: LIS hero with band gauge and comparison, four dimension cards, risk overview, pattern overview (group by dimension, severity, confidence) with evidence, penalty overview (applied, suppressed, ineligible, not triggered), recommendations traced to patterns, five trend views.
 - Explainability: an eight-step explanation with a waterfall, dimension detail with source-answer drill-down, pattern detail with a readable condition tree, penalty detail (requested against effective), and run comparison with an explicit "what differs" table.
 
@@ -39,7 +39,7 @@ All recorded in `docs/implementation/ARCHITECTURE_GAPS.md` (D1 to D46). The ones
 | D40 | Organization trends computed from stored findings only |
 | D42 | Source answers readable by OWNER, ADMIN, ANALYST only, audited without content |
 | D43 | Deterministic e2e seed, a sandbox organization for mutating checks, an extra illustrative dev pattern/penalty pair that shows suppression |
-| D44 | Optional issuer and audience validation of access tokens |
+| D44 | Optional issuer and audience validation of access tokens (superseded: the external token path was removed in identity phase P7) |
 | D45 | Answers that represent a member, a team or the organization: combined per question after normalization, minimum responses, participation in confidence, one organization result and one result per team. A member is an input scope only: nothing is output, ranked or listed for an individual |
 
 ## Answers from several people (added after the first release run)

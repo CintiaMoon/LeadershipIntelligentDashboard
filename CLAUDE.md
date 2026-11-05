@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository State
 
 The specifications and decisions are complete (see `docs/implementation/`).
-Implementation is at **phase 15 done: engine, configuration, run persistence, the REST API with JWT security, integration tests, observability (metrics, ECS logs, access audit) and the read endpoints for the frontend; reports are built (D59 to D64: JSON, CSV and PDF, and the Reports screen); answers from members, teams and the organization are supported end to end (decision D45); questionnaires authored in a builder and published as tenant template layers, a roster of teams and people, assessment runs and an anonymous respondent flow are built end to end (decisions D47 to D51, `docs/implementation/QUESTIONNAIRES_PROPOSAL.md`, Flyway V1-V9); the frontend (`frontend/`, React + Vite) is complete through phase 5 (foundation, executive dashboard, explainability pages, end-to-end integration, quality and release readiness; see `docs/release/`) and carries the questionnaire, people, run and respondent screens in a restyled dark/light interface; see `docs/frontend/DTO_VIEW_MAPPING.md`** (see the plan): the Maven project (`pom.xml`, Java 21
+Implementation is at **phase 15 done: engine, configuration, run persistence, the REST API with built-in accounts, sessions and API tokens (D65 to D74, `docs/implementation/IDENTITY_PROPOSAL.md`; no external identity provider), integration tests, observability (metrics, ECS logs, access audit) and the read endpoints for the frontend; reports are built (D59 to D64: JSON, CSV and PDF, and the Reports screen); answers from members, teams and the organization are supported end to end (decision D45); questionnaires authored in a builder and published as tenant template layers, a roster of teams and people, assessment runs and an anonymous respondent flow are built end to end (decisions D47 to D51, `docs/implementation/QUESTIONNAIRES_PROPOSAL.md`, Flyway V1-V9); the frontend (`frontend/`, React + Vite) is complete through phase 5 (foundation, executive dashboard, explainability pages, end-to-end integration, quality and release readiness; see `docs/release/`) and carries the questionnaire, people, run and respondent screens in a restyled dark/light interface; see `docs/frontend/DTO_VIEW_MAPPING.md`** (see the plan): the Maven project (`pom.xml`, Java 21
 via `--release 21`, Spring Boot 3.5), the package skeleton under
 `src/main/java/com/company/leadershipintelligence/` and an architecture
 test exist.
@@ -18,12 +18,11 @@ Commands (Maven 3.9, JDK 21+; integration tests need Docker):
 mvn -B verify                              build and run all tests (integration tests start PostgreSQL in Docker)
 mvn -B test -Dtest='!*IntegrationTest' -Dsurefire.failIfNoSpecifiedTests=false   unit tests only, no Docker
 mvn -B test -Dtest=ArchitectureTest        run one test class
-docker compose up -d --build               local stack: PostgreSQL, mock identity provider (:8081), Mailpit (:8025 inbox), app (:8080, profile dev)
-docker compose up -d postgres mock-oauth2 mailpit  services only; then mvn spring-boot:run -Dspring-boot.run.profiles=dev
+docker compose up -d --build               local stack: PostgreSQL, Redis, Mailpit (:8025 inbox), app (:8080, profile dev), web UI (:3000)
+docker compose up -d postgres mailpit redis        services only; then mvn spring-boot:run -Dspring-boot.run.profiles=dev
 npx newman run docs/postman/lis.postman_collection.json   run every endpoint against the local stack
 cd frontend && npm run dev                 web UI on :5173 with the application own accounts (proxies /api to :8080); also npm run lint | typecheck | test | build
-cd frontend && npm run dev:oidc            the same with the external provider and its persona picker (until the last identity phase removes it)
-cd frontend && npm run e2e                 Playwright against the compose stack (web UI with the persona picker on :3000); seeds org-1 and org-2 first
+cd frontend && npm run e2e                 Playwright against the compose stack (web UI on :3000, signed in as the demo accounts <name>@demo.test / demo-password-1234); seeds org-1 and org-2 first
 cd frontend && npm run e2e:accounts        Playwright for the application own accounts (web UI on :3001, emails read from Mailpit); no seed needed
 cd frontend && npm run verify              lint, typecheck, unit tests, build and the no-test-code-in-production check
 cd frontend && npm run e2e:seed            create the deterministic demo series only (after docker compose down -v for a clean start)
@@ -129,7 +128,7 @@ Use:
 -   PostgreSQL
 -   Jackson
 -   Jakarta Validation
--   Spring Security + JWT
+-   Spring Security (sessions with CSRF, API tokens)
 -   JUnit 5
 -   Mockito where useful
 -   Testcontainers
@@ -444,8 +443,8 @@ Owners and administrators author questionnaires in the builder (`/api/v1/questio
 validated TEMPLATE layer through the ordinary configuration lifecycle in one transaction, and the questionnaire id is the
 template id. Teams and people (`/api/v1/teams`, `/people`) form the roster; an assessment run (`/api/v1/runs`) pins a
 published version and its configuration version and snapshots one participant per active person. Respondents hold the
-`RESPONDENT` role (deliberately NOT in the `Role` enum, like `PLATFORM_ADMIN`), are matched to the roster by the `email`
-claim, and reach only `/api/v1/respond/**`. Submitted answers are stored with the team and the question only (no person,
+`RESPONDENT` role (deliberately NOT in the `Role` enum, like `PLATFORM_ADMIN`), are matched to the roster by the confirmed
+email of their account, and reach only `/api/v1/respond/**`. Submitted answers are stored with the team and the question only (no person,
 no time, random id; a test asserts the columns); closing a run scores them once as MEMBER answers with the pinned
 configuration. Free text is collected and never scored and is not part of the generated layer. Never add a column that
 links an answer to a person, and keep the completion list free of answers.
@@ -453,7 +452,7 @@ links an answer to a person, and keep the completion list free of answers.
 ## Platform Administration
 
 `PLATFORM_ADMIN` (decision D46) creates and lists tenants through `/api/v1/platform/**` and the
-Tenants screen. It belongs to no tenant (no `tenant_id` in its token), reaches nothing
+Tenants screen. It belongs to no tenant (an account flag, no membership), reaches nothing
 tenant-scoped, and is deliberately NOT a value of the `Role` enum: the "every role may read" rules
 are built from that enum. The tenant roles cannot reach these endpoints. A tenant is an id
 (permanent) and a name only. Creation and list reads are audited.
@@ -461,8 +460,9 @@ are built from that enum. The tenant roles cannot reach these endpoints. A tenan
 ## Multi-Tenancy
 
 Tenancy is enforced (`specv3.md` Section 25). The tenant comes only from
-the authenticated security context (`tenant_id` claim); organizations
-must be in `org_ids`. All tenant-owned repository methods take a tenant
+the authenticated security context: the company named in `X-Company-Id`
+accepted only with an ACTIVE membership of the signed-in account (or the
+company of an API token); organizations must be in the membership. All tenant-owned repository methods take a tenant
 scope, configuration caches are keyed by tenant, and configuration
 precedence is Platform default → Template → Organization → Tenant.
 Tenant isolation tests are mandatory.

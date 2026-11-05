@@ -85,10 +85,15 @@ public class SecurityConfiguration {
         return new HttpSessionSecurityContextRepository();
     }
 
-    /** The CSRF token lives in a cookie the web application can read and sends back in a header (decision D68). */
+    /**
+     * The CSRF token lives in a cookie the web application can read and sends back in a header (decision D68). The script-readable
+     * cookie gets the same protections as the session cookie that it guards: SameSite=Lax, and Secure whenever the session cookie is.
+     */
     @Bean
-    CookieCsrfTokenRepository csrfTokenRepository() {
-        return CookieCsrfTokenRepository.withHttpOnlyFalse();
+    CookieCsrfTokenRepository csrfTokenRepository(@Value("${server.servlet.session.cookie.secure:true}") boolean secure) {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie.secure(secure).sameSite("Lax"));
+        return repository;
     }
 
     @Bean
