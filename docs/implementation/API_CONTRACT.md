@@ -361,7 +361,7 @@ A **company is the tenant**. The session names a user; a **membership** (INVITED
 
 | Method and path | Answer |
 |---|---|
-| `GET /api/v1/companies` | Session only (401 otherwise), no company header. `[{id, name, roles}]` for the ACTIVE memberships only, by name then id. The same list is in `companies` of `GET /api/v1/auth/me` and of login (`{id, name}`) |
+| `GET /api/v1/companies` | Session only (401 otherwise), no company header. `[{id, name, roles, organizationIds, allOrganizations}]` for the ACTIVE memberships only, by name then id. `organizationIds` are the organizations the user reaches (with `allOrganizations` true: the ones that exist now, and a new one may still be named). The interface uses them to shape itself; the server decides. The same list is in `companies` of `GET /api/v1/auth/me` and of login (`{id, name}`) |
 | `POST /api/v1/auth/invitations/accept` | body `{token}`; needs a session (CSRF as the other auth calls). 204 and the membership becomes ACTIVE. 400 `INVALID_TOKEN`, identical for an unknown, used or expired link, an invitation sent to another email, and a company the user already belongs to; a refusal does not use the link up |
 | `POST /api/v1/platform/tenants` | now also takes `ownerEmail`: an INVITED OWNER membership is created for that (normalized) email in the same transaction and an invitation email is sent after commit (link `/invitations/accept?token=`, 7 days, once, hash stored). A malformed owner email: 422 `INVALID_TENANT` and no company is created |
 

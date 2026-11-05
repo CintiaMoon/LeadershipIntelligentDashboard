@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/app/providers/auth-context';
 import { brand } from '@/brand';
@@ -26,6 +26,9 @@ const iconPaths: Record<NavIcon, string> = {
   people: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 4.5a3 3 0 0 1 0 6m2.5 9.5v-1a4.5 4.5 0 0 0-3-4.2',
   reports: 'M5 20V10m5 10V4m5 16v-7m5 7H3',
   answer: 'M5 4h14v16H5V4Zm3 5h8M8 13h8M8 17h5',
+  members: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1',
+  tokens: 'M15 7a4 4 0 1 1-3.9 4.9L4 19v-3l2-1v-2h2l3.1-3.1A4 4 0 0 1 15 7Zm1 1.5h.01',
+  audit: 'M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3Zm-3 9 2 2 4-4',
 };
 
 function NavGlyph({ icon }: { icon: NavIcon }) {
@@ -59,21 +62,73 @@ function ThemeToggle() {
   );
 }
 
+/** Names an organization that does not exist yet; it is created the first time something is saved in it (decision D20). */
+function NewOrganization({ onAdd }: { onAdd: (organizationId: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+  if (!open) {
+    return (
+      <Button variant="ghost" onClick={() => setOpen(true)}>
+        New organization
+      </Button>
+    );
+  }
+  const submit = () => {
+    const id = value.trim();
+    if (id) onAdd(id);
+    setValue('');
+    setOpen(false);
+  };
+  return (
+    <form
+      className="flex items-center gap-2 text-sm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
+      <label className="flex items-center gap-2 text-ink-soft">
+        <span>Organization id</span>
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          maxLength={64}
+          className="min-h-9 w-40 rounded-md border border-line bg-surface px-2 text-sm text-ink"
+        />
+      </label>
+      <Button type="submit" variant="secondary">
+        Use
+      </Button>
+      <Button variant="ghost" onClick={() => setOpen(false)}>
+        Cancel
+      </Button>
+    </form>
+  );
+}
+
 export function AppLayout() {
-  const { principal, signOut } = useAuth();
+  const { principal, signOut, mode, company, account } = useAuth();
   const organizationId = useSession((s) => s.organizationId);
   const setOrganization = useSession((s) => s.setOrganization);
-  const organizations = principal?.organizations ?? [];
+  const extraOrganizations = useSession((s) => s.extraOrganizations);
+  const addOrganization = useSession((s) => s.addOrganization);
+  // a member who is not limited to a list may also name an organization that does not exist yet
+  const mayNameNew = mode === 'session' && company?.allOrganizations === true;
+  const organizations = useMemo(
+    () => (mayNameNew ? [...new Set([...(principal?.organizations ?? []), ...extraOrganizations])] : (principal?.organizations ?? [])),
+    [principal, extraOrganizations, mayNameNew],
+  );
   const platform = isPlatformAdmin(principal);
   const respondent = isRespondent(principal);
 
-  // Keep the selection valid for this user: default to the first organization, drop one the token does not list.
+  // Keep the selection valid for this user: default to the first organization, drop one the user may not reach.
   useEffect(() => {
     if (!principal) return;
-    if (!organizationId || !principal.organizations.includes(organizationId)) {
-      setOrganization(principal.organizations[0] ?? null);
+    if (!organizationId || !organizations.includes(organizationId)) {
+      setOrganization(organizations[0] ?? null);
     }
-  }, [principal, organizationId, setOrganization]);
+  }, [principal, organizations, organizationId, setOrganization]);
 
   return (
     <div className="min-h-screen lg:flex">
@@ -120,6 +175,15 @@ export function AppLayout() {
                 </select>
               </label>
             )}
+            {mayNameNew && <NewOrganization onAdd={addOrganization} />}
+            {mode === 'session' && company && (
+              <p className="flex items-center gap-2 text-sm">
+                <span className="font-medium" data-testid="company-name">{company.name}</span>
+                <a href="/companies" className="text-ink-soft underline-offset-2 hover:underline">
+                  Switch company
+                </a>
+              </p>
+            )}
             <div className="ml-auto flex flex-wrap items-center gap-3">
               <div className="flex flex-wrap items-center gap-1.5" aria-label="Your roles">
                 {platform && <Badge tone="accent">Platform administrator</Badge>}
@@ -131,6 +195,11 @@ export function AppLayout() {
                 ))}
               </div>
               <ThemeToggle />
+              {mode === 'session' && account && (
+                <a href="/account" className="text-sm text-ink-soft underline-offset-2 hover:underline" title="Your account">
+                  {account.displayName}
+                </a>
+              )}
               <Button variant="ghost" onClick={() => void signOut()}>
                 Sign out
               </Button>

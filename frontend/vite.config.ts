@@ -29,5 +29,7 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/tests/setup.ts'],
     css: false,
+    // the existing suites exercise the external provider; the account screens switch to the session mode with vi.stubEnv
+    env: { VITE_AUTH_MODE: 'oidc' },
   },
 });

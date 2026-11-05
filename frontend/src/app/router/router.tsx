@@ -1,24 +1,56 @@
 import type { ComponentType } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AppLayout } from '@/app/layouts/AppLayout';
+import { AcceptInvitationPage } from '@/features/account/AcceptInvitationPage';
+import { AccountPage } from '@/features/account/AccountPage';
+import { CompanyPickerPage } from '@/features/account/CompanyPickerPage';
+import { ForgotPasswordPage, ResetPasswordPage } from '@/features/account/PasswordResetPages';
+import { RegisterPage } from '@/features/account/RegisterPage';
+import { VerifyEmailPage } from '@/features/account/VerifyEmailPage';
 import { CallbackPage } from '@/features/auth/CallbackPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { NotFoundPage } from '@/features/errors/NotFoundPage';
-import { HomeRedirect, RequireAuth, RequireConfigurationReader, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
+import { authConfig } from '@/services/auth/config';
+import { companyBase, companyFromPath } from './company-path';
+import { HomeRedirect, RequireAuth, RequireCompany, RequireConfigurationReader, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
 
 /** Wraps a page so that only owners and administrators see it; the backend refuses everyone else as well. */
 const manager = (Page: ComponentType) => function ManagerPage() { return (<RequireManager><Page /></RequireManager>); };
 const reader = (Page: ComponentType) => function ReaderPage() { return (<RequireConfigurationReader><Page /></RequireConfigurationReader>); };
 const respondent = (Page: ComponentType) => function RespondentPage() { return (<RequireRespondent><Page /></RequireRespondent>); };
 
-export const routes: RouteObject[] = [
-  { path: '/login', element: <LoginPage /> },
-  { path: '/auth/callback', element: <CallbackPage /> },
+/** The pages of the application's own accounts (decisions D65 to D73); they belong to no company. */
+function accountRoutes(): RouteObject[] {
+  return [
+    { path: '/register', element: <RegisterPage /> },
+    { path: '/verify-email', element: <VerifyEmailPage /> },
+    { path: '/forgot-password', element: <ForgotPasswordPage /> },
+    { path: '/reset-password', element: <ResetPasswordPage /> },
+    { path: '/invitations/accept', element: <AcceptInvitationPage /> },
+    { path: '/companies', element: (<RequireAuth><CompanyPickerPage /></RequireAuth>) },
+    { path: '/account', element: (<RequireAuth><AccountPage /></RequireAuth>) },
+  ];
+}
+
+/** Chosen when the page loads: the application's own accounts, or the external provider (kept until the last identity phase). */
+export function buildRoutes(): RouteObject[] {
+  const session = authConfig.mode === 'session';
+  return [
+    { path: '/login', element: <LoginPage /> },
+    ...(session ? accountRoutes() : [{ path: '/auth/callback', element: <CallbackPage /> }]),
+    ...appRoutes(),
+  ];
+}
+
+function appRoutes(): RouteObject[] {
+  return [
   {
     path: '/',
     element: (
       <RequireAuth>
-        <AppLayout />
+        <RequireCompany>
+          <AppLayout />
+        </RequireCompany>
       </RequireAuth>
     ),
     children: [
@@ -73,9 +105,30 @@ export const routes: RouteObject[] = [
       // the respondent flow
       { path: 'respond', lazy: async () => ({ Component: respondent((await import('@/features/respond/MyRunsPage')).MyRunsPage) }) },
       { path: 'respond/:runId', lazy: async () => ({ Component: respondent((await import('@/features/respond/RespondPage')).RespondPage) }) },
+      // members, API tokens and the security audit: the application's own accounts (decisions D70, D72, D74)
+      { path: 'members', lazy: async () => ({ Component: manager((await import('@/features/members/MembersPage')).MembersPage) }) },
+      { path: 'api-tokens', lazy: async () => ({ Component: manager((await import('@/features/apitokens/ApiTokensPage')).ApiTokensPage) }) },
+      { path: 'security-audit', lazy: async () => ({ Component: manager((await import('@/features/audit/SecurityAuditPage')).SecurityAuditPage) }) },
+      {
+        path: 'platform/security-audit',
+        lazy: async () => {
+          const { SecurityAuditPage } = await import('@/features/audit/SecurityAuditPage');
+          return { Component: () => (<RequirePlatformAdmin><SecurityAuditPage platform /></RequirePlatformAdmin>) };
+        },
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
-];
+  ];
+}
 
-export const createRouter = () => createBrowserRouter(routes);
+export const routes: RouteObject[] = buildRoutes();
+
+/**
+ * The router for the address that was opened. The screens of a company are served under {@code /c/<company>}: that prefix is the
+ * router's basename, so they keep their own short paths and every link inside them stays inside the company (decision D69).
+ */
+export const createRouter = () => {
+  const company = companyFromPath(window.location.pathname);
+  return createBrowserRouter(buildRoutes(), company ? { basename: companyBase(company) } : undefined);
+};

@@ -1,6 +1,8 @@
 # Local development stack.
 #   docker compose up -d postgres mock-oauth2 mailpit     only the services; run the app with: mvn spring-boot:run -Dspring-boot.run.profiles=dev
-#   docker compose up -d --build                  everything: app on http://localhost:8080, web UI on http://localhost:3000
+#   docker compose up -d --build                  everything: app on http://localhost:8080, web UI with the persona picker on http://localhost:3000,
+#                                                 web UI with the application accounts on http://localhost:3001, Mailpit inbox on http://localhost:8025
+# Host ports that often clash with other projects can be moved: LIS_POSTGRES_PORT=15432 LIS_REDIS_PORT=16379 docker compose up -d --build
 # The "dev" profile seeds two demo tenants and the ILLUSTRATIVE sample configuration. Never use it in production.
 services:
   postgres:
@@ -10,7 +12,7 @@ services:
       POSTGRES_USER: lis
       POSTGRES_PASSWORD: lis
     ports:
-      - "5432:5432"
+      - "${LIS_POSTGRES_PORT:-5432}:5432"
     volumes:
       - lis-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -44,7 +46,7 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
-      - "6379:6379"
+      - "${LIS_REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -76,7 +78,9 @@ services:
       # outgoing email goes to Mailpit; links in the emails point at the web UI
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"
-      LIS_WEB_BASE_URL: http://localhost:3000
+      LIS_WEB_BASE_URL: http://localhost:3001
+      # the first platform administrator: an account is created and sent a link (see Mailpit) to choose a password
+      LIS_BOOTSTRAP_ADMIN_EMAIL: admin@lis.local
       LIS_MAIL_FROM: no-reply@lis.local
       # the local stack is plain HTTP, so the session cookie cannot be Secure here (production keeps the default, true)
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
@@ -92,12 +96,28 @@ services:
         VITE_OIDC_AUTHORITY: http://localhost:8081/default
         VITE_OIDC_CLIENT_ID: lis-web
         VITE_DEV_PERSONAS: "true"
+        # the external provider and its persona picker: what the end-to-end suite (npm run e2e) drives, until the last identity phase
+        VITE_AUTH_MODE: oidc
     depends_on:
       - app
     environment:
       IDP_ORIGIN: http://localhost:8081
     ports:
       - "3000:80"
+
+  # The same web application with the application own accounts (register, sign in, company in the address): http://localhost:3001.
+  # Emails (confirmation, reset, invitations) go to Mailpit and their links point here.
+  accounts:
+    build:
+      context: ./frontend
+      args:
+        VITE_AUTH_MODE: session
+    depends_on:
+      - app
+    environment:
+      IDP_ORIGIN: http://localhost:8081
+    ports:
+      - "3001:80"
 
 volumes:
   lis-pgdata:

@@ -71,3 +71,19 @@ export const canReadConfiguration = (p: Principal | null) => isPlatformAdmin(p) 
 /** Changing it: the platform administrator for the platform default, owners and administrators for their tenant. The backend decides. */
 export const canChangeConfiguration = (p: Principal | null) => isPlatformAdmin(p) || hasAny(p, ['OWNER', 'ADMIN']);
 
+
+/**
+ * What a signed-in account may do in one company, for the interface only (the server decides, from the membership, on every call).
+ * The platform administrator belongs to no company.
+ */
+export function principalFor(account: { id: string; platformAdmin: boolean }, company: { id: string; roles: string[]; organizationIds: string[] } | null): Principal | null {
+  if (account.platformAdmin) return { subject: account.id, tenantId: '', organizations: [], roles: [], platformAdmin: true };
+  if (!company) return null;
+  return {
+    subject: account.id,
+    tenantId: company.id,
+    organizations: company.organizationIds,
+    roles: company.roles.filter((r): r is Role => (ROLES as readonly string[]).includes(r)),
+    respondent: company.roles.includes(RESPONDENT),
+  };
+}
