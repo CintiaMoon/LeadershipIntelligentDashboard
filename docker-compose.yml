@@ -38,6 +38,19 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # Throttle counters of the sign-in and account endpoints (decision D71). Counters only: no persistence is needed, and the
+  # application keeps counting in its own process if Redis is down.
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   app:
     build: .
     depends_on:
@@ -47,6 +60,8 @@ services:
         condition: service_started
       mailpit:
         condition: service_started
+      redis:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://postgres:5432/lis
@@ -55,6 +70,9 @@ services:
       LIS_SECURITY_JWK_SET_URI: http://mock-oauth2:8080/default/jwks
       # tokens are issued to browsers that reach the mock provider on localhost:8081, so that is the issuer they carry
       LIS_SECURITY_ISSUER: http://localhost:8081/default
+      # throttle counters are shared through Redis (decision D71)
+      LIS_RATE_LIMIT_STORE: redis
+      SPRING_DATA_REDIS_HOST: redis
       # outgoing email goes to Mailpit; links in the emails point at the web UI
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"

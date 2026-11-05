@@ -1,4 +1,9 @@
 spring:
+  data:
+    redis:
+      # Redis holds throttle counters only (decision D71); no Spring Data repositories are built on it
+      repositories:
+        enabled: false
   application:
     name: leadership-intelligence
   datasource:
@@ -42,6 +47,10 @@ server:
         secure: true
         same-site: lax
 management:
+  health:
+    redis:
+      # throttle counters fall back to this process when Redis is down, so Redis must not turn the health check red
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -60,12 +69,22 @@ lis:
     web-base-url: ${LIS_WEB_BASE_URL:http://localhost:3000}
     mail-from: ${LIS_MAIL_FROM:no-reply@localhost}
     mail-async: true
-    # throttling of the sign-in and account endpoints (in memory, per instance, until the shared counters of phase P2)
-    ip-requests-per-minute: 60
-    login-failure-limit: 5
-    login-lockout: 15m
-    emails-per-address-per-hour: 5
     audit-hash-key: ${LIS_AUDIT_HASH_KEY:}
+  rate-limit:
+    # throttles of the sign-in and account endpoints (decision D71); starting values, not calibrated. store: memory (this process only)
+    # or redis (shared by every instance, with an in-process fallback when Redis is down; needs SPRING_DATA_REDIS_HOST)
+    store: ${LIS_RATE_LIMIT_STORE:memory}
+    login-ip-limit: 20
+    login-ip-window: 5m
+    login-failure-limit: 5
+    login-failure-window: 15m
+    login-delay-base: 30s
+    login-delay-max: 15m
+    account-ip-limit: 5
+    account-email-limit: 5
+    account-window: 1h
+    token-ip-limit: 20
+    token-window: 1h
   engine:
     version: 3.0.0
     algorithm-version: 1.0.0

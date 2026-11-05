@@ -1,79 +1,112 @@
 package com.company.leadershipintelligence.service.identity;
 
-import com.company.leadershipintelligence.config.properties.IdentityProperties;
+import com.company.leadershipintelligence.config.properties.RateLimitProperties;
+import com.company.leadershipintelligence.domain.exception.RateLimitedException;
+import com.company.leadershipintelligence.repository.security.RateCounters;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 
-import java.time.Clock;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HexFormat;
+import java.util.Map;
 
 /**
- * Throttles the sign-in and account endpoints (finding of the P1 review). In memory and per instance: it limits abuse on one
- * node and is replaced by the shared Redis counters of phase P2 (decision D71). Three rules, none of which depends on whether
- * an account exists, so a throttle never reveals one:
+ * The throttles of the sign-in and account endpoints (decision D71). Every rule counts what the caller sent, never whether an
+ * account exists, so a refusal reveals nothing about who has one. A refused call is audited ({@code RATE_LIMITED}), counted
+ * ({@code auth.ratelimit.hits}) and answered 429 with {@code Retry-After}.
+ *
  * <ul>
- *   <li>a client address may make {@code ipRequestsPerMinute} calls a minute (the caller answers 429 above it);</li>
- *   <li>after {@code loginFailureLimit} failed sign-ins for one email from one address, sign-in is refused for
- *       {@code loginLockout} (keyed by both, so a stranger cannot lock the owner out from another address);</li>
- *   <li>an address receives at most {@code emailsPerAddressPerHour} account emails an hour; further requests are answered as
- *       usual and send nothing.</li>
+ *   <li>sign-in: per address {@code loginIpLimit} per {@code loginIpWindow}; per account (email hash) a failure counter, and from
+ *       {@code loginFailureLimit} failures a delay that doubles with every further failure up to {@code loginDelayMax}, never a
+ *       permanent lock;</li>
+ *   <li>register, resend verification, forgot password: per address and per email, {@code accountIpLimit} /
+ *       {@code accountEmailLimit} per {@code accountWindow}, counted for each of the three separately;</li>
+ *   <li>using a verification or reset link: per address {@code tokenIpLimit} per {@code tokenWindow}.</li>
  * </ul>
  */
 @Component
 public class AuthRateLimiter {
 
-    private static final int PRUNE_ABOVE = 10_000;
-    private static final Duration MINUTE = Duration.ofMinutes(1);
-    private static final Duration HOUR = Duration.ofHours(1);
+    private final RateCounters counters;
+    private final RateLimitProperties limits;
+    private final SecurityAudit audit;
+    private final MeterRegistry meters;
 
-    private record Window(Instant start, int count) {
+    public AuthRateLimiter(RateCounters counters, RateLimitProperties limits, SecurityAudit audit, MeterRegistry meters) {
+        this.counters = counters;
+        this.limits = limits;
+        this.audit = audit;
+        this.meters = meters;
     }
 
-    private final IdentityProperties properties;
-    private final Clock clock;
-    private final ConcurrentHashMap<String, Window> counters = new ConcurrentHashMap<>();
-
-    public AuthRateLimiter(IdentityProperties properties, Clock clock) {
-        this.properties = properties;
-        this.clock = clock;
+    /** A sign-in call from this address. */
+    public void checkLoginAddress(ClientInfo client) {
+        hit("login-ip", "login-ip|" + ip(client), limits.loginIpLimit(), limits.loginIpWindow(), client);
     }
 
-    /** Counts a call from this address; false when it is over the limit. */
-    public boolean allowRequest(String ip) {
-        return count("ip|" + ip, MINUTE) <= properties.ipRequestsPerMinute();
+    /** Refuses while the account (identified by the normalized email) is in its delay after repeated failures. */
+    public void checkLoginOpen(String email, ClientInfo client) {
+        counters.remaining("login-delay|" + hash(email)).ifPresent(left -> refuse("login-account", left, client));
     }
 
-    /** Counts an account email to this address; false when the hourly allowance is used up. */
-    public boolean allowMail(String email) {
-        return count("mail|" + email, HOUR) <= properties.emailsPerAddressPerHour();
-    }
-
-    /** True while sign-in is open for this email and address (does not count). */
-    public boolean loginOpen(String email, String ip) {
-        Window w = counters.get(loginKey(email, ip));
-        return w == null || !clock.instant().isBefore(w.start().plus(properties.loginLockout())) || w.count() < properties.loginFailureLimit();
-    }
-
-    public void loginFailed(String email, String ip) {
-        count(loginKey(email, ip), properties.loginLockout());
-    }
-
-    public void loginSucceeded(String email, String ip) {
-        counters.remove(loginKey(email, ip));
-    }
-
-    private static String loginKey(String email, String ip) {
-        return "login|" + email + "|" + ip;
-    }
-
-    private int count(String key, Duration length) {
-        Instant now = clock.instant();
-        if (counters.size() > PRUNE_ABOVE) {
-            Duration longest = HOUR.compareTo(properties.loginLockout()) > 0 ? HOUR : properties.loginLockout();
-            counters.values().removeIf(w -> now.isAfter(w.start().plus(longest)));
+    public void loginFailed(String email) {
+        String key = hash(email);
+        long failures = counters.increment("login-fail|" + key, limits.loginFailureWindow());
+        if (failures >= limits.loginFailureLimit()) {
+            long doublings = Math.min(failures - limits.loginFailureLimit(), 20);
+            Duration delay = limits.loginDelayBase().multipliedBy(1L << doublings);
+            counters.mark("login-delay|" + key, delay.compareTo(limits.loginDelayMax()) > 0 ? limits.loginDelayMax() : delay);
         }
-        return counters.merge(key, new Window(now, 1),
-                (old, fresh) -> now.isBefore(old.start().plus(length)) ? new Window(old.start(), old.count() + 1) : fresh).count();
+    }
+
+    public void loginSucceeded(String email) {
+        String key = hash(email);
+        counters.delete("login-fail|" + key);
+        counters.delete("login-delay|" + key);
+    }
+
+    /**
+     * One call to register, resend-verification or forgot-password ({@code action}). The email may be null for a request whose
+     * address is not valid; only the address rule applies then.
+     */
+    public void checkAccountRequest(String action, String email, ClientInfo client) {
+        hit("account-ip-" + action, action + "-ip|" + ip(client), limits.accountIpLimit(), limits.accountWindow(), client);
+        if (email != null) {
+            hit("account-email-" + action, action + "-email|" + hash(email), limits.accountEmailLimit(), limits.accountWindow(), client);
+        }
+    }
+
+    /** One use of a verification or reset link. */
+    public void checkTokenUse(ClientInfo client) {
+        hit("token-ip", "token-ip|" + ip(client), limits.tokenIpLimit(), limits.tokenWindow(), client);
+    }
+
+    private void hit(String rule, String key, int limit, Duration window, ClientInfo client) {
+        long count = counters.increment(key, window);
+        if (count > limit) {
+            refuse(rule, counters.remaining(key).orElse(window), client);
+        }
+    }
+
+    private void refuse(String rule, Duration retryAfter, ClientInfo client) {
+        meters.counter("auth.ratelimit.hits", "rule", rule).increment();
+        audit.record("RATE_LIMITED", SecurityAudit.FAILURE, null, null, null, client, Map.of("rule", rule));
+        throw new RateLimitedException(rule, retryAfter);
+    }
+
+    private static String ip(ClientInfo client) {
+        return client == null || client.ip() == null ? "unknown" : client.ip();
+    }
+
+    /** SHA-256 of the normalized email: the same on every instance, and no address is stored in the counters. */
+    private static String hash(String email) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(email.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 }

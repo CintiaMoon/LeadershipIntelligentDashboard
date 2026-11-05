@@ -8,7 +8,6 @@ import com.company.leadershipintelligence.domain.exception.ScoringErrorCode;
 import com.company.leadershipintelligence.domain.exception.ScoringException;
 import com.company.leadershipintelligence.service.identity.AccountService;
 import com.company.leadershipintelligence.service.identity.AccountView;
-import com.company.leadershipintelligence.service.identity.AuthRateLimiter;
 import com.company.leadershipintelligence.service.identity.AuthenticationService;
 import com.company.leadershipintelligence.service.identity.ClientInfo;
 import com.company.leadershipintelligence.service.identity.PasswordService;
@@ -55,17 +54,15 @@ public class AuthController {
     private final SecurityAudit audit;
     private final SecurityContextRepository contexts;
     private final CookieCsrfTokenRepository csrfTokens;
-    private final AuthRateLimiter limiter;
 
     public AuthController(AccountService accounts, AuthenticationService authentication, PasswordService passwords, SecurityAudit audit,
-                          SecurityContextRepository contexts, CookieCsrfTokenRepository csrfTokens, AuthRateLimiter limiter) {
+                          SecurityContextRepository contexts, CookieCsrfTokenRepository csrfTokens) {
         this.accounts = accounts;
         this.authentication = authentication;
         this.passwords = passwords;
         this.audit = audit;
         this.contexts = contexts;
         this.csrfTokens = csrfTokens;
-        this.limiter = limiter;
     }
 
     @Operation(summary = "The CSRF token to send in the X-XSRF-TOKEN header of every state-changing request (also set as the XSRF-TOKEN cookie)")
@@ -78,27 +75,27 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void register(@Valid @RequestBody AuthRequests.Register body, HttpServletRequest request) {
-        accounts.register(body.email(), body.password(), body.displayName(), limited(request));
+        accounts.register(body.email(), body.password(), body.displayName(), client(request));
     }
 
     @Operation(summary = "Confirm an email address with the token from the verification email")
     @PostMapping("/verify-email")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void verifyEmail(@Valid @RequestBody AuthRequests.VerifyEmail body, HttpServletRequest request) {
-        accounts.verifyEmail(body.token(), body.password(), limited(request));
+        accounts.verifyEmail(body.token(), body.password(), client(request));
     }
 
     @Operation(summary = "Send a new verification email to a pending account. Always 202")
     @PostMapping("/resend-verification")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void resend(@Valid @RequestBody AuthRequests.EmailOnly body, HttpServletRequest request) {
-        accounts.resendVerification(body.email(), limited(request));
+        accounts.resendVerification(body.email(), client(request));
     }
 
     @Operation(summary = "Sign in with email and password; starts a server-side session and sets the session cookie")
     @PostMapping("/login")
     public AccountResponse login(@Valid @RequestBody AuthRequests.Login body, HttpServletRequest request, HttpServletResponse response) {
-        ClientInfo from = limited(request);
+        ClientInfo from = client(request);
         AccountView account = authentication.authenticate(body.email(), body.password(), from);
         // a new session for every sign-in: whatever session came with the request is ended first (session fixation)
         HttpSession old = request.getSession(false);
@@ -154,14 +151,14 @@ public class AuthController {
     @PostMapping("/password/forgot")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void forgot(@Valid @RequestBody AuthRequests.EmailOnly body, HttpServletRequest request) {
-        passwords.requestReset(body.email(), limited(request));
+        passwords.requestReset(body.email(), client(request));
     }
 
     @Operation(summary = "Set a new password with the token from the reset email; ends every session of the user")
     @PostMapping("/password/reset")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void reset(@Valid @RequestBody AuthRequests.ResetPassword body, HttpServletRequest request) {
-        passwords.reset(body.token(), body.newPassword(), limited(request));
+        passwords.reset(body.token(), body.newPassword(), client(request));
     }
 
     @Operation(summary = "Change the password of the signed-in user; ends their other sessions")
@@ -175,15 +172,6 @@ public class AuthController {
 
     private static AccountResponse response(AccountView account) {
         return new AccountResponse(account.id(), account.email(), account.displayName(), account.platformAdmin(), List.of());
-    }
-
-    /** The client of an unauthenticated call; refused with 429 when its address is over the per-minute limit. */
-    private ClientInfo limited(HttpServletRequest request) {
-        ClientInfo client = client(request);
-        if (!limiter.allowRequest(String.valueOf(client.ip()))) {
-            throw new ScoringException(ScoringErrorCode.TOO_MANY_REQUESTS, "Too many requests. Try again in a minute.");
-        }
-        return client;
     }
 
     private static ClientInfo client(HttpServletRequest request) {
