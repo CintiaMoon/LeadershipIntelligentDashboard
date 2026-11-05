@@ -5,6 +5,7 @@ import com.company.leadershipintelligence.service.identity.ClientInfo;
 import com.company.leadershipintelligence.service.identity.CompanyMembership;
 import com.company.leadershipintelligence.service.identity.SessionAccount;
 import com.company.leadershipintelligence.service.identity.MembershipService;
+import com.company.leadershipintelligence.service.identity.OrganizationReach;
 import com.company.leadershipintelligence.service.identity.SecurityAudit;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -85,7 +86,7 @@ public class CompanyContextFilter extends OncePerRequestFilter {
                 errors.accessDenied(request, response, new AccessDeniedException("only a platform administrator may do this"));
                 return;
             }
-            replace(token(user, null, List.of(PlatformRole.PLATFORM_ADMIN), List.of()), List.of(new SimpleGrantedAuthority("ROLE_" + PlatformRole.PLATFORM_ADMIN)));
+            replace(token(user, null, List.of(PlatformRole.PLATFORM_ADMIN), List.of(), false), List.of(new SimpleGrantedAuthority("ROLE_" + PlatformRole.PLATFORM_ADMIN)));
             chain.doFilter(request, response);
             return;
         }
@@ -108,15 +109,17 @@ public class CompanyContextFilter extends OncePerRequestFilter {
         List<String> roles = List.copyOf(membership.roles());
         List<GrantedAuthority> authorities = new ArrayList<>();
         roles.forEach(r -> authorities.add(new SimpleGrantedAuthority("ROLE_" + r)));
-        replace(token(user, membership.tenantId(), roles, List.copyOf(membership.organizationIds())), authorities);
+        OrganizationReach reach = memberships.reach(membership.tenantId(), membership.organizationIds());
+        replace(token(user, membership.tenantId(), roles, List.copyOf(reach.organizationIds()), reach.all()), authorities);
         chain.doFilter(request, response);
     }
 
-    private Jwt token(SessionAccount user, String tenantId, List<String> roles, List<String> organizations) {
+    private Jwt token(SessionAccount user, String tenantId, List<String> roles, List<String> organizations, boolean allOrganizations) {
         Instant now = clock.instant();
-        Jwt.Builder builder = Jwt.withTokenValue("session").header("alg", "none").subject(user.id().toString())
+        Jwt.Builder builder = Jwt.withTokenValue(CurrentUser.INTERNAL_TOKEN_VALUE).header("alg", "none").subject(user.id().toString())
                 .claim("email", user.email()).claim(CurrentUser.ROLES_CLAIM, roles)
-                .claim(CurrentUser.ORGANIZATIONS_CLAIM, organizations).issuedAt(now).expiresAt(now.plus(LIFETIME));
+                .claim(CurrentUser.ORGANIZATIONS_CLAIM, organizations).claim(CurrentUser.ALL_ORGANIZATIONS_CLAIM, allOrganizations)
+                .issuedAt(now).expiresAt(now.plus(LIFETIME));
         if (tenantId != null) {
             builder.claim(CurrentUser.TENANT_CLAIM, tenantId);
         }

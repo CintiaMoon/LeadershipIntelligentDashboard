@@ -223,6 +223,48 @@ class MembershipApiIntegrationTest extends PostgresIntegrationTest {
         assertThat(status(b.get("/api/v1/organizations/org-1/dashboard"))).isNotEqualTo(403);
     }
 
+
+    @Test
+    void aMembershipWithoutAnOrganizationListReachesEveryOrganizationIncludingNewOnes() throws Exception {
+        // the owner of a new company has no organizations yet and must be able to create the first one by naming it
+        SessionClient owner = signedIn("owner@example.com");
+        member("acme", "owner@example.com", "ACTIVE", "OWNER");
+        String organization = "org-" + co;
+        owner.inCompany("acme");
+        assertThat(status(owner.post("/api/v1/teams", Map.of("organizationId", organization, "name", "Platform")))).isEqualTo(201);
+        assertThat(owner.get("/api/v1/teams").getResponse().getContentAsString()).contains("Platform");
+        assertThat(status(owner.get("/api/v1/organizations/" + organization + "/dashboard"))).isNotEqualTo(403);
+        assertThat(status(owner.get("/api/v1/organizations/another-new-org/dashboard"))).as("an organization that does not exist yet is not forbidden").isNotEqualTo(403);
+        // configuration management lists the organization it now knows
+        assertThat(owner.get("/api/v1/configuration/layers").getResponse().getContentAsString()).contains(organization);
+    }
+
+    @Test
+    void anUnrestrictedMembershipNeverSeesAnotherCompanysOrganizations() throws Exception {
+        SessionClient owner = signedIn("owner@example.com");
+        member("acme", "owner@example.com", "ACTIVE", "OWNER");
+        jdbc.update("insert into organization (id, tenant_id, name) values ('org-g-" + co + "', 'globex', 'G')");
+        jdbc.update("insert into team (id, tenant_id, organization_id, name) values ('team-g-" + co + "', 'globex', 'org-g-" + co + "', 'Globex only')");
+        owner.inCompany("acme");
+        assertThat(owner.get("/api/v1/teams").getResponse().getContentAsString()).doesNotContain("Globex only");
+        // naming another company's organization does not reach it: the organization id belongs to that company
+        MvcResult clash = owner.post("/api/v1/teams", Map.of("organizationId", "org-g-" + co, "name", "Hijack"));
+        assertThat(status(clash)).isGreaterThanOrEqualTo(400);
+        assertThat(jdbc.queryForObject("select count(*) from team where name = 'Hijack'", Long.class)).isZero();
+    }
+
+    @Test
+    void aMembershipWithAnOrganizationListStaysLimitedToIt() throws Exception {
+        SessionClient b = signedIn("ana@example.com");
+        UUID membership = member("acme", "ana@example.com", "ACTIVE", "ADMIN");
+        restrictTo(membership, "org-1-" + co);
+        b.inCompany("acme");
+        MvcResult other = b.post("/api/v1/teams", Map.of("organizationId", "org-2-" + co, "name", "Elsewhere"));
+        assertThat(status(other)).isEqualTo(403);
+        assertThat(code(b.body(other))).isEqualTo("ORGANIZATION_ACCESS_DENIED");
+        assertThat(status(b.post("/api/v1/teams", Map.of("organizationId", "org-1-" + co, "name", "Mine")))).isEqualTo(201);
+        assertThat(b.get("/api/v1/teams").getResponse().getContentAsString()).contains("Mine").doesNotContain("Elsewhere");
+    }
     @Test
     void aCompanyInABodyOrQueryCannotReplaceTheHeader() throws Exception {
         SessionClient b = signedIn("ana@example.com");

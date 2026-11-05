@@ -64,6 +64,17 @@ public class MembershipService {
         return memberships.findActive(userId, tenantId).map(MembershipService::view);
     }
 
+    /**
+     * What a membership or token reaches in a company. A list means exactly those organizations. No list means every organization of
+     * the company, including ones created later, so an owner of a new company can create its first organization.
+     */
+    public OrganizationReach reach(String tenantId, Set<String> restriction) {
+        if (!restriction.isEmpty()) {
+            return new OrganizationReach(Set.copyOf(restriction), false);
+        }
+        return new OrganizationReach(Set.copyOf(memberships.organizationIds(tenantId)), true);
+    }
+
     /** The companies the user may open: ACTIVE memberships only. */
     public List<CompanyMembership> companies(UUID userId) {
         return memberships.listActive(userId).stream().map(MembershipService::view).toList();

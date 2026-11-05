@@ -37,6 +37,11 @@ public class MembershipStore {
         return load(SELECT + "where m.user_id = ? and m.tenant_id = ? and m.status = 'ACTIVE'", userId, tenantId).stream().findFirst();
     }
 
+    /** The organizations that exist in this company, in a fixed order. */
+    public List<String> organizationIds(String tenantId) {
+        return jdbc.queryForList("select id from organization where tenant_id = ? order by id", String.class, tenantId);
+    }
+
     /** Every company the user may open, by company name then id so the order is the same on every read. */
     public List<MembershipRow> listActive(UUID userId) {
         return load(SELECT + "where m.user_id = ? and m.status = 'ACTIVE' order by t.name, m.tenant_id", userId);
