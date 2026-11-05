@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { readFile } from 'node:fs/promises';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -15,7 +16,7 @@ async function expectNoViolations(page: Page, what: string) {
 
 async function signIn(page: Page, persona: RegExp) {
   await page.goto('/login');
-  await page.getByRole('button', { name: persona }).click();
+  await pickPersona(page, persona);
   await expect(page.getByTestId('lis-value')).toBeVisible();
 }
 
@@ -94,7 +95,7 @@ test.describe('reports', () => {
 
   test('another tenant has no assessments to report on', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Administrator of another tenant/ }).click();
+    await pickPersona(page, /^Administrator of another tenant/);
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Reports' }).click();
     await expect(page.getByLabel('Assessment', { exact: true }).locator('option')).toHaveCount(1);
   });

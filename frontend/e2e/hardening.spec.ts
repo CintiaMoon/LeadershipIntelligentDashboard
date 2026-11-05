@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona } from './api';
 
 const APP = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
@@ -11,7 +11,7 @@ test.describe('hardening', () => {
     expect(h['content-security-policy']).toContain("script-src 'self'");
     expect(h['content-security-policy']).toContain("frame-ancestors 'none'");
     expect(h['content-security-policy']).toContain("object-src 'none'");
-    expect(h['content-security-policy']).toMatch(/connect-src 'self' http:\/\/localhost:8081/);
+    expect(h['content-security-policy']).toMatch(/connect-src 'self';/);
     expect(h['x-content-type-options']).toBe('nosniff');
     expect(h['x-frame-options']).toBe('DENY');
     expect(h['referrer-policy']).toBe('no-referrer');
@@ -33,11 +33,12 @@ test.describe('hardening', () => {
   test('a full journey runs without a single content-security-policy violation or console error', async ({ page }) => {
     const problems: string[] = [];
     page.on('console', (m) => {
-      if (m.type() === 'error') problems.push(m.text());
+      // the probe for a session before anyone has signed in is answered 401 by design; the browser logs it as a failed resource
+      if (m.type() === 'error' && !/status of 401/.test(m.text())) problems.push(m.text());
     });
     page.on('pageerror', (e) => problems.push(e.message));
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Administrator Full access/ }).click();
+    await pickPersona(page, /^Administrator Full access/);
     await expect(page.getByTestId('lis-value')).toBeVisible();
     await page.getByRole('link', { name: 'How was this calculated?' }).click();
     await expect(page.getByRole('heading', { name: 'Final LIS' })).toBeVisible();
@@ -47,9 +48,9 @@ test.describe('hardening', () => {
     expect(problems).toEqual([]);
   });
 
-  test('tokens are kept in the tab session only, never in long-lived storage', async ({ page }) => {
+  test('the session is an HttpOnly cookie, and nothing of it or of a result is kept in browser storage', async ({ page, context }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Administrator Full access/ }).click();
+    await pickPersona(page, /^Administrator Full access/);
     await expect(page.getByTestId('lis-value')).toBeVisible();
     const stored = await page.evaluate(() => ({
       local: Object.keys(window.localStorage),
@@ -57,12 +58,17 @@ test.describe('hardening', () => {
       cookies: document.cookie,
     }));
     expect(stored.local).toEqual([]);
-    expect(stored.cookies).toBe('');
-    expect(stored.session.some((k) => k.startsWith('oidc.user:'))).toBe(true);
-    // no scoring result is kept client-side: only the session user and small preferences
-    const values = await page.evaluate(() => JSON.stringify({ ...window.sessionStorage }));
+    // script cannot read the session cookie (HttpOnly); only the CSRF token, which is meant to be read, is visible
+    expect(stored.cookies).not.toContain('LIS_SESSION');
+    const cookies = await context.cookies();
+    const session = cookies.find((c) => c.name === 'LIS_SESSION');
+    expect(session?.httpOnly).toBe(true);
+    expect(session?.sameSite).toBe('Lax');
+    // no scoring result and no credential is kept client-side: only small preferences
+    const values = await page.evaluate(() => JSON.stringify({ ...window.sessionStorage, ...window.localStorage }));
     expect(values).not.toContain('leadershipIntelligenceScore');
     expect(values).not.toContain('only one key person');
+    expect(values).not.toContain('demo-password');
   });
 
   test('the API never describes its internals to a caller who did something wrong', async ({ request }) => {

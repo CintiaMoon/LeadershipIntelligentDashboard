@@ -1,8 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 
 async function signIn(page: Page, persona: RegExp) {
   await page.goto('/login');
-  await page.getByRole('button', { name: persona }).click();
+  await pickPersona(page, persona);
   await expect(page.getByTestId('lis-value')).toBeVisible();
 }
 
@@ -81,9 +82,10 @@ test.describe('explainability', () => {
     const href = await page.getByRole('link', { name: 'How was this calculated?' }).getAttribute('href');
     await page.getByRole('button', { name: 'Sign out' }).click();
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Administrator of another tenant/ }).click();
+    await pickPersona(page, /^Administrator of another tenant/);
     await page.waitForURL(/\/dashboard$/);
-    await page.goto(href as string);
+    // the same screen, opened inside the company of the other administrator
+    await page.goto((href as string).replace(/^\/c\/[^/]+/, ''));
     await expect(page.getByRole('alert')).toContainText('Not found');
     expect(request).toBeTruthy();
   });

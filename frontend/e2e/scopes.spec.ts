@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona } from './api';
 
 // Answers from several people (decision D45) in the scratch organization, so the seeded demo series stay untouched.
@@ -7,7 +8,7 @@ const TEMPLATE = 'tpl-teams';
 
 async function signIn(page: Page) {
   await page.goto('/login');
-  await page.getByRole('button', { name: /^Sandbox administrator/ }).click();
+  await pickPersona(page, /^Sandbox administrator/);
   await expect(page.getByTestId('lis-value')).toBeVisible();
 }
 
@@ -73,7 +74,7 @@ test.describe('answers from several people', () => {
     await expect(page.getByTestId('lis-value')).toHaveText(two(teams.alpha.leadershipIntelligenceScore));
     await expect(page.getByText(/Teams are never ranked against each other/)).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Historical trends' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'How was this calculated?' })).toHaveAttribute('href', `/runs/${teams.alpha.scoringRunId}/explanation`);
+    await expect(page.getByRole('link', { name: 'How was this calculated?' })).toHaveAttribute('href', new RegExp(`/runs/${teams.alpha.scoringRunId}/explanation$`));
 
     await scope.selectOption('beta');
     await expect(page.getByTestId('lis-value')).toHaveText(two(teams.beta.leadershipIntelligenceScore));

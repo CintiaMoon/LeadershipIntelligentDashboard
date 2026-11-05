@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona } from './api';
 
 // Platform administration (decision D46): the platform administrator creates and lists tenants and sees no tenant data;
@@ -7,13 +8,13 @@ import { asPersona } from './api';
 
 async function signInAsPlatformAdmin(page: Page) {
   await page.goto('/login');
-  await page.getByRole('button', { name: /^Platform administrator/ }).click();
+  await pickPersona(page, /^Platform administrator/);
   await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
 }
 
 async function signInAsTenantAdmin(page: Page) {
   await page.goto('/login');
-  await page.getByRole('button', { name: /^Administrator Full access/ }).click();
+  await pickPersona(page, /^Administrator Full access/);
   await expect(page.getByTestId('lis-value')).toBeVisible();
 }
 

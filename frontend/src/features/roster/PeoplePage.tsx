@@ -182,7 +182,7 @@ function PersonRow({ person, teams }: { person: PersonView; teams: TeamView[] })
             {person.active && (
               <Button
                 variant="ghost"
-                aria-label={`Invite ${person.name} to answer`}
+                aria-label={`${invite.isSuccess ? 'Invited' : 'Invite to answer'}: ${person.name}`}
                 disabled={invite.isPending || invite.isSuccess}
                 onClick={() => invite.mutate(person.id as string)}
                 title="Send an invitation to answer questionnaires, to the e-mail address listed here"

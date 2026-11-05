@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona, runsOf } from './api';
 
 // WCAG 2.2 AA automated checks on every screen, plus the keyboard paths automation cannot see. Automated checks find
@@ -19,7 +20,7 @@ async function useLightTheme(page: Page) {
 
 async function signIn(page: Page, persona: RegExp) {
   await page.goto('/login');
-  await page.getByRole('button', { name: persona }).click();
+  await pickPersona(page, persona);
   await page.waitForURL(/\/dashboard$/);
   await expect(page.getByTestId('lis-value')).toBeVisible();
 }
@@ -27,14 +28,14 @@ async function signIn(page: Page, persona: RegExp) {
 test.describe('accessibility', () => {
   test('the login page', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Leadership Intelligent Dashboard', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible();
     await expectNoViolations(page, 'login');
   });
 
   test('the login page in the light theme', async ({ page }) => {
     await useLightTheme(page);
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Leadership Intelligent Dashboard', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await expectNoViolations(page, 'login (light)');
   });

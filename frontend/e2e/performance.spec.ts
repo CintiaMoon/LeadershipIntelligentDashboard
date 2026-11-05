@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, pickPersona } from './fixtures';
 import { asPersona } from './api';
 
 // Budgets for a developer machine with everything on localhost: they catch regressions (an accidentally eager chart
@@ -8,7 +8,7 @@ const KB = 1024;
 test.describe('performance budgets', () => {
   test('the login page downloads little JavaScript and paints quickly', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Leadership Intelligent Dashboard', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible();
     const { js, count, fcp } = await page.evaluate(() => {
       const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
       const scripts = resources.filter((r) => r.initiatorType === 'script' || r.name.endsWith('.js'));
@@ -23,7 +23,7 @@ test.describe('performance budgets', () => {
 
   test('the dashboard becomes usable quickly and stays within its JavaScript budget', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /^Administrator Full access/ }).click();
+    await pickPersona(page, /^Administrator Full access/);
     await expect(page.getByTestId('lis-value')).toBeVisible();
     await page.waitForLoadState('networkidle');
     const metrics = await page.evaluate(
