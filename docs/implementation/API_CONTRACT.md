@@ -386,3 +386,29 @@ A token cannot manage tokens: an ADMIN token passes the role rule and is refused
 **Limits** (decision D71, `lis.rate-limit.api-token-limit` 600 per minute per token, `api-token-failure-limit` 60 per minute per address for tokens that are not valid): over the limit is `429 TOO_MANY_REQUESTS` with `Retry-After`, audited as `RATE_LIMITED` (rules `api-token`, `api-token-invalid`).
 
 **Audit.** Security audit: `API_TOKEN_CREATED`, `API_TOKEN_REVOKED`, `API_TOKEN_REJECTED` (with the reason) and `API_TOKEN_USED` (the first use of each UTC day). `lastUsedAt` is kept to within the hour. What a token does is recorded in the access audit with the subject `api-token:<id>`, so it can be told apart from a person.
+
+## 21. As implemented (members, invitations and the security audit, phase P5: decisions D72, D74)
+
+All the member endpoints need OWNER or ADMIN **with a session** (an API token is refused, 403) and act on the caller's own company; a company cannot be named in a body or query.
+
+| Method and path | Answer |
+|---|---|
+| `GET /api/v1/members` | `[{id, email, displayName, status, roles, organizationIds, createdAt, updatedAt}]` by email: members and pending invitations, not the removed. `email` is the invited address and `displayName` absent while the person has no account |
+| `POST /api/v1/members` | body `{email, roles[], organizationIds[]?}`. 201 with the new INVITED member and an email with a single-use link (7 days; only its hash is stored). 422 `INVALID_MEMBER` (bad email, unknown role, `RESPONDENT` mixed with tenant roles); 403 `MEMBER_ACTION_REFUSED` (not allowed to give these roles or organizations); 409 `MEMBER_CONFLICT` (already a member, or already invited: resend instead); 429 (5 invitations to one address and 60 by one company an hour). A person whose membership was removed is invited again on the same membership |
+| `PATCH /api/v1/members/{id}` | body with any of `roles`, `organizationIds` (empty list = every organization), `status` (`ACTIVE` or `SUSPENDED`); an absent field is unchanged; an empty body is 422. Applies at the member's next request |
+| `DELETE /api/v1/members/{id}` | 204: removes a member or withdraws an invitation (its link stops working). The row is kept as REMOVED. The API tokens the member created stop working |
+| `POST /api/v1/members/{id}/resend-invitation` | 204 for a pending invitation; the earlier link stops working. 409 for anyone else |
+| `POST /api/v1/people/{personId}/invite` | invites a person of the roster, within the caller's organizations and only if active, as a `RESPONDENT`-only member limited to the person's organization. 201 like the invitation above |
+| `POST /api/v1/auth/invitations/preview` | public, body `{token}`: `{companyName, email, roles, accountExists}` for the page that opens the link. 400 `INVALID_TOKEN` for an unknown, used, expired or withdrawn link |
+| `POST /api/v1/auth/invitations/register` | public, body `{token, password, displayName}`: creates the account **already verified** (the link proves the mailbox) and activates the membership; the person then signs in. 204. 422 `WEAK_PASSWORD`; 422 `INVALID_ACCOUNT_REQUEST` when the address already has an account (sign in and use `POST /auth/invitations/accept`); 400 `INVALID_TOKEN`. Nothing is created on a refusal |
+
+**Rules.** An OWNER may grant and manage every role. An ADMIN may manage ENGINEERING_LEADER, ANALYST, VIEWER and RESPONDENT, but cannot grant OWNER or ADMIN and cannot change, suspend or remove anyone who holds one. **Nobody changes, suspends or removes their own membership.** A company keeps at least one ACTIVE OWNER: removing, suspending or demoting the last one is 409. An actor limited to some organizations can only give a subset of them (a member without a list reaches every organization, which only an actor with that reach may give) and can only manage members whose organizations lie within theirs. A membership holds tenant roles, or `RESPONDENT` on its own. An unknown member, or one of another company, is 404 `MEMBER_NOT_FOUND`.
+
+**Security audit.** Recorded here: `MEMBERSHIP_INVITED`, `MEMBERSHIP_INVITATION_RESENT`, `MEMBERSHIP_ROLE_CHANGED` (from and to), `MEMBERSHIP_SCOPE_CHANGED`, `MEMBERSHIP_SUSPENDED`, `MEMBERSHIP_REACTIVATED`, `MEMBERSHIP_REMOVED`, `MEMBERSHIP_ACCEPTED`, `SECURITY_AUDIT_READ`, `SECURITY_AUDIT_PURGED`.
+
+| Method and path | Who | Answer |
+|---|---|---|
+| `GET /api/v1/security-audit` | OWNER or ADMIN | `{items: [{id, occurredAt, eventType, outcome, userId, userEmail, tenantId, clientIp, userAgent, detail}], page, size, total}`, newest first, **the caller's own company's events only** (a `tenantId` parameter does nothing). Filters `eventType`, `outcome` (`SUCCESS` or `FAILURE`), `userId`, `from`, `to` (ISO instants, `to` exclusive); `page` from 0, `size` 1 to 200 (default 50); anything else 422 `INVALID_MEMBER`, a malformed value 400 |
+| `GET /api/v1/platform/security-audit` | platform administrator | the same for every event, with an optional `tenantId` filter |
+
+Events without a company (sign-ins, registrations, rate limits) are visible to the platform only. Every read is recorded as `SECURITY_AUDIT_READ`. **Retention** (`lis.security-audit.retention`, 400 days; `purge-enabled`, `purge-cron`): a daily job deletes events older than that and records `SECURITY_AUDIT_PURGED`; the table refuses every other update or delete (migration V14 lets the job's transaction delete, never update). **Anonymity:** answering a questionnaire writes no security or access event, and no audit or session row names a respondent next to a run or an answer (tests assert it); a respondent's own sign-in and sign-out are logged like anyone's.

@@ -105,6 +105,7 @@ public class RosterService {
         return view(roster.person(tenant.value(), id).orElseThrow());
     }
 
+/** One person of the roster, inside the caller's organizations. */    @Transactional    public PersonView person(TenantId tenant, OrganizationScope scope, UUID personId) {        PersonRow existing = roster.person(tenant.value(), personId).orElseThrow(RosterService::personNotFound);        scope.require(existing.organizationId());        return view(existing);    }
     /** Replaces the person's team, name, e-mail and active flag. People are deactivated, never deleted. */
     @Transactional
     public PersonView updatePerson(TenantId tenant, OrganizationScope scope, String actor, UUID personId, String teamId, String name, String email,

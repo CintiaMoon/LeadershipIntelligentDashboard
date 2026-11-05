@@ -3,6 +3,7 @@ package com.company.leadershipintelligence.api.controller;
 import com.company.leadershipintelligence.api.request.AuthRequests;
 import com.company.leadershipintelligence.api.response.AccountResponse;
 import com.company.leadershipintelligence.api.response.CsrfResponse;
+import com.company.leadershipintelligence.api.response.InvitationPreviewResponse;
 import com.company.leadershipintelligence.api.security.UserPrincipal;
 import com.company.leadershipintelligence.domain.exception.ScoringErrorCode;
 import com.company.leadershipintelligence.domain.exception.ScoringException;
@@ -10,6 +11,7 @@ import com.company.leadershipintelligence.service.identity.AccountService;
 import com.company.leadershipintelligence.service.identity.AccountView;
 import com.company.leadershipintelligence.service.identity.AuthenticationService;
 import com.company.leadershipintelligence.service.identity.ClientInfo;
+import com.company.leadershipintelligence.service.identity.InvitationPreview;
 import com.company.leadershipintelligence.service.identity.MembershipService;
 import com.company.leadershipintelligence.service.identity.PasswordService;
 import com.company.leadershipintelligence.service.identity.SecurityAudit;
@@ -155,6 +157,20 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void acceptInvitation(@AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody AuthRequests.TokenOnly body, HttpServletRequest request) {
         memberships.accept(user.userId(), body.token(), client(request));
+    }
+
+    @Operation(summary = "What an invitation link offers: the company, the invited address, the roles and whether that address has an account")
+    @PostMapping("/invitations/preview")
+    public InvitationPreviewResponse previewInvitation(@Valid @RequestBody AuthRequests.TokenOnly body, HttpServletRequest request) {
+        InvitationPreview preview = memberships.preview(body.token(), client(request));
+        return new InvitationPreviewResponse(preview.companyName(), preview.email(), List.copyOf(preview.roles()), preview.accountExists());
+    }
+
+    @Operation(summary = "Create an account from an invitation link: the account is verified, the membership active; the person then signs in")
+    @PostMapping("/invitations/register")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void registerWithInvitation(@Valid @RequestBody AuthRequests.InvitationRegister body, HttpServletRequest request) {
+        memberships.registerWithInvitation(body.token(), body.password(), body.displayName(), client(request));
     }
 
     @Operation(summary = "Ask for a password reset email. Always 202")

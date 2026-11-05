@@ -19,6 +19,8 @@ import java.time.Duration;
  * @param tokenIpLimit        uses of a verification or reset link from one address per {@code tokenWindow}
  * @param apiTokenLimit       calls with one API token per {@code apiTokenWindow}
  * @param apiTokenFailureLimit  calls from one address with an API token that is not valid, per {@code apiTokenWindow}
+ * @param inviteCompanyLimit  invitations a company may send per {@code accountWindow}
+ * @param inviteEmailLimit    invitations to one email address per {@code accountWindow}
  */
 @ConfigurationProperties(prefix = "lis.rate-limit")
 public record RateLimitProperties(
@@ -36,5 +38,7 @@ public record RateLimitProperties(
         @DefaultValue("1h") Duration tokenWindow,
         @DefaultValue("600") int apiTokenLimit,
         @DefaultValue("60") int apiTokenFailureLimit,
-        @DefaultValue("1m") Duration apiTokenWindow) {
+        @DefaultValue("1m") Duration apiTokenWindow,
+        @DefaultValue("60") int inviteCompanyLimit,
+        @DefaultValue("5") int inviteEmailLimit) {
 }

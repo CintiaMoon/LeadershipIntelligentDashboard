@@ -53,6 +53,15 @@ public final class AuthRequests {
         }
     }
 
+    /** Creating an account from an invitation link: the link proves the mailbox, the password is chosen here. */
+    public record InvitationRegister(@NotBlank @Size(max = 200) String token, @NotBlank @Size(max = 1000) String password,
+                                     @NotBlank @Size(max = 200) String displayName) {
+        @Override
+        public String toString() {
+            return "InvitationRegister[redacted]";
+        }
+    }
+
     public record ResetPassword(@NotBlank @Size(max = 200) String token, @NotBlank @Size(max = 1000) String newPassword) {
         @Override
         public String toString() {

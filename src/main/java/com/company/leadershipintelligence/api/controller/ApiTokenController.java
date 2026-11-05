@@ -6,14 +6,12 @@ import com.company.leadershipintelligence.api.response.CreatedApiTokenResponse;
 import com.company.leadershipintelligence.api.security.CurrentUser;
 import com.company.leadershipintelligence.service.identity.ApiTokenService;
 import com.company.leadershipintelligence.service.identity.ApiTokenView;
-import com.company.leadershipintelligence.service.identity.ClientInfo;
 import com.company.leadershipintelligence.service.identity.IssuedApiToken;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -48,16 +46,16 @@ public class ApiTokenController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CreatedApiTokenResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateApiTokenRequest request, HttpServletRequest http) {
-        UUID creator = person(jwt);
+        UUID creator = Callers.person(jwt);
         IssuedApiToken issued = tokens.create(creator, CurrentUser.from(jwt).tenantId().value(), request.name(), request.role(), request.expiresAt(),
-                request.organizationIds(), client(http));
+                request.organizationIds(), Callers.client(http));
         return new CreatedApiTokenResponse(response(issued.token()), issued.secret());
     }
 
     @Operation(summary = "The API tokens of this company, newest first (never their secrets)")
     @GetMapping
     public List<ApiTokenResponse> list(@AuthenticationPrincipal Jwt jwt) {
-        person(jwt);
+        Callers.person(jwt);
         return tokens.list(CurrentUser.from(jwt).tenantId().value()).stream().map(ApiTokenController::response).toList();
     }
 
@@ -65,21 +63,8 @@ public class ApiTokenController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revoke(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, HttpServletRequest http) {
-        UUID by = person(jwt);
-        tokens.revoke(CurrentUser.from(jwt).tenantId().value(), id, by, client(http));
-    }
-
-    /** The signed-in person behind the request. A token, or a caller that is not an account of this application, is refused. */
-    private static UUID person(Jwt jwt) {
-        try {
-            return UUID.fromString(jwt.getSubject());
-        } catch (RuntimeException e) {
-            throw new AccessDeniedException("API tokens are managed with a signed-in session");
-        }
-    }
-
-    private static ClientInfo client(HttpServletRequest request) {
-        return new ClientInfo(request.getRemoteAddr(), request.getHeader("User-Agent"));
+        UUID by = Callers.person(jwt);
+        tokens.revoke(CurrentUser.from(jwt).tenantId().value(), id, by, Callers.client(http));
     }
 
     private static ApiTokenResponse response(ApiTokenView view) {
