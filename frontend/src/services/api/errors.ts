@@ -21,13 +21,15 @@ export class ApiError extends Error {
     message: string,
     public readonly correlationId?: string,
     public readonly details?: Record<string, string>,
+    /** Seconds to wait, from the Retry-After header of a 429. */
+    public readonly retryAfter?: number,
   ) {
     super(message);
     this.name = 'ApiError';
   }
 
-  static fromBody(status: number, body: Partial<ApiErrorBody> | null, headerCorrelationId?: string | null): ApiError {
-    return new ApiError(status, body?.code ?? 'UNKNOWN', body?.message ?? '', body?.correlationId ?? headerCorrelationId ?? undefined, body?.details);
+  static fromBody(status: number, body: Partial<ApiErrorBody> | null, headerCorrelationId?: string | null, retryAfter?: number): ApiError {
+    return new ApiError(status, body?.code ?? 'UNKNOWN', body?.message ?? '', body?.correlationId ?? headerCorrelationId ?? undefined, body?.details, retryAfter);
   }
 }
 
@@ -62,7 +64,7 @@ export function describeError(error: unknown): ErrorView {
     case 422:
       return { kind: 'unprocessable', title: 'The data could not be scored', message: error.message || 'Review the answers and try again.', retryable: false, correlationId };
     case 429:
-      return { kind: 'rate-limited', title: 'Too many requests', message: 'Wait a moment and try again.', retryable: true, correlationId };
+      return { kind: 'rate-limited', title: 'Too many requests', message: error.retryAfter ? `Wait ${waitText(error.retryAfter)} and try again.` : 'Wait a moment and try again.', retryable: true, correlationId };
     case 503:
       return { kind: 'unavailable', title: 'The service is temporarily unavailable', message: 'Try again shortly.', retryable: true, correlationId };
     default:
@@ -73,4 +75,11 @@ export function describeError(error: unknown): ErrorView {
 /** Whether TanStack Query should retry: only transient failures, and only a couple of times. */
 export function shouldRetry(failureCount: number, error: unknown): boolean {
   return failureCount < 2 && describeError(error).retryable;
+}
+
+/** "30 seconds", "5 minutes": how long a throttle asks the caller to wait. */
+export function waitText(seconds: number): string {
+  if (seconds < 90) return `${seconds} second${seconds === 1 ? '' : 's'}`;
+  const minutes = Math.ceil(seconds / 60);
+  return minutes < 90 ? `${minutes} minutes` : `${Math.ceil(minutes / 60)} hours`;
 }

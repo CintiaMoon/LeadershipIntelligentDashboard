@@ -21,8 +21,10 @@ mvn -B test -Dtest=ArchitectureTest        run one test class
 docker compose up -d --build               local stack: PostgreSQL, mock identity provider (:8081), Mailpit (:8025 inbox), app (:8080, profile dev)
 docker compose up -d postgres mock-oauth2 mailpit  services only; then mvn spring-boot:run -Dspring-boot.run.profiles=dev
 npx newman run docs/postman/lis.postman_collection.json   run every endpoint against the local stack
-cd frontend && npm run dev                 web UI on :5173 (proxies /api to :8080); also npm run lint | typecheck | test | build
-cd frontend && npm run e2e                 Playwright against the compose stack (web UI on :3000); seeds org-1 and org-2 first
+cd frontend && npm run dev                 web UI on :5173 with the application own accounts (proxies /api to :8080); also npm run lint | typecheck | test | build
+cd frontend && npm run dev:oidc            the same with the external provider and its persona picker (until the last identity phase removes it)
+cd frontend && npm run e2e                 Playwright against the compose stack (web UI with the persona picker on :3000); seeds org-1 and org-2 first
+cd frontend && npm run e2e:accounts        Playwright for the application own accounts (web UI on :3001, emails read from Mailpit); no seed needed
 cd frontend && npm run verify              lint, typecheck, unit tests, build and the no-test-code-in-production check
 cd frontend && npm run e2e:seed            create the deterministic demo series only (after docker compose down -v for a clean start)
 cd frontend && npm run gen:api             regenerate src/types/api.d.ts from the running backend

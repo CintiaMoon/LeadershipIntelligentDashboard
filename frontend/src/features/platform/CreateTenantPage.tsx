@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { BackLink, PageHeader } from '@/components/ui/PageHeader';
 import { ApiError, describeError } from '@/services/api/errors';
+import { authConfig } from '@/services/auth/config';
 import { useCreateTenant } from '@/services/queries/hooks';
 
 // The same rule as the backend, so most mistakes are caught before the request; the backend still decides.
@@ -15,6 +16,11 @@ const schema = z.object({
     .trim()
     .regex(/^[a-z0-9][a-z0-9-]{1,62}$/, 'Use 2 to 63 lowercase letters, digits or hyphens, starting with a letter or digit.'),
   name: z.string().trim().min(1, 'Enter a name.').max(200, 'Use at most 200 characters.'),
+  ownerEmail: z
+    .string()
+    .trim()
+    .max(254, 'Use at most 254 characters.')
+    .refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@.]+$/.test(v), 'Enter a valid email address.'),
 });
 type Values = z.infer<typeof schema>;
 
@@ -24,11 +30,11 @@ const input = 'mt-1 min-h-10 w-full rounded-md border border-line bg-surface px-
 export function CreateTenantPage() {
   const navigate = useNavigate();
   const create = useCreateTenant();
-  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { id: '', name: '' } });
+  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { id: '', name: '', ownerEmail: '' } });
   const { errors } = form.formState;
 
   const submit = form.handleSubmit((values) => {
-    create.mutate(values, {
+    create.mutate({ id: values.id, name: values.name, ownerEmail: values.ownerEmail || undefined }, {
       onSuccess: (tenant) => navigate('/platform/tenants', { state: { created: tenant.id } }),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
@@ -68,6 +74,16 @@ export function CreateTenantPage() {
             <input id="tenant-name" type="text" autoComplete="off" className={input} aria-invalid={!!errors.name} aria-describedby="tenant-name-error" {...form.register('name')} />
             <p id="tenant-name-error" role="alert" className="mt-1 text-xs text-risk-critical">{errors.name?.message}</p>
           </div>
+          {authConfig.mode === 'session' && (
+            <div>
+              <label htmlFor="tenant-owner" className="text-sm font-medium">Owner email address</label>
+              <input id="tenant-owner" type="email" autoComplete="off" className={input} aria-invalid={!!errors.ownerEmail} aria-describedby="tenant-owner-help tenant-owner-error" {...form.register('ownerEmail')} />
+              <p id="tenant-owner-help" className="mt-1 text-xs text-ink-soft">
+                The first owner of the company. They are emailed an invitation (a link that works once, for seven days); without one the company has no member until someone is invited.
+              </p>
+              <p id="tenant-owner-error" role="alert" className="mt-1 text-xs text-risk-critical">{errors.ownerEmail?.message}</p>
+            </div>
+          )}
           {failure && (
             <p id="create-error" role="alert" className="rounded-lg border border-risk-critical/30 bg-risk-critical-soft px-4 py-3 text-sm text-risk-critical">
               <strong>{failure.title}.</strong> {failure.message}

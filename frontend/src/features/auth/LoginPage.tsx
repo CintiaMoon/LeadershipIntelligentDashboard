@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PERSONAS } from '@/services/auth/oidc';
 import { authConfig } from '@/services/auth/config';
+import { SessionLoginPage } from '@/features/account/SessionLoginPage';
 
-export function LoginPage() {
+function OidcLoginPage() {
   const { status, signIn, principal } = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
@@ -75,4 +76,9 @@ export function LoginPage() {
       </div>
     </main>
   );
+}
+
+/** The sign-in page for however people sign in: an email and a password, or the external provider (kept until the last identity phase). */
+export function LoginPage() {
+  return authConfig.mode === 'session' ? <SessionLoginPage /> : <OidcLoginPage />;
 }

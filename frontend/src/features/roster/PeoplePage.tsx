@@ -6,7 +6,9 @@ import { FormError, Switch, inputClass, selectClass } from '@/components/ui/Form
 import { PageHeader } from '@/components/ui/PageHeader';
 import { QuerySection } from '@/components/ui/QuerySection';
 import { EmptyState } from '@/components/ui/StateViews';
+import { authConfig } from '@/services/auth/config';
 import { useCreatePerson, useCreateTeam, usePeople, useRenameTeam, useTeams, useUpdatePerson } from '@/services/queries/hooks';
+import { useInvitePerson } from '@/services/queries/identity';
 import { useSession } from '@/stores/session';
 import type { PersonView, TeamView } from '@/types/api';
 
@@ -145,6 +147,7 @@ function PersonForm({
 
 function PersonRow({ person, teams }: { person: PersonView; teams: TeamView[] }) {
   const update = useUpdatePerson();
+  const invite = useInvitePerson();
   const [editing, setEditing] = useState(false);
   return (
     <tr className="border-b border-line/60 align-top">
@@ -173,9 +176,23 @@ function PersonRow({ person, teams }: { person: PersonView; teams: TeamView[] })
             />
           </div>
         ) : (
-          <Button variant="ghost" aria-label={`Edit ${person.name}`} onClick={() => setEditing(true)}>
-            Edit
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="ghost" aria-label={`Edit ${person.name}`} onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+            {authConfig.mode === 'session' && person.active && (
+              <Button
+                variant="ghost"
+                aria-label={`Invite ${person.name} to answer`}
+                disabled={invite.isPending || invite.isSuccess}
+                onClick={() => invite.mutate(person.id as string)}
+                title="Send an invitation to answer questionnaires, to the e-mail address listed here"
+              >
+                {invite.isSuccess ? 'Invited' : 'Invite to answer'}
+              </Button>
+            )}
+            {invite.isError && <FormError error={invite.error} />}
+          </div>
         )}
       </td>
     </tr>

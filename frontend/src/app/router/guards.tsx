@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/app/providers/auth-context';
 import { LoadingState } from '@/components/ui/StateViews';
 import { EmptyState } from '@/components/ui/StateViews';
+import { authConfig } from '@/services/auth/config';
 import { canManageAssessments, canReadConfiguration, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
+import { companyFromPath } from './company-path';
 
 /** Anonymous visitors are sent to the login page and brought back afterwards. */
 export function RequireAuth({ children }: { children: ReactNode }) {
@@ -17,6 +19,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
   if (status === 'anonymous') {
+    // the screens of a company have their own router, whose addresses start with /c/<company>: leaving them is a full page load
+    if (authConfig.mode === 'session' && companyFromPath(window.location.pathname)) return <LeaveToLogin />;
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   return <>{children}</>;
@@ -72,4 +76,41 @@ export function HomeRedirect() {
   const { principal } = useAuth();
   if (isPlatformAdmin(principal)) return <Navigate to="/platform/tenants" replace />;
   return <Navigate to={isRespondent(principal) ? '/respond' : '/dashboard'} replace />;
+}
+
+/** Ends up at the sign-in page after a full page load, remembering where the person was. */
+function LeaveToLogin() {
+  useEffect(() => {
+    const from = window.location.pathname + window.location.search;
+    window.location.replace(`/login?from=${encodeURIComponent(from)}`);
+  }, []);
+  return (
+    <div className="mx-auto max-w-3xl p-8">
+      <LoadingState label="Your session has ended" />
+    </div>
+  );
+}
+
+/**
+ * In the application's own accounts a screen belongs to a company (decision D69). Outside one, a person is sent to choose; in a
+ * company they may not open, they are told so. The platform administrator belongs to no company. The server checks the membership
+ * on every call; this only avoids screens that cannot work.
+ */
+export function RequireCompany({ children }: { children: ReactNode }) {
+  const { mode, account, company } = useAuth();
+  if (mode !== 'session') return <>{children}</>;
+  // a platform administrator belongs to no company: outside one they carry on, inside one they are told so
+  if (account?.platformAdmin ? !companyFromPath(window.location.pathname) : company) return <>{children}</>;
+  if (companyFromPath(window.location.pathname)) {
+    return (
+      <div className="mx-auto max-w-3xl p-8">
+        <EmptyState
+          title="You cannot open this company"
+          description="Either it does not exist, or you are not an active member of it. Choose one of your companies."
+          action={<a href="/companies" className="inline-flex min-h-9 items-center rounded-md bg-ink px-3.5 text-sm font-medium text-canvas hover:bg-ink/90">My companies</a>}
+        />
+      </div>
+    );
+  }
+  return <Navigate to="/companies" replace />;
 }

@@ -128,12 +128,32 @@ class MembershipApiIntegrationTest extends PostgresIntegrationTest {
         assertThat(list.get(0).get("id").asText()).isEqualTo("acme");
         assertThat(list.get(0).get("name").asText()).isEqualTo("Acme Corp");
         assertThat(list.get(0).get("roles").toString()).contains("OWNER").contains("ADMIN");
+        // no organization list: every organization, with the ones that exist listed
+        assertThat(list.get(0).get("allOrganizations").asBoolean()).isTrue();
         // the same list comes with the account
         JsonNode me = b.body(b.get("/api/v1/auth/me"));
         assertThat(me.get("companies")).hasSize(1);
         assertThat(me.get("companies").get(0).get("id").asText()).isEqualTo("acme");
     }
 
+
+    @Test
+    void theCompanyListSaysWhichOrganizationsTheUserReaches() throws Exception {
+        SessionClient b = signedIn("ana@example.com");
+        jdbc.update("insert into organization (id, tenant_id, name) values ('org-list-a-" + co + "', 'acme', 'A') on conflict do nothing");
+        jdbc.update("insert into organization (id, tenant_id, name) values ('org-list-b-" + co + "', 'acme', 'B') on conflict do nothing");
+        member("acme", "ana@example.com", "ACTIVE", "VIEWER");
+        JsonNode all = b.body(b.get("/api/v1/companies")).get(0);
+        assertThat(all.get("allOrganizations").asBoolean()).isTrue();
+        assertThat(all.get("organizationIds").toString()).contains("org-list-a-" + co).contains("org-list-b-" + co);
+        // limited to a list: exactly that list
+        jdbc.update("delete from company_membership_organization");
+        UUID membership = jdbc.queryForObject("select id from company_membership where tenant_id = 'acme'", UUID.class);
+        restrictTo(membership, "org-list-a-" + co);
+        JsonNode limited = b.body(b.get("/api/v1/companies")).get(0);
+        assertThat(limited.get("allOrganizations").asBoolean()).isFalse();
+        assertThat(limited.get("organizationIds").toString()).isEqualTo("[\"org-list-a-" + co + "\"]");
+    }
     @Test
     void aUserWithNoCompanyGetsAnEmptyList() throws Exception {
         SessionClient b = signedIn("ana@example.com");

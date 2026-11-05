@@ -5,6 +5,7 @@ import com.company.leadershipintelligence.api.security.UserPrincipal;
 import com.company.leadershipintelligence.domain.exception.ScoringErrorCode;
 import com.company.leadershipintelligence.domain.exception.ScoringException;
 import com.company.leadershipintelligence.service.identity.MembershipService;
+import com.company.leadershipintelligence.service.identity.OrganizationReach;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -37,6 +38,9 @@ public class CompaniesController {
             throw new ScoringException(ScoringErrorCode.AUTHENTICATION_FAILED, "A signed-in session is required.");
         }
         return memberships.companies(user.userId()).stream()
-                .map(m -> new CompanyResponse(m.tenantId(), m.tenantName(), List.copyOf(m.roles()))).toList();
+                .map(m -> {
+                    OrganizationReach reach = memberships.reach(m.tenantId(), m.organizationIds());
+                    return new CompanyResponse(m.tenantId(), m.tenantName(), List.copyOf(m.roles()), reach.organizationIds().stream().sorted().toList(), reach.all());
+                }).toList();
     }
 }

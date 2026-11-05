@@ -26,7 +26,8 @@ export type RunAnswers = S['RunAnswersResponse'];
 export type CalculateRequest = S['CalculateRequest'];
 export type Tenant = S['TenantResponse'];
 export type TenantList = S['TenantListResponse'];
-export type CreateTenantRequest = S['CreateTenantRequest'];
+/** The owner email is part of creating a company (decision D69); the generated schema predates it. */
+export type CreateTenantRequest = S['CreateTenantRequest'] & { ownerEmail?: string };
 export type RecalculateRequest = S['RecalculateRequest'];
 
 /** The standard backend error body (specv3.md 28.10). */
