@@ -3,6 +3,7 @@ package com.company.leadershipintelligence.api.exception;
 import com.company.leadershipintelligence.api.controller.ApiRequestException;
 import com.company.leadershipintelligence.api.response.ApiError;
 import com.company.leadershipintelligence.config.beans.CorrelationIdFilter;
+import com.company.leadershipintelligence.domain.exception.RateLimitedException;
 import com.company.leadershipintelligence.domain.exception.ScoringErrorCode;
 import com.company.leadershipintelligence.domain.exception.ScoringException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -34,6 +35,13 @@ import java.util.TreeMap;
 public class GlobalExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(RateLimitedException.class)
+    ResponseEntity<ApiError> rateLimited(RateLimitedException e) {
+        long seconds = Math.max(1, (e.retryAfter().toMillis() + 999) / 1000);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", Long.toString(seconds))
+                .body(new ApiError(e.code().name(), e.getMessage(), e.details(), correlationId()));
+    }
 
     @ExceptionHandler(ScoringException.class)
     ResponseEntity<ApiError> scoring(ScoringException e) {

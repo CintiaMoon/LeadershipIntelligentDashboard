@@ -76,14 +76,12 @@ public class AccountService {
         if (problem != null) {
             throw new ScoringException(ScoringErrorCode.WEAK_PASSWORD, problem);
         }
+        // refused (429) before any hashing when this address or this email has registered too often; the count never depends on
+        // whether the email is known
+        limiter.checkAccountRequest("register", email, client);
         Instant now = clock.instant();
         // the password is hashed before anyone looks for the email, so a new and a known address take the same time
         String hash = hasher.hash(password);
-        if (!limiter.allowMail(email)) {
-            // answered like any other registration; nothing is created or sent, so the address cannot be flooded with emails
-            audit.record("REGISTERED", SecurityAudit.FAILURE, null, null, email, client, Map.of("reason", "RATE_LIMITED"));
-            return;
-        }
         UUID id = UUID.randomUUID();
         if (users.insertPending(id, email, name, hash, now)) {
             sendVerification(id, email, name, now);
@@ -110,6 +108,7 @@ public class AccountService {
      */
     @Transactional
     public void verifyEmail(String token, String password, ClientInfo client) {
+        limiter.checkTokenUse(client);
         Instant now = clock.instant();
         String tokenHash = token == null || token.isBlank() ? null : codec.hash(token.trim());
         Optional<UserRow> owner = tokenHash == null ? Optional.empty()
@@ -144,13 +143,9 @@ public class AccountService {
      */
     public void resendVerification(String rawEmail, ClientInfo client) {
         String email = EmailAddress.normalize(rawEmail);
-        boolean allowed = email == null || limiter.allowMail(email);
+        limiter.checkAccountRequest("resend", email, client);
         Optional<UserRow> user = email == null ? Optional.empty() : users.findByEmail(email);
         if (user.isPresent() && user.get().status() == AccountStatus.PENDING_VERIFICATION) {
-            if (!allowed) {
-                audit.record("VERIFICATION_RESENT", SecurityAudit.FAILURE, user.get().id(), null, null, client, Map.of("reason", "RATE_LIMITED"));
-                return;
-            }
             UserRow pending = user.get();
             audit.success("VERIFICATION_RESENT", pending.id(), client);
             work.run(() -> transaction.executeWithoutResult(status ->

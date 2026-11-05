@@ -19,11 +19,13 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @SpringBootTest
 @Import(TestClockConfiguration.class)
 // the tests share one client address and make many calls; the limits themselves are tested in AuthRateLimitIntegrationTest
-@org.springframework.test.context.TestPropertySource(properties = {"lis.identity.ip-requests-per-minute=100000",
-        "lis.identity.login-failure-limit=100000", "lis.identity.emails-per-address-per-hour=100000"})
+@org.springframework.test.context.TestPropertySource(properties = {"lis.rate-limit.login-ip-limit=100000", "lis.rate-limit.account-ip-limit=100000",
+        "lis.rate-limit.login-failure-limit=100000", "lis.rate-limit.account-email-limit=100000", "lis.rate-limit.token-ip-limit=100000"})
 public abstract class PostgresIntegrationTest {
 
-    protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    // every cached Spring context keeps its own connection pool, so the default of 100 connections runs out as test classes with their own
+    // settings are added
+    protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine").withCommand("postgres", "-c", "max_connections=400");
 
     static {
         POSTGRES.start();

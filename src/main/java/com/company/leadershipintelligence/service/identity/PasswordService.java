@@ -66,17 +66,13 @@ public class PasswordService {
      */
     public void requestReset(String rawEmail, ClientInfo client) {
         String email = EmailAddress.normalize(rawEmail);
-        boolean allowed = email == null || limiter.allowMail(email);
+        limiter.checkAccountRequest("forgot", email, client);
         Optional<UserRow> found = email == null ? Optional.empty() : users.findByEmail(email);
         if (found.isEmpty()) {
             audit.record("PASSWORD_RESET_REQUESTED", SecurityAudit.FAILURE, null, null, email == null ? "" : email, client, Map.of("reason", "UNKNOWN_ACCOUNT"));
             return;
         }
         UserRow user = found.get();
-        if (!allowed) {
-            audit.record("PASSWORD_RESET_REQUESTED", SecurityAudit.FAILURE, user.id(), null, null, client, Map.of("reason", "RATE_LIMITED"));
-            return;
-        }
         if (user.status() == AccountStatus.ACTIVE) {
             audit.success("PASSWORD_RESET_REQUESTED", user.id(), client);
             work.run(() -> transaction.executeWithoutResult(status -> issueReset(user)));
@@ -106,6 +102,7 @@ public class PasswordService {
 
     @Transactional
     public void reset(String token, String newPassword, ClientInfo client) {
+        limiter.checkTokenUse(client);
         String early = PasswordPolicy.violation(newPassword, null);
         if (early != null) {
             throw new ScoringException(ScoringErrorCode.WEAK_PASSWORD, early);

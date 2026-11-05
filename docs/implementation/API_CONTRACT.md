@@ -331,4 +331,16 @@ Cookies: `LIS_SESSION` (the session id; HttpOnly, Secure, SameSite=Lax; 30 minut
 | `POST /password/change` | `{currentPassword, newPassword}` | 204 (needs a session); the user's other sessions are ended; 422 when the current password is wrong |
 
 Password rule: 12 to 128 characters, not a very common password, not the email address, not a single repeated pattern; no composition rules. Emails are normalized (trimmed, lower case). `companies` is always empty in P1 and will list only companies with an ACTIVE membership. New codes: `AUTHENTICATION_FAILED` (401), `INVALID_ACCOUNT_REQUEST` and `WEAK_PASSWORD` (422), `INVALID_TOKEN` (400), `CSRF_TOKEN_INVALID` (403), `TOO_MANY_REQUESTS` (429).
-Throttling (in memory per instance; shared counters arrive with P2, D71): a client address may make 60 calls a minute to the unauthenticated endpoints (429 above it); 5 failed sign-ins for one email from one address lock sign-in for that pair for 15 minutes (429, the same for an unknown email); an address gets at most 5 account emails an hour, and further requests are still answered as usual but send nothing. Settings: `lis.identity.ip-requests-per-minute`, `login-failure-limit`, `login-lockout`, `emails-per-address-per-hour`. Behind a proxy set `LIS_FORWARD_HEADERS=framework` so the client address and the Secure flag of cookies come from `X-Forwarded-*` (default `none`: not trusted).Registering a still pending address again replaces the earlier registration (the latest wins, earlier links are retired). Activation needs the link and the password together, so a stranger who registered an address first cannot get it activated by its owner clicking the link.
+
+Throttling (decision D71; starting values, not calibrated): every refusal is `429 TOO_MANY_REQUESTS` with a `Retry-After` header (seconds) and is written to the security audit as `RATE_LIMITED` with the rule that fired (`details.rule`). The counts depend only on what the caller sent, never on whether an account exists.
+
+| Rule | Limit |
+|---|---|
+| `login-ip` | 20 sign-in calls per address per 5 minutes |
+| `login-account` | 5 failed sign-ins per account per 15 minutes, then a delay of 30 s that doubles with every further failure, up to 15 minutes; never a permanent lock; a successful sign-in clears it |
+| `account-ip-*`, `account-email-*` | 5 calls per address and 5 per email per hour, each of register, resend-verification and forgot-password on its own |
+| `token-ip` | 20 uses of a verification or reset link per address per hour |
+
+Settings are under `lis.rate-limit.*`. `lis.rate-limit.store=memory` keeps the counters in the process (default; one instance); `redis` shares them between instances through `SPRING_DATA_REDIS_HOST`. If Redis cannot be reached the limits keep applying with counters in the process, a warning is logged and the metric `auth.ratelimit.fallback` counts the calls served that way; the metric `auth.ratelimit.hits{rule}` counts refusals. Behind a proxy set `LIS_FORWARD_HEADERS=framework` so the client address and the Secure flag of cookies come from `X-Forwarded-*` (default `none`: not trusted).
+
+Registering a still pending address again replaces the earlier registration (the latest wins, earlier links are retired). Activation needs the link and the password together, so a stranger who registered an address first cannot get it activated by its owner clicking the link.
