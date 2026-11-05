@@ -17,6 +17,9 @@ import java.time.Duration;
  * @param mailAsync          send emails on a background thread (false only in tests, so they can read the outbox at once)
  * @param auditHashKey       secret that keys the hash stored for an email that belongs to no account; empty means a random key per
  *                           process, which is fine because that hash is only for spotting repeats within one run
+ * @param invitationTtl      how long an invitation to join a company works
+ * @param bootstrapAdminEmail  when no platform administrator exists at startup, the account with this email becomes one (it is
+ *                           created if needed and sent a link to set its password); empty means none is created
  */
 @ConfigurationProperties(prefix = "lis.identity")
 public record IdentityProperties(
@@ -27,5 +30,7 @@ public record IdentityProperties(
         @DefaultValue("http://localhost:3000") String webBaseUrl,
         @DefaultValue("no-reply@localhost") String mailFrom,
         @DefaultValue("true") boolean mailAsync,
-        @DefaultValue("") String auditHashKey) {
+        @DefaultValue("") String auditHashKey,
+        @DefaultValue("7d") Duration invitationTtl,
+        @DefaultValue("") String bootstrapAdminEmail) {
 }

@@ -1,6 +1,10 @@
 package com.company.leadershipintelligence.config.security;
 
 import com.company.leadershipintelligence.api.exception.ApiErrorWriter;
+import com.company.leadershipintelligence.api.security.CompanyContextFilter;
+import com.company.leadershipintelligence.service.identity.MembershipService;
+import com.company.leadershipintelligence.service.identity.SecurityAudit;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import com.company.leadershipintelligence.config.properties.IdentityProperties;
 import com.company.leadershipintelligence.api.security.PlatformRole;
 import com.company.leadershipintelligence.api.security.RespondentRole;
@@ -75,6 +79,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/verify-email", "/api/v1/auth/resend-verification",
                                 "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/auth/password/forgot", "/api/v1/auth/password/reset").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/invitations/accept").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/password/change").authenticated()
                         .anyRequest().denyAll())
@@ -104,11 +109,24 @@ public class SecurityConfiguration {
 
     @Bean
     @Order(2)
-    SecurityFilterChain filterChain(HttpSecurity http, ApiErrorWriter errors) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, ApiErrorWriter errors, MembershipService memberships, SecurityAudit audit, IdentityProperties identity,
+                                    Clock clock, CookieCsrfTokenRepository csrfTokens, @Value("${server.servlet.session.cookie.name:JSESSIONID}") String sessionCookie) throws Exception {
+        // sessions are read, never created, here; a request with a bearer token is not a session request
+        HttpSessionSecurityContextRepository sessions = new HttpSessionSecurityContextRepository();
+        sessions.setAllowSessionCreation(false);
+        CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
         String[] writers = {Role.OWNER.name(), Role.ADMIN.name(), Role.ENGINEERING_LEADER.name()};
         String[] everyone = java.util.Arrays.stream(Role.values()).map(Enum::name).toArray(String[]::new);
-        http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        http.csrf(c -> c.csrfTokenRepository(csrfTokens).csrfTokenRequestHandler(csrfHandler)
+                        // CSRF protects only what carries an ambient credential: a state-changing call that rides on the session cookie
+                        // (decision D68). A bearer-token call has none, and a call with neither is simply unauthenticated
+                        .requireCsrfProtectionMatcher(r -> !java.util.Set.of("GET", "HEAD", "OPTIONS", "TRACE").contains(r.getMethod())
+                                && r.getHeader("Authorization") == null && hasCookie(r, sessionCookie)))
+                .securityContext(c -> c.securityContextRepository(sessions))
+                .requestCache(c -> c.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
+                .addFilterBefore(new AbsoluteSessionTimeoutFilter(identity.sessionAbsolute(), clock), SecurityContextHolderFilter.class)
+                .addFilterAfter(new CompanyContextFilter(memberships, errors, audit, clock), BearerTokenAuthenticationFilter.class)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.NEVER))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         // platform administration (decision D46): only the platform role, and nothing tenant-scoped is reachable with it
@@ -131,6 +149,8 @@ public class SecurityConfiguration {
                         .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, "/api/v1/scoring-runs/*/answers")
                         .hasAnyRole(Role.OWNER.name(), Role.ADMIN.name(), Role.ANALYST.name())
+                        // the companies a signed-in user may open (decision D69): the user alone, no company; the controller refuses a bearer token
+                        .requestMatchers(HttpMethod.GET, "/api/v1/companies").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/**", "/v3/api-docs", "/v3/api-docs/**").hasAnyRole(everyone)
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o
@@ -139,8 +159,19 @@ public class SecurityConfiguration {
                         .accessDeniedHandler(errors::accessDenied))
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(errors::unauthenticated)
-                        .accessDeniedHandler(errors::accessDenied));
+                        .accessDeniedHandler((request, response, denied) -> {
+                            if (denied instanceof CsrfException) {
+                                errors.csrfRejected(request, response, denied);
+                            } else {
+                                errors.accessDenied(request, response, denied);
+                            }
+                        }));
         return http.build();
+    }
+
+    private static boolean hasCookie(jakarta.servlet.http.HttpServletRequest request, String name) {
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        return cookies != null && java.util.Arrays.stream(cookies).anyMatch(c -> name.equals(c.getName()));
     }
 
     /** Maps the {@code roles} claim to Spring authorities named ROLE_&lt;name&gt;. */

@@ -10,6 +10,7 @@ import com.company.leadershipintelligence.service.identity.AccountService;
 import com.company.leadershipintelligence.service.identity.AccountView;
 import com.company.leadershipintelligence.service.identity.AuthenticationService;
 import com.company.leadershipintelligence.service.identity.ClientInfo;
+import com.company.leadershipintelligence.service.identity.MembershipService;
 import com.company.leadershipintelligence.service.identity.PasswordService;
 import com.company.leadershipintelligence.service.identity.SecurityAudit;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,15 +51,17 @@ public class AuthController {
 
     private final AccountService accounts;
     private final AuthenticationService authentication;
+    private final MembershipService memberships;
     private final PasswordService passwords;
     private final SecurityAudit audit;
     private final SecurityContextRepository contexts;
     private final CookieCsrfTokenRepository csrfTokens;
 
-    public AuthController(AccountService accounts, AuthenticationService authentication, PasswordService passwords, SecurityAudit audit,
+    public AuthController(AccountService accounts, AuthenticationService authentication, MembershipService memberships, PasswordService passwords, SecurityAudit audit,
                           SecurityContextRepository contexts, CookieCsrfTokenRepository csrfTokens) {
         this.accounts = accounts;
         this.authentication = authentication;
+        this.memberships = memberships;
         this.passwords = passwords;
         this.audit = audit;
         this.contexts = contexts;
@@ -147,6 +150,13 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Accept an invitation to a company with the token from the invitation email (needs a session whose verified email is the invited one)")
+    @PostMapping("/invitations/accept")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void acceptInvitation(@AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody AuthRequests.TokenOnly body, HttpServletRequest request) {
+        memberships.accept(user.userId(), body.token(), client(request));
+    }
+
     @Operation(summary = "Ask for a password reset email. Always 202")
     @PostMapping("/password/forgot")
     @ResponseStatus(HttpStatus.ACCEPTED)
@@ -170,8 +180,9 @@ public class AuthController {
         passwords.change(user.userId(), body.currentPassword(), body.newPassword(), session == null ? null : session.getId(), client(request));
     }
 
-    private static AccountResponse response(AccountView account) {
-        return new AccountResponse(account.id(), account.email(), account.displayName(), account.platformAdmin(), List.of());
+    private AccountResponse response(AccountView account) {
+        return new AccountResponse(account.id(), account.email(), account.displayName(), account.platformAdmin(),
+                memberships.companies(account.id()).stream().map(m -> new AccountResponse.CompanyRef(m.tenantId(), m.tenantName())).toList());
     }
 
     private static ClientInfo client(HttpServletRequest request) {
