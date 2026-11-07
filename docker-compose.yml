@@ -67,6 +67,8 @@ services:
       LIS_MAIL_FROM: no-reply@lis.local
       # the browser tests sign in far more often than a person would; the throttle itself is exercised by the unit and integration tests
       LIS_RATE_LIMIT_LOGIN_IP_LIMIT: "2000"
+      LIS_RATE_LIMIT_ACCOUNT_IP_LIMIT: "2000"
+      LIS_RATE_LIMIT_TOKEN_IP_LIMIT: "2000"
       # the local stack is plain HTTP, so the session cookie cannot be Secure here (production keeps the default, true)
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
     ports:
@@ -76,6 +78,9 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # the local stack has the demo accounts, so it also gets the one-click page /demo-login (never in production)
+        VITE_DEMO_LOGIN: "true"
     depends_on:
       - app
     ports:

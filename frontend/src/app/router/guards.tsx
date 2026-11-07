@@ -6,6 +6,17 @@ import { EmptyState } from '@/components/ui/StateViews';
 import { canManageAssessments, canReadConfiguration, isPlatformAdmin, isRespondent, type Principal } from '@/services/auth/principal';
 import { companyFromPath } from './company-path';
 
+/**
+ * The address of the site itself (no company, no path) shows the landing page to someone who is not signed in. Everyone else, and every
+ * other address, goes on to the application as before.
+ */
+export function LandingGate({ children, landing }: { children: ReactNode; landing: ReactNode }) {
+  const { status } = useAuth();
+  const { pathname } = useLocation();
+  if (status === 'anonymous' && pathname === '/' && companyFromPath(window.location.pathname) === null) return <>{landing}</>;
+  return <>{children}</>;
+}
+
 /** Anonymous visitors are sent to the login page and brought back afterwards. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
