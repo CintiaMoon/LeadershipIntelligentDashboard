@@ -33,6 +33,13 @@ describe('ReportsPage', () => {
     expect(screen.queryByLabelText('Earlier assessment')).not.toBeInTheDocument();
   });
 
+  it('names the assessments by their questionnaire, not by its id', async () => {
+    server.use(http.get(`${ORIGIN}/questionnaires`, () => HttpResponse.json([{ id: 'tpl-1', name: 'Quarterly team health' }])));
+    renderRoutes(routes, { route: '/reports' });
+    expect((await screen.findAllByRole('option', { name: /Quarterly team health/ })).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('option', { name: /tpl-1/ })).not.toBeInTheDocument();
+  });
+
   it('draws the report the backend built, section by section, with the notice', async () => {
     server.use(reportRoute());
     renderRoutes(routes, { route });

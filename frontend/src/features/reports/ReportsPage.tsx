@@ -6,13 +6,14 @@ import { Field, selectClass } from '@/components/ui/Form';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/StateViews';
 import { api, type ReportParams } from '@/services/api/endpoints';
+import { useEntityNames } from '@/services/queries/entityNames';
 import { useReport, useRuns } from '@/services/queries/hooks';
 import { useSession } from '@/stores/session';
 import { isReportType, REPORT_TYPES, type Report, type ReportType } from '@/types/report';
 import type { RunSummary } from '@/types/api';
 import { formatDateTime, formatScore } from '@/utils/presentation';
 
-const runLabel = (r: RunSummary) => `${formatDateTime(r.calculatedAt)} · ${r.templateId} · ${formatScore(r.leadershipIntelligenceScore)}`;
+const runLabel = (r: RunSummary, template: (id: string | undefined) => string) => `${formatDateTime(r.calculatedAt)} · ${template(r.templateId)} · ${formatScore(r.leadershipIntelligenceScore)}`;
 
 /** Saves the bytes the backend generated under the name it gave them. */
 function save(blob: Blob, filename: string) {
@@ -112,6 +113,7 @@ export function ReportsPage() {
   const organizationId = useSession((s) => s.organizationId);
   const runs = useRuns({ organizationId: organizationId ?? undefined, limit: 50 });
   const options = runs.data?.items ?? [];
+  const entities = useEntityNames(organizationId);
 
   const typeParam = params.get('type');
   const type: ReportType = isReportType(typeParam) ? typeParam : 'LEADERSHIP_INTELLIGENCE';
@@ -147,7 +149,7 @@ export function ReportsPage() {
       <select id={id} className={selectClass} value={value} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} onChange={(e) => set(e.target.value)}>
         <option value="">Select&hellip;</option>
         {options.map((r) => (
-          <option key={r.scoringRunId} value={r.scoringRunId}>{runLabel(r)}</option>
+          <option key={r.scoringRunId} value={r.scoringRunId}>{runLabel(r, entities.template)}</option>
         ))}
       </select>
     </Field>
