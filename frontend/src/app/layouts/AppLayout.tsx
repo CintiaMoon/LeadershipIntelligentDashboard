@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/app/providers/auth-context';
 import { brand } from '@/brand';
 import { Badge } from '@/components/ui/Badge';
+import { Breadcrumbs } from './Breadcrumbs';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { isPlatformAdmin, isRespondent } from '@/services/auth/principal';
@@ -155,7 +156,7 @@ export function AppLayout() {
         </div>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="border-b border-line bg-sidebar">
+        <header className="sticky top-0 z-30 border-b border-line bg-sidebar">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
             {!platform && !respondent && (
               <label className="flex items-center gap-2 text-sm text-ink-soft">
@@ -205,8 +206,9 @@ export function AppLayout() {
               </Button>
             </div>
           </div>
+          <Breadcrumbs rootLabel={platform ? 'Platform' : (company?.name ?? 'Home')} rootTo={navItems(principal)[0]?.to ?? '/'} />
         </header>
-        <main id="main" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <main id="main" className="mx-auto scroll-mt-32 max-w-6xl px-4 py-8 sm:px-6">
           <Outlet />
         </main>
       </div>

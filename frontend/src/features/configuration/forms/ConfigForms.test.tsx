@@ -65,6 +65,20 @@ describe('ConfigForms', () => {
     expect(written().overall.tolerance).toBe(0.01);
   });
 
+  it('colours each band by its level of risk and draws the 0 to 100 scale', () => {
+    const doc = base();
+    doc.overall.lisInterpretation = [band(0, 40, 'CRITICAL'), band(40, 60, 'AT_RISK'), band(60, 100, 'HEALTHY')];
+    doc.overall.dimensionInterpretation = [band(0, 30, 'LOW_BAND'), band(30, 100, 'TOP_BAND')];
+    render(<Harness initial={doc} />);
+    expect(screen.getByText('Critical').className).toContain('text-risk-critical');
+    expect(screen.getByText('At risk').className).toContain('text-risk-high');
+    expect(screen.getByText('Healthy').className).toContain('text-ok');
+    // a label the colours do not know is coloured by where it sits: the lowest band is the worst
+    expect(screen.getByText('Low band').className).toContain('text-risk-critical');
+    expect(screen.getByText('Top band').className).toContain('text-ok');
+    expect(screen.getByRole('img', { name: /Score scale from 0 to 100: Critical 0 to 40, At risk 40 to 60, Healthy 60 to 100/ })).toBeInTheDocument();
+  });
+
   it('flags bands that leave a gap', async () => {
     render(<Harness initial={base()} />);
     const from = screen.getAllByLabelText('From')[1]!;

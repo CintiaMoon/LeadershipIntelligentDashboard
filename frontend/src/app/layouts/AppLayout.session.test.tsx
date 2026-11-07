@@ -49,6 +49,14 @@ describe('AppLayout with the application accounts', () => {
     expect(screen.queryByRole('button', { name: 'New organization' })).not.toBeInTheDocument();
   });
 
+  it('freezes the top bar and shows where the page sits', () => {
+    renderRoutes(routes, { route: '/dashboard', auth: signedIn({ company: acme(['VIEWER'], ['org-1']) }) });
+    expect(screen.getByRole('banner')).toHaveClass('sticky', 'top-0');
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(trail).toHaveTextContent('Acme Corp');
+    expect(trail.querySelector('[aria-current="page"]')).toHaveTextContent('Dashboard');
+  });
+
   it('shows no company for the platform administrator', () => {
     renderRoutes(routes, { route: '/dashboard', auth: signedIn({ account: { ...ana, platformAdmin: true }, company: null, companies: [] }) });
     expect(screen.queryByTestId('company-name')).not.toBeInTheDocument();
