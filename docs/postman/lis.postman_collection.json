@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Leadership Intelligence Scoring Engine",
-    "description": "Every endpoint of the API. Start the stack with `docker compose up -d --build` (profile dev), then run the folders top to bottom. The collection signs in with the password, as a browser does: the pre-request script keeps one session in the cookie jar, sends the CSRF token in X-XSRF-TOKEN on every state-changing call and the company in X-Company-Id. The accounts are the demo accounts of the dev profile (<name>@demo.test, password demo-password-1234): owner, admin, leader, analyst, viewer, org1-viewer, other-admin, sandbox-admin, sandbox-leader, assess-admin, assess-owner, respondent1 to respondent6, platform-admin, platform-admin-2. Change the collection variable \"persona\" to act as another account, or set the header X-Persona on a request (removed before sending); the persona \"none\" sends the request with no session at all. Requests of the Platform and Accounts folders that need a different account say so in their header.",
+    "description": "Every endpoint of the API. Start the stack with `docker compose up -d --build` (profile dev), then run the folders top to bottom. The collection signs in with the password, as a browser does: the pre-request script keeps one session in the cookie jar, sends the CSRF token in X-XSRF-TOKEN on every state-changing call and the company in X-Company-Id. The accounts are the demo accounts of the dev profile (<name>@demo.test, password demo-password-1234): owner, admin, leader, analyst, viewer, org1-viewer, other-admin, sandbox-admin, sandbox-leader, assess-admin, assess-owner, respondent1 to respondent6, platform-admin, platform-admin-2, platform-admin-3. Change the collection variable \"persona\" to act as another account, or set the header X-Persona on a request (removed before sending); the persona \"none\" sends the request with no session at all. Requests of the Platform and Accounts folders that need a different account say so in their header.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -190,6 +190,10 @@
     },
     {
       "key": "opsTokenSecret",
+      "value": ""
+    },
+    {
+      "key": "memberId",
       "value": ""
     }
   ],
@@ -4341,6 +4345,44 @@
           ]
         },
         {
+          "name": "Invite the person to answer questionnaires (RESPONDENT-only invitation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const m = pm.response.json();",
+                  "pm.test('a pending invitation that can only respond', () => { pm.expect(m.status).to.eql('INVITED'); pm.expect(m.roles).to.eql(['RESPONDENT']); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Persona",
+                "value": "assess-admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/people/{{personId}}/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "people",
+                "{{personId}}",
+                "invite"
+              ]
+            }
+          }
+        },
+        {
           "name": "Change the person (name and active flag)",
           "request": {
             "method": "PUT",
@@ -7168,6 +7210,1328 @@
                 "exec": [
                   "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
                 ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. Registration, passwords, members and invitations",
+      "description": "The public account flows (registration, email verification, password reset and change, invitation links), the members and pending invitations of a company, and the platform security audit. Links that arrive by email carry a token that the API never returns, so these requests check what the API says about a token that does not exist; the whole journey with real emails is the Playwright suite `npm run e2e:accounts` (emails read from Mailpit, http://localhost:8025).",
+      "item": [
+        {
+          "name": "Registration and email verification",
+          "item": [
+            {
+              "name": "Register an account (a verification email is sent, 202)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('stamp')) { pm.collectionVariables.set('stamp', Date.now().toString(36)); }",
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('202 whether or not the address was known', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"postman.{{stamp}}@example.test\",\n  \"password\": \"a-long-password-for-postman-1\",\n  \"displayName\": \"Postman {{stamp}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Register the same address again: the same 202, nothing revealed",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('202 the answer does not say the address exists', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"postman.{{stamp}}@example.test\",\n  \"password\": \"a-long-password-for-postman-1\",\n  \"displayName\": \"Postman {{stamp}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Register with a short password -> 4xx",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('a weak password is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"weak.{{stamp}}@example.test\",\n  \"password\": \"short\",\n  \"displayName\": \"Weak\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Verify the address with a token that does not exist -> 4xx",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('an unknown token is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/verify-email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "verify-email"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"not-a-real-token\",\n  \"password\": \"a-long-password-for-postman-1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Ask for a new verification email (always 202)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('202 even for an address with no account', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/resend-verification",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "resend-verification"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nobody.{{stamp}}@example.test\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Passwords",
+          "item": [
+            {
+              "name": "Ask for a password reset (always 202)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('202 even for an address with no account', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/password/forgot",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "password",
+                    "forgot"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nobody.{{stamp}}@example.test\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Reset the password with a token that does not exist -> 4xx",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('an unknown token is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/password/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "password",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"not-a-real-token\",\n  \"newPassword\": \"another-long-password-1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Change the password with a wrong current password -> 4xx",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('the demo account keeps its password', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "viewer"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/password/change",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "password",
+                    "change"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"not the current password\",\n  \"newPassword\": \"another-long-password-1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Change the password without a session -> 401 or 403",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('refused', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/password/change",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "password",
+                    "change"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"x\",\n  \"newPassword\": \"another-long-password-1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invitation links",
+          "item": [
+            {
+              "name": "Preview an invitation with a token that does not exist -> 4xx",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('an unknown invitation is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/invitations/preview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "invitations",
+                    "preview"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"not-a-real-token\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Create an account from an invitation with a token that does not exist -> 4xx",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/csrf', method: 'GET' }, (err, res) => {",
+                      "  if (err || res.code !== 200) { throw new Error('csrf request failed'); }",
+                      "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('an unknown invitation is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "none"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/invitations/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "invitations",
+                    "register"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"not-a-real-token\",\n  \"password\": \"a-long-password-for-postman-1\",\n  \"displayName\": \"Invited\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Accept an invitation with a token that does not exist -> 4xx",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('an unknown invitation is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "viewer"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/invitations/accept",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "invitations",
+                    "accept"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"not-a-real-token\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Members",
+          "item": [
+            {
+              "name": "List the members and pending invitations",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200', () => pm.response.to.have.status(200));",
+                      "const list = pm.response.json();",
+                      "pm.test('a list that contains the owner', () => { pm.expect(list).to.be.an('array'); pm.expect(list.map(m => m.email)).to.include('owner@demo.test'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Invite a member by email",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('stamp')) { pm.collectionVariables.set('stamp', Date.now().toString(36)); }"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201', () => pm.response.to.have.status(201));",
+                      "const m = pm.response.json();",
+                      "pm.test('a pending invitation with the roles asked for', () => { pm.expect(m.status).to.eql('INVITED'); pm.expect(m.roles).to.eql(['VIEWER']); pm.expect(m.organizationIds).to.eql(['org-1']); });",
+                      "pm.collectionVariables.set('memberId', m.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"member.{{stamp}}@example.test\",\n  \"roles\": [\n    \"VIEWER\"\n  ],\n  \"organizationIds\": [\n    \"org-1\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Invite the same address again -> 409",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('refused as a duplicate', () => pm.expect([409, 422]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"member.{{stamp}}@example.test\",\n  \"roles\": [\n    \"VIEWER\"\n  ],\n  \"organizationIds\": [\n    \"org-1\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Invite with no roles -> 4xx",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('at least one role is required', () => pm.expect(pm.response.code).to.be.within(400, 499));",
+                      "pm.test('no 5xx and no leak of the token', () => pm.expect(pm.response.text()).to.not.include('Exception'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"noroles.{{stamp}}@example.test\",\n  \"roles\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Send the invitation again",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members/{{memberId}}/resend-invitation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members",
+                    "{{memberId}}",
+                    "resend-invitation"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Change the roles of the member",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200', () => pm.response.to.have.status(200));",
+                      "pm.test('the new role', () => pm.expect(pm.response.json().roles).to.eql(['ANALYST']));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members/{{memberId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members",
+                    "{{memberId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"roles\": [\n    \"ANALYST\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "A viewer cannot list the members -> 403",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "viewer"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "A viewer cannot invite -> 403",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "viewer"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"denied.{{stamp}}@example.test\",\n  \"roles\": [\n    \"VIEWER\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Another company does not see the member -> 404",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('404', () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "other-admin"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members/{{memberId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members",
+                    "{{memberId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"roles\": [\n    \"VIEWER\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Withdraw the invitation",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('204', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members/{{memberId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members",
+                    "{{memberId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "The member is gone from the list",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200', () => pm.response.to.have.status(200));",
+                      "pm.test('not listed any more', () => pm.expect(pm.response.json().map(m => m.id)).to.not.include(pm.collectionVariables.get('memberId')));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/members",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "members"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Security audit of the platform",
+          "item": [
+            {
+              "name": "Security audit of the platform (platform administrator)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200', () => pm.response.to.have.status(200));",
+                      "pm.test('has entries or an empty page', () => pm.expect(pm.response.json()).to.be.an('object'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "platform-admin"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/platform/security-audit?size=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "platform",
+                    "security-audit"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Security audit of the platform filtered by company",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "platform-admin"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/platform/security-audit?tenantId=demo-tenant&size=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "platform",
+                    "security-audit"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "A company administrator cannot read the platform audit -> 403",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Persona",
+                    "value": "admin"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/platform/security-audit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "platform",
+                    "security-audit"
+                  ]
+                }
               }
             }
           ]
