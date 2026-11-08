@@ -68,6 +68,13 @@ describe('ComparePage', () => {
     expect(router.state.location.search).toBe(`?base=${f.PREVIOUS_RUN_ID}&run=${f.RUN_ID}`);
   });
 
+  it('names the assessments by their questionnaire, not by its id', async () => {
+    server.use(http.get(`${ORIGIN}/questionnaires`, () => HttpResponse.json([{ id: 'tpl-1', name: 'Quarterly team health' }])));
+    renderRoutes(routes, { route: '/compare' });
+    expect((await screen.findAllByRole('option', { name: /Quarterly team health/ })).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('option', { name: /tpl-1/ })).not.toBeInTheDocument();
+  });
+
   it('shows an error when the comparison fails, with a reference', async () => {
     server.use(http.get(`${ORIGIN}/scoring-runs/compare`, () => HttpResponse.json({ code: 'SCORING_RUN_NOT_FOUND', message: 'x', correlationId: 'c-4' }, { status: 404 })));
     renderRoutes(routes, { route });

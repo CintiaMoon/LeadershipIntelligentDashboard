@@ -13,11 +13,11 @@ interface Props {
   summary?: RunSummary;
   bands: NonNullable<RunCatalog['lisBands']>;
   history: (number | null | undefined)[];
-  templateId?: string;
+  templateName?: string;
 }
 
 /** The visual anchor of the dashboard: the LIS exactly as the backend returned it. */
-export function LisHero({ result, summary, bands, history, templateId }: Props) {
+export function LisHero({ result, summary, bands, history, templateName }: Props) {
   const label = result.interpretation;
   const band = bands.find((b) => b.label === label);
   const shown = history.filter((v): v is number => typeof v === 'number');
@@ -46,7 +46,7 @@ export function LisHero({ result, summary, bands, history, templateId }: Props) 
           </div>
           <p className="mt-3 text-xs text-ink-faint">
             Last assessment {formatDateTime(result.calculatedAt)}
-            {templateId && <> &middot; template {templateId}</>}
+            {templateName && <> &middot; template {templateName}</>}
           </p>
         </div>
         <div className="space-y-5">

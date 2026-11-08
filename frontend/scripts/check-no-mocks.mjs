@@ -20,7 +20,8 @@ walk('src', (path) => {
   if (/from ['"](@\/tests|\.\.?\/.*tests)\//.test(text) || /from ['"]msw/.test(text)) problems.push(`${normalized} imports test-only code`);
 });
 
-const markers = ['11111111-1111-1111-1111-111111111111', 'setupServer', 'HttpResponse', 'mockServiceWorker'];
+// 'demo-password' is the published password of the demo accounts: only a build made with VITE_DEMO_LOGIN=true may carry it
+const markers = ['11111111-1111-1111-1111-111111111111', 'setupServer', 'HttpResponse', 'mockServiceWorker', 'demo-password'];
 try {
   walk('dist', (path) => {
     if (!/\.(js|html|css)$/.test(path)) return;

@@ -59,6 +59,9 @@ export function SessionLoginPage() {
         </Button>
       </form>
       <p className="flex flex-wrap justify-between gap-2 text-sm">
+        {import.meta.env.VITE_DEMO_LOGIN === 'true' && (
+          <Link to="/demo-login" className="text-ink-soft underline-offset-2 hover:underline">Test accounts</Link>
+        )}
         <Link to="/forgot-password" className="text-ink-soft underline-offset-2 hover:underline">Forgot your password?</Link>
         <Link to="/verify-email" className="text-ink-soft underline-offset-2 hover:underline">Did not get the confirmation email?</Link>
       </p>

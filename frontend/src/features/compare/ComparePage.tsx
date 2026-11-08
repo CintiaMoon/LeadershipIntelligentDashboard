@@ -8,6 +8,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { BackLink, PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/StateViews';
 import { makeNames } from '@/features/dashboard/display';
+import { useEntityNames } from '@/services/queries/entityNames';
 import { useCatalog, useComparison, useRuns } from '@/services/queries/hooks';
 import { useSession } from '@/stores/session';
 import type { RunSummary } from '@/types/api';
@@ -19,8 +20,8 @@ const formSchema = z
   .refine((v) => v.base !== v.run, { path: ['run'], message: 'Choose two different assessments' });
 type FormValues = z.infer<typeof formSchema>;
 
-function runLabel(r: RunSummary): string {
-  return `${formatDateTime(r.calculatedAt)} \u00B7 ${r.templateId} \u00B7 ${formatScore(r.leadershipIntelligenceScore)}`;
+function runLabel(r: RunSummary, template: (id: string | undefined) => string): string {
+  return `${formatDateTime(r.calculatedAt)} \u00B7 ${template(r.templateId)} \u00B7 ${formatScore(r.leadershipIntelligenceScore)}`;
 }
 
 function Side({ title, run }: { title: string; run: RunSummary }) {
@@ -47,6 +48,7 @@ export function ComparePage() {
   const comparison = useComparison(base, run);
   const catalog = useCatalog(run);
   const names = makeNames(catalog.data);
+  const entities = useEntityNames(organizationId);
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), values: { base: base ?? '', run: run ?? '' } });
 
   const options = runs.data?.items ?? [];
@@ -58,7 +60,7 @@ export function ComparePage() {
         ['Configuration hash', c.base.configurationHash?.slice(0, 19), c.run.configurationHash?.slice(0, 19)],
         ['Algorithm version', c.base.algorithmVersion, c.run.algorithmVersion],
         ['Engine version', c.base.engineVersion, c.run.engineVersion],
-        ['Assessment template', c.base.templateId, c.run.templateId],
+        ['Assessment template', entities.template(c.base.templateId), entities.template(c.run.templateId)],
         ['Template version', c.base.templateVersion, c.run.templateVersion],
         ['Organization', c.base.organizationId, c.run.organizationId],
       ]
@@ -77,7 +79,7 @@ export function ComparePage() {
                 <option value="">Select&hellip;</option>
                 {options.map((r) => (
                   <option key={r.scoringRunId} value={r.scoringRunId}>
-                    {runLabel(r)}
+                    {runLabel(r, entities.template)}
                   </option>
                 ))}
               </select>

@@ -9,8 +9,9 @@ import { RegisterPage } from '@/features/account/RegisterPage';
 import { VerifyEmailPage } from '@/features/account/VerifyEmailPage';
 import { SessionLoginPage } from '@/features/account/SessionLoginPage';
 import { NotFoundPage } from '@/features/errors/NotFoundPage';
+import { LandingPage } from '@/features/landing/LandingPage';
 import { companyBase, companyFromPath } from './company-path';
-import { HomeRedirect, RequireAuth, RequireCompany, RequireConfigurationReader, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
+import { HomeRedirect, LandingGate, RequireAuth, RequireCompany, RequireConfigurationReader, RequireManager, RequirePlatformAdmin, RequireRespondent } from './guards';
 
 /** Wraps a page so that only owners and administrators see it; the backend refuses everyone else as well. */
 const manager = (Page: ComponentType) => function ManagerPage() { return (<RequireManager><Page /></RequireManager>); };
@@ -30,9 +31,18 @@ function accountRoutes(): RouteObject[] {
   ];
 }
 
+/**
+ * TESTING ONLY: the one-click page for the demo accounts. The condition is written out here (not in a shared constant) so that the
+ * bundler removes the route, the page and the published password from a build made without VITE_DEMO_LOGIN=true.
+ */
+function demoLoginRoutes(): RouteObject[] {
+  if (import.meta.env.VITE_DEMO_LOGIN !== 'true') return [];
+  return [{ path: '/demo-login', lazy: async () => ({ Component: (await import('@/features/account/DemoLoginPage')).DemoLoginPage }) }];
+}
+
 /** Every route: sign-in and the account pages (outside any company), then the application with the screens of a company. */
 export function buildRoutes(): RouteObject[] {
-  return [{ path: '/login', element: <SessionLoginPage /> }, ...accountRoutes(), ...appRoutes()];
+  return [{ path: '/login', element: <SessionLoginPage /> }, ...demoLoginRoutes(), ...accountRoutes(), ...appRoutes()];
 }
 
 function appRoutes(): RouteObject[] {
@@ -40,11 +50,13 @@ function appRoutes(): RouteObject[] {
   {
     path: '/',
     element: (
-      <RequireAuth>
-        <RequireCompany>
-          <AppLayout />
-        </RequireCompany>
-      </RequireAuth>
+      <LandingGate landing={<LandingPage />}>
+        <RequireAuth>
+          <RequireCompany>
+            <AppLayout />
+          </RequireCompany>
+        </RequireAuth>
+      </LandingGate>
     ),
     children: [
       { index: true, element: <HomeRedirect /> },

@@ -66,6 +66,31 @@ describe('DashboardPage with answers from several people', () => {
     expect(screen.getByRole('link', { name: 'How was this calculated?' })).toHaveAttribute('href', `/runs/${s.TEAM_RUN_ID}/explanation`);
   });
 
+  it('shows the name of the team and of the questionnaire, not their generated ids', async () => {
+    server.use(
+      http.get(`${ORIGIN}/teams`, () => HttpResponse.json([{ id: 'alpha', organizationId: 'org-1', name: 'Platform squad' }])),
+      http.get(`${ORIGIN}/questionnaires`, () => HttpResponse.json([{ id: 'tpl-1', name: 'Quarterly team health' }])),
+    );
+    renderRoutes(routes, { route: '/dashboard?team=alpha' });
+    expect(await screen.findByTestId('lis-value')).toHaveTextContent('71.50');
+    expect(await screen.findByText(/Showing team Platform squad/)).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Team Platform squad' })).toBeInTheDocument();
+    expect(screen.getByText(/Organization org-1/)).toHaveTextContent('team Platform squad');
+    expect(screen.getByText(/template Quarterly team health/)).toBeInTheDocument();
+    expect(screen.queryByText(/template tpl-1/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the ids when the names cannot be read', async () => {
+    server.use(
+      http.get(`${ORIGIN}/teams`, () => HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 })),
+      http.get(`${ORIGIN}/questionnaires`, () => HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 })),
+    );
+    renderRoutes(routes, { route: '/dashboard?team=alpha' });
+    expect(await screen.findByTestId('lis-value')).toHaveTextContent('71.50');
+    expect(screen.getByText(/Showing team alpha/)).toBeInTheDocument();
+    expect(screen.getByText(/template tpl-1/)).toBeInTheDocument();
+  });
+
   it('switching the scope puts the team in the address', async () => {
     const view = renderRoutes(routes, { route: '/dashboard' });
     await screen.findByTestId('lis-value');

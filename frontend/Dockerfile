@@ -3,6 +3,9 @@ WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# TESTING ONLY: true adds the one-click page for the demo accounts (/demo-login). Leave it unset for anything but the local stack.
+ARG VITE_DEMO_LOGIN=false
+ENV VITE_DEMO_LOGIN=$VITE_DEMO_LOGIN
 RUN npm run build
 
 FROM nginx:1.27-alpine

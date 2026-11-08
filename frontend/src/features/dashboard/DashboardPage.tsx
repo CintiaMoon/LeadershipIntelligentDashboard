@@ -4,6 +4,7 @@ import { ResponsesPanel } from '@/components/responses/ResponsesPanel';
 import { LisHero } from '@/components/score/LisHero';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/StateViews';
 import { QuerySection } from '@/components/ui/QuerySection';
+import { useEntityNames } from '@/services/queries/entityNames';
 import { useSession } from '@/stores/session';
 import { SEVERITIES } from '@/utils/labels';
 import { DimensionOverview } from './DimensionOverview';
@@ -33,6 +34,7 @@ export function DashboardPage() {
   const teamParam = params.get('team');
 
   const data = useDashboardData(organizationId, templateParam, teamParam);
+  const entities = useEntityNames(organizationId);
   const update = (change: Record<string, string | null>) =>
     setParams(
       (current) => {
@@ -63,9 +65,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader organizationId={organizationId} team={data.team?.teamId}>
+      <PageHeader organizationId={organizationId} team={data.team?.teamId ? entities.team(data.team.teamId) : undefined}>
         <div className="flex flex-wrap items-center gap-4">
-          <ScopeSwitcher teams={data.teamRuns} value={data.team?.teamId ?? null} onChange={(team) => update({ team })} />
+          <ScopeSwitcher teams={data.teamRuns} value={data.team?.teamId ?? null} teamName={entities.team} onChange={(team) => update({ team })} />
           {data.latestRuns.length > 1 && (
             <label className="flex items-center gap-2 text-sm text-ink-soft">
               <span>Assessment template</span>
@@ -76,7 +78,7 @@ export function DashboardPage() {
               >
                 {data.latestRuns.map((r) => (
                   <option key={r.templateId} value={r.templateId}>
-                    {r.templateId}
+                    {entities.template(r.templateId)}
                   </option>
                 ))}
               </select>
@@ -87,7 +89,7 @@ export function DashboardPage() {
 
       {data.scoped && (
         <p role="note" className="rounded-lg border border-line bg-surface px-4 py-3 text-sm text-ink-soft">
-          Showing team {data.team?.teamId}. History, trends and comparison with the previous assessment are available for the whole organization only. Teams are
+          Showing team {data.team?.teamId ? entities.team(data.team.teamId) : ''}. History, trends and comparison with the previous assessment are available for the whole organization only. Teams are
           never ranked against each other.
         </p>
       )}
@@ -123,6 +125,7 @@ function TeamOrOrganization({
   update: (change: Record<string, string | null>) => void;
 }) {
   const { parsed, names } = data;
+  const entities = useEntityNames(useSession((s) => s.organizationId));
   const history = data.trends.data?.points ?? [];
   const dimensionHistory = Object.fromEntries(
     ['TEAM_HEALTH', 'DELIVERY_STABILITY', 'TECHNICAL_RISK', 'LEADERSHIP_LOAD'].map((d) => [
@@ -143,7 +146,7 @@ function TeamOrOrganization({
               summary={data.scoped ? undefined : data.latest}
               bands={data.catalog.data?.lisBands ?? []}
               history={history.map((p) => p.run?.leadershipIntelligenceScore)}
-              templateId={data.latest?.templateId}
+              templateName={data.latest?.templateId ? entities.template(data.latest.templateId) : undefined}
             />
           )
         }

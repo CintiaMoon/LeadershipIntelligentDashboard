@@ -8,7 +8,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 const PAGES: Array<[string, string, string]> = [
   ['sign in', '/login', 'Sign in'],
-  ['register', '/register', 'Create an account'],
+  ['register', '/register', 'Create your account'],
   ['reset request', '/forgot-password', 'Reset your password'],
   ['reset with a link', '/reset-password?token=example', 'Choose a new password'],
   ['confirm with a link', '/verify-email?token=example', 'Confirm your email address'],

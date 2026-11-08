@@ -58,45 +58,47 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --color-canvas: #f6f7f9;
-  --color-sidebar: #ffffff;
-  --color-surface: #ffffff;
-  --color-line: #e3e6ec;
-  --color-ink: #0f1a2b;
-  --color-ink-soft: #46546a;
-  --color-ink-faint: #566174;
+  /* Light theme: warm paper rather than pure white, soft slate ink rather than black, one muted teal accent and desaturated
+     status colours, so long reading sessions stay calm. Every text/background pair is checked in tokens.test.ts (WCAG AA). */
+  --color-canvas: #f3f1ec;
+  --color-sidebar: #eceae3;
+  --color-surface: #fbfaf7;
+  --color-line: #dcd8cd;
+  --color-ink: #1f2a37;
+  --color-ink-soft: #4a5565;
+  --color-ink-faint: #5b6573;
 
-  --color-accent: #0e6b52;
-  --color-accent-soft: #e0f3ec;
-  --color-accent-ink: #0a4d3b;
-  --color-on-accent: #ffffff;
+  --color-accent: #2c6b62;
+  --color-accent-soft: #dfebe6;
+  --color-accent-ink: #1e4f47;
+  --color-on-accent: #fbfaf7;
 
-  --color-risk-low: #51647d;
-  --color-risk-low-soft: #eef1f5;
-  --color-risk-medium: #8a6100;
-  --color-risk-medium-soft: #fdf3d6;
-  --color-risk-high: #b04a00;
-  --color-risk-high-soft: #fde8d6;
-  --color-risk-critical: #a61b1b;
-  --color-risk-critical-soft: #fbe3e3;
-  --color-ok: #1f6b4a;
-  --color-ok-soft: #e0f2ea;
+  --color-risk-low: #566170;
+  --color-risk-low-soft: #ebe9e4;
+  --color-risk-medium: #7a5810;
+  --color-risk-medium-soft: #f5ebcf;
+  --color-risk-high: #9c4619;
+  --color-risk-high-soft: #f5e0d2;
+  --color-risk-critical: #963030;
+  --color-risk-critical-soft: #f3dcda;
+  --color-ok: #2a664a;
+  --color-ok-soft: #dbebe1;
 
-  --shadow-card: 0 1px 2px rgb(15 26 43 / 0.05), 0 1px 3px rgb(15 26 43 / 0.06);
+  --shadow-card: 0 1px 2px rgb(31 42 55 / 0.05), 0 2px 6px rgb(31 42 55 / 0.05);
 
-  --chart-score: #0e6b52;
-  --chart-grid: #e3e6ec;
-  --chart-axis: #6b7789;
-  --chart-team-health: #28457f;
-  --chart-delivery-stability: #1f6b4a;
-  --chart-technical-risk: #b04a00;
-  --chart-leadership-load: #7a4fa3;
-  --chart-critical: #a61b1b;
-  --chart-high: #b04a00;
-  --chart-medium: #a87a0a;
-  --chart-low: #71829a;
-  --chart-deduction: #b04a00;
-  --chart-suppressed: #a87a0a;
+  --chart-score: #2c6b62;
+  --chart-grid: #dcd8cd;
+  --chart-axis: #5f6975;
+  --chart-team-health: #35557e;
+  --chart-delivery-stability: #2a664a;
+  --chart-technical-risk: #9c4619;
+  --chart-leadership-load: #6f5496;
+  --chart-critical: #963030;
+  --chart-high: #9c4619;
+  --chart-medium: #94700f;
+  --chart-low: #76818f;
+  --chart-deduction: #9c4619;
+  --chart-suppressed: #94700f;
 }
 
 html {

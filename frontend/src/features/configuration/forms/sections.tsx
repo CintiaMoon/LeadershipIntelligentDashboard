@@ -1,4 +1,6 @@
+import { Badge, type Tone } from '@/components/ui/Badge';
 import { Field, selectClass, Switch } from '@/components/ui/Form';
+import { interpretationTone } from '@/utils/labels';
 import { humanizeCode } from '@/utils/presentation';
 import { bandsProblem, unitProblem, weightsProblem } from './checks';
 import { NumberField, TextField } from './NumberField';
@@ -26,17 +28,71 @@ const Problem = ({ id, text }: { id: string; text: string | undefined }) =>
     </p>
   ) : null;
 
+const BAND_FILL: Record<Tone, string> = {
+  neutral: 'bg-line',
+  accent: 'bg-accent',
+  ok: 'bg-ok',
+  low: 'bg-risk-low',
+  medium: 'bg-risk-medium',
+  high: 'bg-risk-high',
+  critical: 'bg-risk-critical',
+};
+const BAND_EDGE: Record<Tone, string> = {
+  neutral: 'border-l-line',
+  accent: 'border-l-accent',
+  ok: 'border-l-ok',
+  low: 'border-l-risk-low',
+  medium: 'border-l-risk-medium',
+  high: 'border-l-risk-high',
+  critical: 'border-l-risk-critical',
+};
+/** From the worst band to the best, for a label the colour defaults do not know. */
+const BY_POSITION: Tone[][] = [[], ['neutral'], ['critical', 'ok'], ['critical', 'medium', 'ok'], ['critical', 'high', 'medium', 'ok'], ['critical', 'high', 'medium', 'low', 'ok']];
+
+/** The colour of each band: by its label when it is a known one, else by where it sits between the lowest and the highest score. */
+function bandTones(bands: Record<string, unknown>[]): Tone[] {
+  const order = bands.map((band, i) => ({ i, min: typeof band.min === 'number' ? band.min : 0 })).sort((x, y) => x.min - y.min);
+  const scale = BY_POSITION[Math.min(bands.length, BY_POSITION.length - 1)] ?? [];
+  const tones: Tone[] = bands.map(() => 'neutral');
+  order.forEach(({ i }, rank) => {
+    const known = interpretationTone(String(bands[i]!.label));
+    tones[i] = known !== 'neutral' ? known : (scale[rank] ?? 'neutral');
+  });
+  return tones;
+}
+
 function Bands({ title, path, props }: { title: string; path: Path; props: SectionProps }) {
   const bands = getIn(props.doc, path);
   if (!Array.isArray(bands)) return null;
   const id = path.join('-');
+  const list = bands as Record<string, unknown>[];
+  const tones = bandTones(list);
+  const drawable = list
+    .map((band, i) => ({ band, tone: tones[i]!, i }))
+    .filter(({ band }) => typeof band.min === 'number' && typeof band.max === 'number' && band.max > band.min)
+    .sort((x, y) => (x.band.min as number) - (y.band.min as number));
   return (
     <fieldset className="min-w-0 space-y-3">
       <legend className="text-sm font-semibold">{title}</legend>
+      {drawable.length > 0 && (
+        <div role="img" aria-label={`Score scale from 0 to 100: ${drawable.map(({ band }) => `${humanizeCode(String(band.label))} ${band.min} to ${band.max}`).join(', ')}`}>
+          <div className="flex h-3 overflow-hidden rounded-full ring-1 ring-inset ring-line">
+            {drawable.map(({ band, tone, i }) => (
+              <div key={i} className={BAND_FILL[tone]} style={{ width: `${Math.max(0, Math.min(100, (band.max as number) - (band.min as number)))}%` }} />
+            ))}
+          </div>
+          <div className="mt-1 flex justify-between text-xs text-ink-faint" aria-hidden="true">
+            <span>0</span>
+            <span>100</span>
+          </div>
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
-        {(bands as Record<string, unknown>[]).map((b, i) => (
-          <div key={String(b.label)} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 rounded-md border border-line p-3">
-            <p className="col-span-2 text-sm font-medium">{humanizeCode(String(b.label))}</p>
+        {list.map((b, i) => (
+          <div key={String(b.label)} className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 rounded-md border border-line border-l-4 p-3 ${BAND_EDGE[tones[i]!]}`}>
+            <p className="col-span-2 flex items-center gap-2 text-sm font-medium">
+              <Badge tone={tones[i]!}>{humanizeCode(String(b.label))}</Badge>
+            </p>
             <NumberField id={`${id}-${i}-min`} label="From" value={b.min as number} disabled={props.disabled} onChange={(v) => props.set([...path, i, 'min'], v)} />
             <NumberField id={`${id}-${i}-max`} label="Up to" value={b.max as number} disabled={props.disabled} onChange={(v) => props.set([...path, i, 'max'], v)} />
           </div>
